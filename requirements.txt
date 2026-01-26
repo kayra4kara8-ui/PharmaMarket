@@ -2,8 +2,8 @@
 # CORE DEPENDENCIES
 # ============================
 streamlit==1.31.0
-pandas==2.1.4  # veya >=2.0.0
-numpy==1.26.0  # veya >=1.24.0
+pandas>=2.0.0
+numpy>=1.24.0
 plotly==5.18.0
 
 # ============================
@@ -17,8 +17,8 @@ scipy==1.11.4
 # UTILITIES
 # ============================
 python-dateutil==2.8.2
-pytz==2024.1  # güncellendi
-xlrd==2.0.1  # dikkat: xlrd artık .xlsx dosyalarını desteklemiyor
+pytz>=2023.3
+xlrd==2.0.1
 
 # ============================
 # VISUALIZATION
@@ -30,8 +30,3 @@ statsmodels==0.14.0
 # PERFORMANCE
 # ============================
 joblib==1.3.2
-
-# ============================
-# EK GEREKLİ PAKETLER
-# ============================
-setuptools==65.5.0  # distutils eksikliği için
