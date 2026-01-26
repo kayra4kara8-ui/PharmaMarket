@@ -1,33 +1,31 @@
-# Pharmaceutical Sales Analytics Dashboard
+# Pharmaceutical Market Intelligence Platform
 
-Enterprise-grade analytics platform for pharmaceutical market intelligence.
+Enterprise-grade analytics dashboard for pharmaceutical market intelligence and sales analytics.
 
-## Features
+## 🚀 Features
 
-- **🌍 Geographic Analysis**: Interactive world map with regional insights
-- **📈 Market Intelligence**: Manufacturer ranking and molecule analysis
-- **💰 Price Analytics**: Price positioning and trend analysis
-- **📊 Advanced Insights**: Market concentration metrics and Pareto analysis
-- **🔬 Portfolio Analysis**: Manufacturer portfolio efficiency
+### Core Capabilities
+- **Real-time Data Processing**: Handle large datasets (>1M records)
+- **Interactive Visualizations**: Professional-grade charts and maps
+- **Advanced Analytics**: Market share, growth, concentration metrics
+- **Geospatial Analysis**: Country and regional market intelligence
 
-## Installation
+### Professional Features
+- **Multi-tab Interface**: Organized analysis workflow
+- **Dynamic Filtering**: Real-time data filtering
+- **Export Functionality**: CSV, Excel, JSON export
+- **Responsive Design**: Mobile and desktop optimized
+- **Performance Optimized**: Caching and efficient processing
 
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run the app: `streamlit run app.py`
+## 📦 Installation
 
-## Data Format
+### Local Development
+```bash
+# Clone repository
+git clone [repository-url]
 
-Upload Excel or CSV files with the following structure:
+# Install dependencies
+pip install -r requirements.txt
 
-- Required columns: `Manufacturer`, `Molecule`, `Country`, `Region`
-- MAT Period columns: `MAT Q4 2023 USD MNF`, `MAT Q4 2023 Standard Units`, etc.
-- Optional columns: Various metadata columns
-
-## Deployment
-
-The app is configured for deployment on Streamlit Cloud. Simply connect your GitHub repository.
-
-## License
-
-Proprietary - For internal use only
+# Run application
+streamlit run app.py
