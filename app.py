@@ -1784,9 +1784,23 @@ class PharmaAnalyticsDashboard:
 # ==============================================================================
 # APPLICATION ENTRY POINT
 # ==============================================================================
+# ==============================================================================
+# APPLICATION ENTRY POINT
+# ==============================================================================
 def main():
     """Main application entry point"""
     try:
+        # ✅ SET PAGE CONFIG HERE - AT THE VERY BEGINNING
+        st.set_page_config(
+            page_title='Pharma Intelligence Platform',
+            page_icon='💊',
+            layout='wide',
+            initial_sidebar_state='expanded'
+        )
+        
+        # Apply custom styling (page config'tan sonra)
+        apply_custom_styling()
+        
         # Create and run dashboard
         dashboard = PharmaAnalyticsDashboard()
         dashboard.run()
@@ -1810,3 +1824,4 @@ def main():
 # ==============================================================================
 if __name__ == "__main__":
     main()
+
