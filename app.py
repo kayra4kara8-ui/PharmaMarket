@@ -641,34 +641,43 @@ class DashboardComponents:
             if 'SU_AVG_PRICE' in df.columns:
                 metric_options.append(('💵 Avg Price', 'SU_AVG_PRICE'))
             
-            selected_metric = st.selectbox(
-                "📊 Select Metric",
-                [opt[1] for opt in metric_options],
-                format_func=lambda x: dict(metric_options)[x],
-                index=0 if metric_options else 0
-            )
+            if metric_options:
+                selected_metric = st.selectbox(
+                    "📊 Select Metric",
+                    [opt[1] for opt in metric_options],
+                    format_func=lambda x: dict(metric_options)[x],
+                    index=0
+                )
+            else:
+                selected_metric = None
             
             st.markdown("---")
             
             # Manufacturer filter
             if 'MANUFACTURER' in df.columns:
                 manufacturers = sorted(df['MANUFACTURER'].dropna().unique())
-                selected_mfgs = st.multiselect(
-                    "🏭 Filter Manufacturers",
-                    manufacturers,
-                    default=manufacturers[:5] if len(manufacturers) > 5 else manufacturers
-                )
+                if len(manufacturers) > 0:
+                    selected_mfgs = st.multiselect(
+                        "🏭 Filter Manufacturers",
+                        manufacturers,
+                        default=None
+                    )
+                else:
+                    selected_mfgs = None
             else:
                 selected_mfgs = None
             
             # Molecule filter
             if 'MOLECULE' in df.columns:
                 molecules = sorted(df['MOLECULE'].dropna().unique())
-                selected_mols = st.multiselect(
-                    "🧪 Filter Molecules",
-                    molecules,
-                    default=molecules[:5] if len(molecules) > 5 else molecules
-                )
+                if len(molecules) > 0:
+                    selected_mols = st.multiselect(
+                        "🧪 Filter Molecules",
+                        molecules,
+                        default=None
+                    )
+                else:
+                    selected_mols = None
             else:
                 selected_mols = None
             
@@ -700,7 +709,7 @@ class DashboardComponents:
         st.markdown("#### 📊 Dataset Info")
         
         info_html = """
-        <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 8px;">
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 8px; color: white;">
         """
         
         info_html += f'<p style="margin: 0.3rem 0;"><strong>Records:</strong> {len(df):,}</p>'
@@ -730,29 +739,28 @@ class DashboardComponents:
     @staticmethod
     def _export_data(df):
         """Export data functionality"""
-        export_format = st.selectbox(
-            "Select format",
-            ["Excel", "CSV"]
+        st.info("Click the download button below to export your data")
+        
+        # CSV Export
+        csv_data = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name=f"pharma_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
         )
         
-        if export_format == "Excel":
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False, sheet_name='Analysis')
-            st.download_button(
-                label="📥 Download Excel",
-                data=output.getvalue(),
-                file_name="pharma_analysis.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        elif export_format == "CSV":
-            csv_data = df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Download CSV",
-                data=csv_data,
-                file_name="pharma_analysis.csv",
-                mime="text/csv"
-            )
+        # Excel Export
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Analysis')
+        
+        st.download_button(
+            label="📥 Download Excel",
+            data=output.getvalue(),
+            file_name=f"pharma_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
     
     @staticmethod
     def create_tabs():
@@ -891,11 +899,11 @@ class PharmaAnalyticsApp:
             filtered_df = filtered_df[filtered_df['PERIOD'] == filters['period']]
         
         # Apply manufacturer filter
-        if filters['manufacturers']:
+        if filters['manufacturers'] and len(filters['manufacturers']) > 0:
             filtered_df = filtered_df[filtered_df['MANUFACTURER'].isin(filters['manufacturers'])]
         
         # Apply molecule filter
-        if filters['molecules']:
+        if filters['molecules'] and len(filters['molecules']) > 0:
             filtered_df = filtered_df[filtered_df['MOLECULE'].isin(filters['molecules'])]
         
         return filtered_df
@@ -1109,16 +1117,17 @@ class PharmaAnalyticsApp:
                 # Price distribution
                 price_data = df[df['SU_AVG_PRICE'] > 0]
                 
-                fig = px.histogram(
-                    price_data,
-                    x='SU_AVG_PRICE',
-                    nbins=50,
-                    title="Price Distribution",
-                    labels={'SU_AVG_PRICE': 'Average Price'}
-                )
-                
-                fig.update_layout(height=400)
-                st.plotly_chart(fig, use_container_width=True)
+                if len(price_data) > 0:
+                    fig = px.histogram(
+                        price_data,
+                        x='SU_AVG_PRICE',
+                        nbins=50,
+                        title="Price Distribution",
+                        labels={'SU_AVG_PRICE': 'Average Price'}
+                    )
+                    
+                    fig.update_layout(height=400)
+                    st.plotly_chart(fig, use_container_width=True)
             
             with col2:
                 # Price by manufacturer
@@ -1151,9 +1160,17 @@ class PharmaAnalyticsApp:
             height=500
         )
         
-        # Export options
-        st.markdown("---")
-        self.components._export_data(df)
+        # Data statistics
+        st.markdown("### 📊 Data Statistics")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("**Column Types**")
+            st.write(df.dtypes)
+        
+        with col2:
+            st.write("**Missing Values**")
+            st.write(df.isnull().sum())
 
 # ==============================================================================
 # 8. APPLICATION ENTRY POINT
