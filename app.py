@@ -72,6 +72,13 @@ st.markdown("""
     .trend-up { color: #10B981; }
     .trend-down { color: #EF4444; }
     .trend-neutral { color: #6B7280; }
+    .data-card {
+        background: #F9FAFB;
+        border-radius: 10px;
+        padding: 1rem;
+        border: 1px solid #E5E7EB;
+        margin-bottom: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -79,75 +86,122 @@ st.markdown("""
 # ANALİZ FONKSİYONLARI - SONUÇ ODAKLI
 # ============================================================================
 
+def normalize_column_names(df):
+    """Kolon isimlerini normalize et ve standartlaştır"""
+    if df.empty:
+        return df
+    
+    column_mapping = {}
+    for col in df.columns:
+        col_str = str(col).strip().upper()
+        
+        # Anahtar kelimelere göre eşleştirme
+        if 'INTERNATIONAL PRODUCT' in col_str or 'PRODUCT' in col_str:
+            column_mapping[col] = 'PRODUCT'
+        elif 'MOLECULE' in col_str:
+            column_mapping[col] = 'MOLECULE'
+        elif 'MANUFACTURER' in col_str:
+            column_mapping[col] = 'MANUFACTURER'
+        elif 'SPECIALTY' in col_str:
+            column_mapping[col] = 'SPECIALTY_PRODUCT'
+        elif '2024' in col_str and ('USD' in col_str or 'MNF' in col_str):
+            if '2024' in col_str and 'USD' in col_str:
+                column_mapping[col] = 'SALES_2024'
+            elif '2024' in col_str and 'UNITS' in col_str:
+                column_mapping[col] = 'UNITS_2024'
+            elif '2024' in col_str and 'PRICE' in col_str:
+                column_mapping[col] = 'PRICE_2024'
+        elif '2023' in col_str and ('USD' in col_str or 'MNF' in col_str):
+            if '2023' in col_str and 'USD' in col_str:
+                column_mapping[col] = 'SALES_2023'
+            elif '2023' in col_str and 'UNITS' in col_str:
+                column_mapping[col] = 'UNITS_2023'
+            elif '2023' in col_str and 'PRICE' in col_str:
+                column_mapping[col] = 'PRICE_2023'
+        elif '2022' in col_str and ('USD' in col_str or 'MNF' in col_str):
+            if '2022' in col_str and 'USD' in col_str:
+                column_mapping[col] = 'SALES_2022'
+    
+    # Kolon isimlerini güncelle
+    df = df.rename(columns=column_mapping)
+    
+    # Eksik kolonları kontrol et
+    required_cols = ['PRODUCT', 'MOLECULE', 'MANUFACTURER', 'SALES_2024']
+    for col in required_cols:
+        if col not in df.columns:
+            # Benzer kolon bulmaya çalış
+            for df_col in df.columns:
+                if col.split('_')[0].lower() in df_col.lower():
+                    df = df.rename(columns={df_col: col})
+                    break
+    
+    return df
+
 def calculate_market_share(df):
     """Pazar payı analizi"""
-    if df.empty:
-        return pd.DataFrame()
+    if df.empty or 'SALES_2024' not in df.columns:
+        return df
     
-    # SATIŞ DEĞERİNE GÖRE PAZAR PAYI
-    if 'MAT Q3 2024 USD MNF' in df.columns:
-        market_total = df['MAT Q3 2024 USD MNF'].sum()
-        df['MARKET_SHARE_%'] = (df['MAT Q3 2024 USD MNF'] / market_total * 100).round(2)
+    df = df.copy()
     
-    # STANDART ÜNİTE BAZINDA PAZAR PAYI
-    if 'MAT Q3 2024 STANDARD UNITS' in df.columns:
-        unit_total = df['MAT Q3 2024 STANDARD UNITS'].sum()
-        df['UNIT_SHARE_%'] = (df['MAT Q3 2024 STANDARD UNITS'] / unit_total * 100).round(2)
+    try:
+        # Toplam satış
+        total_sales = df['SALES_2024'].sum()
+        if total_sales > 0:
+            df['MARKET_SHARE_%'] = (df['SALES_2024'] / total_sales * 100).round(2)
+        else:
+            df['MARKET_SHARE_%'] = 0
+    except:
+        df['MARKET_SHARE_%'] = 0
     
     return df
 
 def calculate_growth_rates(df):
     """Büyüme oranları analizi"""
     if df.empty:
-        return df
+        return pd.DataFrame()
     
     growth_data = []
     
     for idx, row in df.iterrows():
         try:
             # 2023-2024 büyüme oranı
-            if ('MAT Q3 2023 USD MNF' in df.columns and 
-                'MAT Q3 2024 USD MNF' in df.columns and
-                pd.notna(row['MAT Q3 2023 USD MNF']) and 
-                row['MAT Q3 2023 USD MNF'] != 0):
-                
-                sales_growth = ((row['MAT Q3 2024 USD MNF'] - row['MAT Q3 2023 USD MNF']) / 
-                               row['MAT Q3 2023 USD MNF'] * 100)
+            sales_2024 = row.get('SALES_2024', 0)
+            sales_2023 = row.get('SALES_2023', 0)
+            
+            if pd.notna(sales_2023) and sales_2023 != 0:
+                sales_growth = ((sales_2024 - sales_2023) / sales_2023 * 100)
             else:
                 sales_growth = np.nan
             
             # Volume büyüme
-            if ('MAT Q3 2023 STANDARD UNITS' in df.columns and 
-                'MAT Q3 2024 STANDARD UNITS' in df.columns and
-                pd.notna(row['MAT Q3 2023 STANDARD UNITS']) and 
-                row['MAT Q3 2023 STANDARD UNITS'] != 0):
-                
-                volume_growth = ((row['MAT Q3 2024 STANDARD UNITS'] - row['MAT Q3 2023 STANDARD UNITS']) / 
-                                row['MAT Q3 2023 STANDARD UNITS'] * 100)
+            units_2024 = row.get('UNITS_2024', 0)
+            units_2023 = row.get('UNITS_2023', 0)
+            
+            if pd.notna(units_2023) and units_2023 != 0:
+                volume_growth = ((units_2024 - units_2023) / units_2023 * 100)
             else:
                 volume_growth = np.nan
             
             # Fiyat değişimi
-            if ('MAT Q3 2023 SU AVG PRICE USD MNF' in df.columns and 
-                'MAT Q3 2024 SU AVG PRICE USD MNF' in df.columns and
-                pd.notna(row['MAT Q3 2023 SU AVG PRICE USD MNF']) and 
-                row['MAT Q3 2023 SU AVG PRICE USD MNF'] != 0):
-                
-                price_change = ((row['MAT Q3 2024 SU AVG PRICE USD MNF'] - row['MAT Q3 2023 SU AVG PRICE USD MNF']) / 
-                               row['MAT Q3 2023 SU AVG PRICE USD MNF'] * 100)
+            price_2024 = row.get('PRICE_2024', 0)
+            price_2023 = row.get('PRICE_2023', 0)
+            
+            if pd.notna(price_2023) and price_2023 != 0:
+                price_change = ((price_2024 - price_2023) / price_2023 * 100)
             else:
                 price_change = np.nan
             
             growth_data.append({
-                'PRODUCT': row.get('INTERNATIONAL PRODUCT', ''),
+                'PRODUCT': row.get('PRODUCT', ''),
                 'MOLECULE': row.get('MOLECULE', ''),
                 'MANUFACTURER': row.get('MANUFACTURER', ''),
                 'SALES_GROWTH_%': round(sales_growth, 1) if not pd.isna(sales_growth) else np.nan,
                 'VOLUME_GROWTH_%': round(volume_growth, 1) if not pd.isna(volume_growth) else np.nan,
                 'PRICE_CHANGE_%': round(price_change, 1) if not pd.isna(price_change) else np.nan,
-                'SALES_2024': row.get('MAT Q3 2024 USD MNF', 0),
-                'SALES_2023': row.get('MAT Q3 2023 USD MNF', 0),
-                'VOLUME_2024': row.get('MAT Q3 2024 STANDARD UNITS', 0)
+                'SALES_2024': sales_2024,
+                'SALES_2023': sales_2023,
+                'VOLUME_2024': units_2024
             })
             
         except:
@@ -161,48 +215,58 @@ def analyze_molecule_performance(df):
         return pd.DataFrame()
     
     molecule_stats = []
+    molecules = df['MOLECULE'].dropna().unique()
     
-    for molecule in df['MOLECULE'].unique():
-        molecule_df = df[df['MOLECULE'] == molecule]
-        
-        # Toplam satış
-        total_sales_2024 = molecule_df['MAT Q3 2024 USD MNF'].sum() if 'MAT Q3 2024 USD MNF' in df.columns else 0
-        total_sales_2023 = molecule_df['MAT Q3 2023 USD MNF'].sum() if 'MAT Q3 2023 USD MNF' in df.columns else 0
-        
-        # Büyüme
-        if total_sales_2023 > 0:
-            growth_rate = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
-        else:
-            growth_rate = 0 if total_sales_2024 > 0 else np.nan
-        
-        # Üretici sayısı
-        manufacturers = molecule_df['MANUFACTURER'].nunique()
-        
-        # Ürün sayısı
-        products = molecule_df['INTERNATIONAL PRODUCT'].nunique()
-        
-        # Ortalama fiyat
-        avg_price = molecule_df['MAT Q3 2024 SU AVG PRICE USD MNF'].mean() if 'MAT Q3 2024 SU AVG PRICE USD MNF' in df.columns else 0
-        
-        molecule_stats.append({
-            'MOLECULE': molecule,
-            'TOTAL_SALES_2024': total_sales_2024,
-            'TOTAL_SALES_2023': total_sales_2023,
-            'GROWTH_%': round(growth_rate, 1) if not pd.isna(growth_rate) else 0,
-            'MANUFACTURERS': manufacturers,
-            'PRODUCTS': products,
-            'AVG_PRICE': round(avg_price, 2),
-            'MARKET_SHARE_%': 0  # Sonradan hesaplanacak
-        })
+    for molecule in molecules[:50]:  # İlk 50 molekülü analiz et
+        try:
+            molecule_df = df[df['MOLECULE'] == molecule]
+            
+            # Toplam satış
+            total_sales_2024 = molecule_df['SALES_2024'].sum() if 'SALES_2024' in df.columns else 0
+            total_sales_2023 = molecule_df['SALES_2023'].sum() if 'SALES_2023' in df.columns else 0
+            
+            # Büyüme
+            if total_sales_2023 > 0:
+                growth_rate = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
+            else:
+                growth_rate = 0 if total_sales_2024 > 0 else np.nan
+            
+            # Üretici sayısı
+            manufacturers = molecule_df['MANUFACTURER'].nunique() if 'MANUFACTURER' in molecule_df.columns else 0
+            
+            # Ürün sayısı
+            products = molecule_df['PRODUCT'].nunique() if 'PRODUCT' in molecule_df.columns else 0
+            
+            # Ortalama fiyat
+            avg_price = molecule_df['PRICE_2024'].mean() if 'PRICE_2024' in molecule_df.columns else 0
+            
+            molecule_stats.append({
+                'MOLECULE': str(molecule)[:50],  # Uzun isimleri kısalt
+                'TOTAL_SALES_2024': total_sales_2024,
+                'TOTAL_SALES_2023': total_sales_2023,
+                'GROWTH_%': round(growth_rate, 1) if not pd.isna(growth_rate) else 0,
+                'MANUFACTURERS': manufacturers,
+                'PRODUCTS': products,
+                'AVG_PRICE': round(avg_price, 2) if not pd.isna(avg_price) else 0,
+                'MARKET_SHARE_%': 0  # Sonradan hesaplanacak
+            })
+        except:
+            continue
+    
+    if not molecule_stats:
+        return pd.DataFrame()
     
     result_df = pd.DataFrame(molecule_stats)
     
     # Pazar payı hesapla
     if 'TOTAL_SALES_2024' in result_df.columns:
         total_market = result_df['TOTAL_SALES_2024'].sum()
-        result_df['MARKET_SHARE_%'] = (result_df['TOTAL_SALES_2024'] / total_market * 100).round(2)
+        if total_market > 0:
+            result_df['MARKET_SHARE_%'] = (result_df['TOTAL_SALES_2024'] / total_market * 100).round(2)
+        else:
+            result_df['MARKET_SHARE_%'] = 0
     
-    return result_df.sort_values('TOTAL_SALES_2024', ascending=False)
+    return result_df.sort_values('TOTAL_SALES_2024', ascending=False).head(20)  # Top 20'yi göster
 
 def analyze_manufacturer_performance(df):
     """Üretici bazlı performans analizi"""
@@ -210,164 +274,211 @@ def analyze_manufacturer_performance(df):
         return pd.DataFrame()
     
     manufacturer_stats = []
+    manufacturers = df['MANUFACTURER'].dropna().unique()
     
-    for manufacturer in df['MANUFACTURER'].unique():
-        man_df = df[df['MANUFACTURER'] == manufacturer]
-        
-        # Satış verileri
-        total_sales_2024 = man_df['MAT Q3 2024 USD MNF'].sum() if 'MAT Q3 2024 USD MNF' in df.columns else 0
-        total_sales_2023 = man_df['MAT Q3 2023 USD MNF'].sum() if 'MAT Q3 2023 USD MNF' in df.columns else 0
-        
-        # Büyüme
-        if total_sales_2023 > 0:
-            growth_rate = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
-        else:
-            growth_rate = 0 if total_sales_2024 > 0 else np.nan
-        
-        # Portföy analizi
-        molecules = man_df['MOLECULE'].nunique()
-        products = man_df['INTERNATIONAL PRODUCT'].nunique()
-        
-        # Ortalama fiyat
-        avg_price = man_df['MAT Q3 2024 SU AVG PRICE USD MNF'].mean() if 'MAT Q3 2024 SU AVG PRICE USD MNF' in df.columns else 0
-        
-        # Specialty vs Non-specialty
-        specialty_sales = 0
-        if 'SPECIALTY PRODUCT' in df.columns:
-            specialty_sales = man_df[man_df['SPECIALTY PRODUCT'].str.contains('SPECIALTY', na=False)]['MAT Q3 2024 USD MNF'].sum()
-        
-        manufacturer_stats.append({
-            'MANUFACTURER': manufacturer,
-            'TOTAL_SALES_2024': total_sales_2024,
-            'TOTAL_SALES_2023': total_sales_2023,
-            'GROWTH_%': round(growth_rate, 1) if not pd.isna(growth_rate) else 0,
-            'MOLECULES': molecules,
-            'PRODUCTS': products,
-            'AVG_PRICE': round(avg_price, 2),
-            'SPECIALTY_SALES': specialty_sales,
-            'SPECIALTY_SHARE_%': (specialty_sales / total_sales_2024 * 100).round(2) if total_sales_2024 > 0 else 0
-        })
+    for manufacturer in manufacturers[:50]:  # İlk 50 üreticiyi analiz et
+        try:
+            man_df = df[df['MANUFACTURER'] == manufacturer]
+            
+            # Satış verileri
+            total_sales_2024 = man_df['SALES_2024'].sum() if 'SALES_2024' in man_df.columns else 0
+            total_sales_2023 = man_df['SALES_2023'].sum() if 'SALES_2023' in man_df.columns else 0
+            
+            # Büyüme
+            if total_sales_2023 > 0:
+                growth_rate = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
+            else:
+                growth_rate = 0 if total_sales_2024 > 0 else np.nan
+            
+            # Portföy analizi
+            molecules = man_df['MOLECULE'].nunique() if 'MOLECULE' in man_df.columns else 0
+            products = man_df['PRODUCT'].nunique() if 'PRODUCT' in man_df.columns else 0
+            
+            # Ortalama fiyat
+            avg_price = man_df['PRICE_2024'].mean() if 'PRICE_2024' in man_df.columns else 0
+            
+            # Specialty vs Non-specialty
+            specialty_sales = 0
+            if 'SPECIALTY_PRODUCT' in man_df.columns:
+                try:
+                    specialty_mask = man_df['SPECIALTY_PRODUCT'].astype(str).str.contains('SPECIALTY', case=False, na=False)
+                    if specialty_mask.any():
+                        specialty_sales = man_df.loc[specialty_mask, 'SALES_2024'].sum()
+                except:
+                    specialty_sales = 0
+            
+            manufacturer_stats.append({
+                'MANUFACTURER': str(manufacturer)[:50],  # Uzun isimleri kısalt
+                'TOTAL_SALES_2024': total_sales_2024,
+                'TOTAL_SALES_2023': total_sales_2023,
+                'GROWTH_%': round(growth_rate, 1) if not pd.isna(growth_rate) else 0,
+                'MOLECULES': molecules,
+                'PRODUCTS': products,
+                'AVG_PRICE': round(avg_price, 2) if not pd.isna(avg_price) else 0,
+                'SPECIALTY_SALES': specialty_sales,
+                'SPECIALTY_SHARE_%': (specialty_sales / total_sales_2024 * 100).round(2) if total_sales_2024 > 0 else 0
+            })
+        except:
+            continue
+    
+    if not manufacturer_stats:
+        return pd.DataFrame()
     
     result_df = pd.DataFrame(manufacturer_stats)
     
     # Pazar payı hesapla
     if 'TOTAL_SALES_2024' in result_df.columns:
         total_market = result_df['TOTAL_SALES_2024'].sum()
-        result_df['MARKET_SHARE_%'] = (result_df['TOTAL_SALES_2024'] / total_market * 100).round(2)
+        if total_market > 0:
+            result_df['MARKET_SHARE_%'] = (result_df['TOTAL_SALES_2024'] / total_market * 100).round(2)
+        else:
+            result_df['MARKET_SHARE_%'] = 0
     
-    return result_df.sort_values('TOTAL_SALES_2024', ascending=False)
+    return result_df.sort_values('TOTAL_SALES_2024', ascending=False).head(20)  # Top 20'yi göster
 
 def analyze_price_segments(df):
     """Fiyat segmentasyonu analizi"""
-    if df.empty or 'MAT Q3 2024 SU AVG PRICE USD MNF' not in df.columns:
+    if df.empty or 'PRICE_2024' not in df.columns:
         return pd.DataFrame()
     
-    # Fiyat aralıklarına göre segmentasyon
-    price_bins = [0, 10, 50, 100, 500, 1000, float('inf')]
-    price_labels = ['<10$', '10-50$', '50-100$', '100-500$', '500-1000$', '>1000$']
-    
-    df['PRICE_SEGMENT'] = pd.cut(df['MAT Q3 2024 SU AVG PRICE USD MNF'], 
-                                 bins=price_bins, labels=price_labels, right=False)
-    
-    segment_stats = []
-    for segment in price_labels:
-        segment_df = df[df['PRICE_SEGMENT'] == segment]
+    try:
+        # Fiyat aralıklarına göre segmentasyon
+        price_bins = [0, 10, 50, 100, 500, 1000, float('inf')]
+        price_labels = ['<10$', '10-50$', '50-100$', '100-500$', '500-1000$', '>1000$']
         
-        if len(segment_df) > 0:
-            total_sales = segment_df['MAT Q3 2024 USD MNF'].sum()
-            total_volume = segment_df['MAT Q3 2024 STANDARD UNITS'].sum() if 'MAT Q3 2024 STANDARD UNITS' in df.columns else 0
-            product_count = len(segment_df)
-            avg_price = segment_df['MAT Q3 2024 SU AVG PRICE USD MNF'].mean()
+        df_copy = df.copy()
+        df_copy['PRICE_SEGMENT'] = pd.cut(
+            df_copy['PRICE_2024'], 
+            bins=price_bins, 
+            labels=price_labels, 
+            right=False
+        )
+        
+        segment_stats = []
+        for segment in price_labels:
+            segment_df = df_copy[df_copy['PRICE_SEGMENT'] == segment]
             
-            segment_stats.append({
-                'PRICE_SEGMENT': segment,
-                'TOTAL_SALES': total_sales,
-                'TOTAL_VOLUME': total_volume,
-                'PRODUCT_COUNT': product_count,
-                'AVG_PRICE': round(avg_price, 2),
-                'SALES_PER_PRODUCT': round(total_sales / product_count, 2) if product_count > 0 else 0
-            })
-    
-    return pd.DataFrame(segment_stats)
+            if len(segment_df) > 0:
+                total_sales = segment_df['SALES_2024'].sum()
+                total_volume = segment_df['UNITS_2024'].sum() if 'UNITS_2024' in segment_df.columns else 0
+                product_count = len(segment_df)
+                avg_price = segment_df['PRICE_2024'].mean()
+                
+                segment_stats.append({
+                    'PRICE_SEGMENT': segment,
+                    'TOTAL_SALES': total_sales,
+                    'TOTAL_VOLUME': total_volume,
+                    'PRODUCT_COUNT': product_count,
+                    'AVG_PRICE': round(avg_price, 2),
+                    'SALES_PER_PRODUCT': round(total_sales / product_count, 2) if product_count > 0 else 0
+                })
+        
+        return pd.DataFrame(segment_stats)
+    except:
+        return pd.DataFrame()
 
 def analyze_specialty_vs_generic(df):
     """Specialty vs Non-specialty analizi"""
-    if df.empty or 'SPECIALTY PRODUCT' not in df.columns:
+    if df.empty or 'SPECIALTY_PRODUCT' not in df.columns:
         return pd.DataFrame()
     
-    df['PRODUCT_TYPE'] = df['SPECIALTY PRODUCT'].apply(
-        lambda x: 'SPECIALTY' if isinstance(x, str) and 'SPECIALTY' in x.upper() else 'NON-SPECIALTY'
-    )
-    
-    type_stats = []
-    
-    for p_type in ['SPECIALTY', 'NON-SPECIALTY']:
-        type_df = df[df['PRODUCT_TYPE'] == p_type]
+    try:
+        df_copy = df.copy()
         
-        total_sales_2024 = type_df['MAT Q3 2024 USD MNF'].sum()
-        total_sales_2023 = type_df['MAT Q3 2023 USD MNF'].sum() if 'MAT Q3 2023 USD MNF' in df.columns else 0
+        # Product type'ı belirle
+        def get_product_type(x):
+            if pd.isna(x):
+                return 'UNKNOWN'
+            x_str = str(x).upper()
+            if 'SPECIALTY' in x_str:
+                return 'SPECIALTY'
+            elif 'NON' in x_str or 'GENERIC' in x_str:
+                return 'NON-SPECIALTY'
+            else:
+                return 'UNKNOWN'
         
-        if total_sales_2023 > 0:
-            growth = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
-        else:
-            growth = 0
+        df_copy['PRODUCT_TYPE'] = df_copy['SPECIALTY_PRODUCT'].apply(get_product_type)
         
-        product_count = len(type_df)
-        avg_price = type_df['MAT Q3 2024 SU AVG PRICE USD MNF'].mean() if 'MAT Q3 2024 SU AVG PRICE USD MNF' in df.columns else 0
+        type_stats = []
         
-        type_stats.append({
-            'PRODUCT_TYPE': p_type,
-            'TOTAL_SALES_2024': total_sales_2024,
-            'MARKET_SHARE_%': (total_sales_2024 / df['MAT Q3 2024 USD MNF'].sum() * 100).round(2) if df['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-            'GROWTH_%': round(growth, 1),
-            'PRODUCT_COUNT': product_count,
-            'AVG_PRICE': round(avg_price, 2),
-            'SALES_PER_PRODUCT': round(total_sales_2024 / product_count, 2) if product_count > 0 else 0
-        })
-    
-    return pd.DataFrame(type_stats)
+        for p_type in ['SPECIALTY', 'NON-SPECIALTY', 'UNKNOWN']:
+            type_df = df_copy[df_copy['PRODUCT_TYPE'] == p_type]
+            
+            if len(type_df) > 0:
+                total_sales_2024 = type_df['SALES_2024'].sum()
+                total_sales_2023 = type_df['SALES_2023'].sum() if 'SALES_2023' in type_df.columns else 0
+                
+                if total_sales_2023 > 0:
+                    growth = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
+                else:
+                    growth = 0
+                
+                product_count = len(type_df)
+                avg_price = type_df['PRICE_2024'].mean() if 'PRICE_2024' in type_df.columns else 0
+                
+                total_market = df_copy['SALES_2024'].sum()
+                market_share = (total_sales_2024 / total_market * 100).round(2) if total_market > 0 else 0
+                
+                type_stats.append({
+                    'PRODUCT_TYPE': p_type,
+                    'TOTAL_SALES_2024': total_sales_2024,
+                    'MARKET_SHARE_%': market_share,
+                    'GROWTH_%': round(growth, 1),
+                    'PRODUCT_COUNT': product_count,
+                    'AVG_PRICE': round(avg_price, 2),
+                    'SALES_PER_PRODUCT': round(total_sales_2024 / product_count, 2) if product_count > 0 else 0
+                })
+        
+        return pd.DataFrame(type_stats)
+    except:
+        return pd.DataFrame()
 
 def identify_top_performers(df, n=10):
     """En iyi performans gösteren ürünleri belirle"""
-    if df.empty:
+    if df.empty or 'SALES_2024' not in df.columns:
         return pd.DataFrame()
     
-    # Satışa göre sırala
-    if 'MAT Q3 2024 USD MNF' in df.columns:
-        top_sales = df.nlargest(n, 'MAT Q3 2024 USD MNF')[['INTERNATIONAL PRODUCT', 'MOLECULE', 
-                                                          'MANUFACTURER', 'MAT Q3 2024 USD MNF',
-                                                          'MAT Q3 2023 USD MNF']].copy()
+    try:
+        # Satışa göre sırala
+        top_sales = df.nlargest(n, 'SALES_2024')[['PRODUCT', 'MOLECULE', 
+                                                  'MANUFACTURER', 'SALES_2024',
+                                                  'SALES_2023']].copy()
         
         # Büyüme oranı ekle
-        top_sales['GROWTH_%'] = ((top_sales['MAT Q3 2024 USD MNF'] - top_sales['MAT Q3 2023 USD MNF']) / 
-                                 top_sales['MAT Q3 2023 USD MNF'] * 100).round(1)
+        top_sales['GROWTH_%'] = 0
+        for idx, row in top_sales.iterrows():
+            if row['SALES_2023'] > 0:
+                growth = ((row['SALES_2024'] - row['SALES_2023']) / row['SALES_2023'] * 100)
+                top_sales.at[idx, 'GROWTH_%'] = round(growth, 1)
         
         return top_sales
-    
-    return pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
 def identify_emerging_products(df, min_sales=100000, min_growth=20):
-    """Yükselen ürünleri belirle (yüksek büyüme + belirli satış hacmi)"""
+    """Yükselen ürünleri belirle"""
     if df.empty:
         return pd.DataFrame()
     
-    required_cols = ['INTERNATIONAL PRODUCT', 'MOLECULE', 'MANUFACTURER',
-                     'MAT Q3 2024 USD MNF', 'MAT Q3 2023 USD MNF']
-    
-    if all(col in df.columns for col in required_cols):
-        # Satışı min_sales üzerinde ve büyümesi min_growth üzerinde olanlar
-        emerging = df[
-            (df['MAT Q3 2024 USD MNF'] >= min_sales) &
-            (df['MAT Q3 2023 USD MNF'] > 0)
-        ].copy()
+    try:
+        required_cols = ['PRODUCT', 'MOLECULE', 'MANUFACTURER', 'SALES_2024', 'SALES_2023']
         
-        if not emerging.empty:
-            emerging['GROWTH_%'] = ((emerging['MAT Q3 2024 USD MNF'] - emerging['MAT Q3 2023 USD MNF']) / 
-                                    emerging['MAT Q3 2023 USD MNF'] * 100)
+        if all(col in df.columns for col in required_cols):
+            # Satışı min_sales üzerinde ve büyümesi min_growth üzerinde olanlar
+            emerging = df[
+                (df['SALES_2024'] >= min_sales) &
+                (df['SALES_2023'] > 0)
+            ].copy()
             
-            emerging = emerging[emerging['GROWTH_%'] >= min_growth]
-            
-            return emerging[required_cols + ['GROWTH_%']].sort_values('GROWTH_%', ascending=False)
+            if not emerging.empty:
+                emerging['GROWTH_%'] = ((emerging['SALES_2024'] - emerging['SALES_2023']) / 
+                                        emerging['SALES_2023'] * 100)
+                
+                emerging = emerging[emerging['GROWTH_%'] >= min_growth]
+                
+                return emerging[required_cols + ['GROWTH_%']].sort_values('GROWTH_%', ascending=False)
+    except:
+        pass
     
     return pd.DataFrame()
 
@@ -380,165 +491,145 @@ def plot_market_share_treemap(df, title="Pazar Payı Dağılımı"):
     if df.empty or 'MARKET_SHARE_%' not in df.columns:
         return None
     
-    # En yüksek pazar payına sahip 20 ürün
-    top_products = df.nlargest(20, 'MARKET_SHARE_%')
-    
-    fig = px.treemap(
-        top_products,
-        path=[px.Constant("Pazar"), 'MANUFACTURER', 'MOLECULE', 'INTERNATIONAL PRODUCT'],
-        values='MARKET_SHARE_%',
-        color='MAT Q3 2024 USD MNF',
-        color_continuous_scale='RdBu',
-        title=title,
-        hover_data=['MAT Q3 2024 USD MNF', 'GROWTH_%'] if 'GROWTH_%' in df.columns else ['MAT Q3 2024 USD MNF']
-    )
-    
-    fig.update_layout(margin=dict(t=50, l=25, r=25, b=25))
-    return fig
-
-def plot_growth_matrix(df):
-    """Büyüme matrisi (BCG Matrix benzeri)"""
-    if df.empty or 'MARKET_SHARE_%' not in df.columns or 'GROWTH_%' not in df.columns:
+    try:
+        # En yüksek pazar payına sahip 20 ürün
+        top_products = df.nlargest(20, 'MARKET_SHARE_%').copy()
+        
+        # Eksik değerleri doldur
+        for col in ['MANUFACTURER', 'MOLECULE', 'PRODUCT']:
+            if col in top_products.columns:
+                top_products[col] = top_products[col].fillna('Bilinmeyen')
+        
+        fig = px.treemap(
+            top_products,
+            path=[px.Constant("Pazar"), 'MANUFACTURER', 'MOLECULE', 'PRODUCT'],
+            values='MARKET_SHARE_%',
+            color='SALES_2024',
+            color_continuous_scale='RdBu',
+            title=title,
+            hover_data=['SALES_2024']
+        )
+        
+        fig.update_layout(margin=dict(t=50, l=25, r=25, b=25))
+        return fig
+    except:
         return None
-    
-    fig = px.scatter(
-        df,
-        x='MARKET_SHARE_%',
-        y='GROWTH_%',
-        size='MAT Q3 2024 USD MNF',
-        color='MANUFACTURER',
-        hover_name='INTERNATIONAL PRODUCT',
-        title='Büyüme-Pazar Payı Matrisi',
-        labels={
-            'MARKET_SHARE_%': 'Pazar Payı (%)',
-            'GROWTH_%': 'Büyüme Oranı (%)'
-        },
-        size_max=60
-    )
-    
-    # Quadrant çizgileri
-    if 'MARKET_SHARE_%' in df.columns and 'GROWTH_%' in df.columns:
-        market_median = df['MARKET_SHARE_%'].median()
-        growth_median = df['GROWTH_%'].median()
-        
-        fig.add_hline(y=growth_median, line_dash="dash", line_color="gray")
-        fig.add_vline(x=market_median, line_dash="dash", line_color="gray")
-        
-        # Quadrant etiketleri
-        fig.add_annotation(x=market_median/2, y=growth_median*1.5, text="Yıldız", showarrow=False)
-        fig.add_annotation(x=market_median*1.5, y=growth_median*1.5, text="Lider", showarrow=False)
-        fig.add_annotation(x=market_median/2, y=growth_median/2, text="Soru İşareti", showarrow=False)
-        fig.add_annotation(x=market_median*1.5, y=growth_median/2, text="Nakit İneği", showarrow=False)
-    
-    fig.update_layout(height=600)
-    return fig
 
 def plot_sales_composition(df, group_by='MANUFACTURER'):
     """Satış kompozisyonu grafiği"""
     if df.empty or group_by not in df.columns:
         return None
     
-    if group_by == 'MANUFACTURER':
-        grouped = df.groupby('MANUFACTURER')['MAT Q3 2024 USD MNF'].sum().reset_index()
-        title = 'Üreticilere Göre Satış Dağılımı'
-    elif group_by == 'MOLECULE':
-        grouped = df.groupby('MOLECULE')['MAT Q3 2024 USD MNF'].sum().reset_index()
-        title = 'Moleküllere Göre Satış Dağılımı'
-    else:
+    try:
+        if group_by == 'MANUFACTURER':
+            grouped = df.groupby('MANUFACTURER')['SALES_2024'].sum().reset_index()
+            title = 'Üreticilere Göre Satış Dağılımı'
+        elif group_by == 'MOLECULE':
+            grouped = df.groupby('MOLECULE')['SALES_2024'].sum().reset_index()
+            title = 'Moleküllere Göre Satış Dağılımı'
+        else:
+            return None
+        
+        # En yüksek 10'u göster
+        top_grouped = grouped.nlargest(10, 'SALES_2024')
+        
+        fig = px.bar(
+            top_grouped,
+            x=group_by,
+            y='SALES_2024',
+            title=title,
+            color='SALES_2024',
+            color_continuous_scale='Viridis'
+        )
+        
+        fig.update_layout(
+            xaxis_title=group_by,
+            yaxis_title='Satış (USD)',
+            xaxis_tickangle=-45
+        )
+        
+        return fig
+    except:
         return None
-    
-    # En yüksek 10'u göster
-    top_grouped = grouped.nlargest(10, 'MAT Q3 2024 USD MNF')
-    
-    fig = px.bar(
-        top_grouped,
-        x=group_by,
-        y='MAT Q3 2024 USD MNF',
-        title=title,
-        color='MAT Q3 2024 USD MNF',
-        color_continuous_scale='Viridis'
-    )
-    
-    fig.update_layout(
-        xaxis_title=group_by,
-        yaxis_title='Satış (USD)',
-        xaxis_tickangle=-45
-    )
-    
-    return fig
 
 def plot_price_vs_volume(df):
     """Fiyat-Volume analizi"""
-    if df.empty or 'MAT Q3 2024 SU AVG PRICE USD MNF' not in df.columns or 'MAT Q3 2024 STANDARD UNITS' not in df.columns:
+    if df.empty or 'PRICE_2024' not in df.columns or 'UNITS_2024' not in df.columns:
         return None
     
-    fig = px.scatter(
-        df,
-        x='MAT Q3 2024 SU AVG PRICE USD MNF',
-        y='MAT Q3 2024 STANDARD UNITS',
-        size='MAT Q3 2024 USD MNF',
-        color='MANUFACTURER',
-        hover_name='INTERNATIONAL PRODUCT',
-        title='Fiyat-Volume Analizi',
-        log_x=True,
-        log_y=True,
-        labels={
-            'MAT Q3 2024 SU AVG PRICE USD MNF': 'Ortalama Fiyat (USD)',
-            'MAT Q3 2024 STANDARD UNITS': 'Satış Volume'
-        }
-    )
-    
-    fig.update_layout(height=500)
-    return fig
+    try:
+        fig = px.scatter(
+            df,
+            x='PRICE_2024',
+            y='UNITS_2024',
+            size='SALES_2024',
+            color='MANUFACTURER' if 'MANUFACTURER' in df.columns else None,
+            hover_name='PRODUCT' if 'PRODUCT' in df.columns else None,
+            title='Fiyat-Volume Analizi',
+            log_x=True,
+            log_y=True,
+            labels={
+                'PRICE_2024': 'Ortalama Fiyat (USD)',
+                'UNITS_2024': 'Satış Volume'
+            }
+        )
+        
+        fig.update_layout(height=500)
+        return fig
+    except:
+        return None
 
 def plot_time_series_growth(df):
     """Zaman serisi büyüme grafiği"""
     if df.empty:
         return None
     
-    # Yıllara göre toplam satış
-    years_data = {}
-    
-    for year in [2022, 2023, 2024]:
-        col_name = f'MAT Q3 {year} USD MNF'
-        if col_name in df.columns:
-            years_data[year] = df[col_name].sum()
-    
-    if len(years_data) < 2:
-        return None
-    
-    years_df = pd.DataFrame(list(years_data.items()), columns=['Yıl', 'Toplam Satış'])
-    
-    fig = px.line(
-        years_df,
-        x='Yıl',
-        y='Toplam Satış',
-        title='Yıllara Göre Toplam Satış Trendi',
-        markers=True
-    )
-    
-    # Büyüme yüzdelerini ekle
-    for i in range(1, len(years_df)):
-        prev = years_df.iloc[i-1]['Toplam Satış']
-        curr = years_df.iloc[i]['Toplam Satış']
-        growth = ((curr - prev) / prev * 100) if prev > 0 else 0
+    try:
+        # Yıllara göre toplam satış
+        years_data = {}
         
-        fig.add_annotation(
-            x=years_df.iloc[i]['Yıl'],
-            y=curr,
-            text=f"%{growth:.1f}",
-            showarrow=True,
-            arrowhead=1
+        for year in [2022, 2023, 2024]:
+            col_name = f'SALES_{year}'
+            if col_name in df.columns:
+                years_data[year] = df[col_name].sum()
+        
+        if len(years_data) < 2:
+            return None
+        
+        years_df = pd.DataFrame(list(years_data.items()), columns=['Yıl', 'Toplam Satış'])
+        
+        fig = px.line(
+            years_df,
+            x='Yıl',
+            y='Toplam Satış',
+            title='Yıllara Göre Toplam Satış Trendi',
+            markers=True
         )
-    
-    fig.update_layout(
-        xaxis_title="Yıl",
-        yaxis_title="Toplam Satış (USD)",
-        yaxis_tickprefix="$",
-        yaxis_tickformat=",.0f"
-    )
-    
-    return fig
+        
+        # Büyüme yüzdelerini ekle
+        for i in range(1, len(years_df)):
+            prev = years_df.iloc[i-1]['Toplam Satış']
+            curr = years_df.iloc[i]['Toplam Satış']
+            growth = ((curr - prev) / prev * 100) if prev > 0 else 0
+            
+            fig.add_annotation(
+                x=years_df.iloc[i]['Yıl'],
+                y=curr,
+                text=f"%{growth:.1f}",
+                showarrow=True,
+                arrowhead=1
+            )
+        
+        fig.update_layout(
+            xaxis_title="Yıl",
+            yaxis_title="Toplam Satış (USD)",
+            yaxis_tickprefix="$",
+            yaxis_tickformat=",.0f"
+        )
+        
+        return fig
+    except:
+        return None
 
 # ============================================================================
 # DASHBOARD ARAYÜZÜ
@@ -547,322 +638,371 @@ def plot_time_series_growth(df):
 def render_kpi_cards(df):
     """Ana KPI kartlarını render et"""
     if df.empty:
-        st.warning("Veri yüklenmedi. Lütfen Excel dosyası yükleyin.")
+        st.warning("📁 Veri yüklenmedi. Lütfen Excel dosyası yükleyin.")
         return
     
     st.markdown('<div class="section-header">📈 ANA PERFORMANS GÖSTERGELERİ</div>', unsafe_allow_html=True)
     
-    # KPI hesaplamaları
-    total_sales_2024 = df['MAT Q3 2024 USD MNF'].sum() if 'MAT Q3 2024 USD MNF' in df.columns else 0
-    total_sales_2023 = df['MAT Q3 2023 USD MNF'].sum() if 'MAT Q3 2023 USD MNF' in df.columns else 0
-    
-    if total_sales_2023 > 0:
-        sales_growth = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
-    else:
-        sales_growth = 0
-    
-    total_products = len(df)
-    total_molecules = df['MOLECULE'].nunique() if 'MOLECULE' in df.columns else 0
-    total_manufacturers = df['MANUFACTURER'].nunique() if 'MANUFACTURER' in df.columns else 0
-    
-    avg_price = df['MAT Q3 2024 SU AVG PRICE USD MNF'].mean() if 'MAT Q3 2024 SU AVG PRICE USD MNF' in df.columns else 0
-    
-    # 4 ana KPI
-    cols = st.columns(4)
-    
-    with cols[0]:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-value">${total_sales_2024:,.0f}</div>
-            <div class="kpi-label">TOPLAM PAZAR (2024)</div>
-            <div class="kpi-trend {'trend-up' if sales_growth > 0 else 'trend-down'}">
-                {'↗️' if sales_growth > 0 else '↘️'} %{sales_growth:.1f} vs 2023
+    try:
+        # KPI hesaplamaları
+        total_sales_2024 = df['SALES_2024'].sum() if 'SALES_2024' in df.columns else 0
+        total_sales_2023 = df['SALES_2023'].sum() if 'SALES_2023' in df.columns else 0
+        
+        if total_sales_2023 > 0:
+            sales_growth = ((total_sales_2024 - total_sales_2023) / total_sales_2023 * 100)
+        else:
+            sales_growth = 0
+        
+        total_products = len(df)
+        total_molecules = df['MOLECULE'].nunique() if 'MOLECULE' in df.columns else 0
+        total_manufacturers = df['MANUFACTURER'].nunique() if 'MANUFACTURER' in df.columns else 0
+        
+        avg_price = df['PRICE_2024'].mean() if 'PRICE_2024' in df.columns else 0
+        
+        # 4 ana KPI
+        cols = st.columns(4)
+        
+        with cols[0]:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">${total_sales_2024:,.0f}</div>
+                <div class="kpi-label">TOPLAM PAZAR (2024)</div>
+                <div class="kpi-trend {'trend-up' if sales_growth > 0 else 'trend-down'}">
+                    {'↗️' if sales_growth > 0 else '↘️'} %{sales_growth:.1f} vs 2023
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with cols[1]:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-value">{total_products}</div>
-            <div class="kpi-label">TOPLAM ÜRÜN</div>
-            <div class="kpi-trend trend-neutral">
-                {total_molecules} Molekül
+            """, unsafe_allow_html=True)
+        
+        with cols[1]:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{total_products}</div>
+                <div class="kpi-label">TOPLAM ÜRÜN</div>
+                <div class="kpi-trend trend-neutral">
+                    {total_molecules} Molekül
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with cols[2]:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-value">{total_manufacturers}</div>
-            <div class="kpi-label">ÜRETİCİ FİRMA</div>
-            <div class="kpi-trend trend-neutral">
-                Pazarda Aktif
+            """, unsafe_allow_html=True)
+        
+        with cols[2]:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">{total_manufacturers}</div>
+                <div class="kpi-label">ÜRETİCİ FİRMA</div>
+                <div class="kpi-trend trend-neutral">
+                    Pazarda Aktif
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with cols[3]:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-value">${avg_price:.2f}</div>
-            <div class="kpi-label">ORTALAMA FİYAT</div>
-            <div class="kpi-trend trend-neutral">
-                Standart Ünite Başına
+            """, unsafe_allow_html=True)
+        
+        with cols[3]:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-value">${avg_price:.2f}</div>
+                <div class="kpi-label">ORTALAMA FİYAT</div>
+                <div class="kpi-trend trend-neutral">
+                    Standart Ünite Başına
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+            
+    except Exception as e:
+        st.error(f"KPI hesaplama hatası: {str(e)}")
 
 def render_market_analysis(df):
     """Pazar analizi bölümü"""
     st.markdown('<div class="section-header">📊 PAZAR ANALİZİ</div>', unsafe_allow_html=True)
     
-    # Pazar payı analizi
-    df_with_share = calculate_market_share(df)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Pazar payı treemap
-        if not df_with_share.empty:
-            fig = plot_market_share_treemap(df_with_share)
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
+    try:
+        # Pazar payı analizi
+        df_with_share = calculate_market_share(df)
         
-        # Molekül performansı
-        molecule_perf = analyze_molecule_performance(df)
-        if not molecule_perf.empty:
+        col1, col2 = st.columns(2)
+        
+        with col1:
             st.markdown("**🏆 TOP 5 MOLEKÜL**")
-            top_molecules = molecule_perf.head(5)
-            for _, row in top_molecules.iterrows():
-                cols = st.columns([3, 2, 2])
-                with cols[0]:
-                    st.text(row['MOLECULE'])
-                with cols[1]:
-                    st.text(f"%{row['MARKET_SHARE_%']}")
-                with cols[2]:
-                    growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
-                    st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]}</span>', unsafe_allow_html=True)
-    
-    with col2:
-        # Üretici performansı
-        manufacturer_perf = analyze_manufacturer_performance(df)
-        if not manufacturer_perf.empty:
-            st.markdown("**🏭 TOP 5 ÜRETİCİ**")
-            top_manufacturers = manufacturer_perf.head(5)
             
-            for _, row in top_manufacturers.iterrows():
-                cols = st.columns([3, 2, 2])
-                with cols[0]:
-                    st.text(row['MANUFACTURER'][:20])
-                with cols[1]:
-                    st.text(f"%{row['MARKET_SHARE_%']}")
-                with cols[2]:
-                    growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
-                    st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]}</span>', unsafe_allow_html=True)
+            # Molekül performansı
+            molecule_perf = analyze_molecule_performance(df)
+            if not molecule_perf.empty:
+                top_molecules = molecule_perf.head(5)
+                
+                for _, row in top_molecules.iterrows():
+                    cols = st.columns([3, 2, 2])
+                    with cols[0]:
+                        st.text(row['MOLECULE'][:20])
+                    with cols[1]:
+                        st.text(f"%{row['MARKET_SHARE_%']:.1f}")
+                    with cols[2]:
+                        growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
+                        st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]:.1f}</span>', unsafe_allow_html=True)
+            else:
+                st.info("Molekül analizi yapılamadı")
+            
+            # Pazar payı treemap
+            if not df_with_share.empty:
+                fig = plot_market_share_treemap(df_with_share)
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
         
-        # Specialty vs Generic
-        type_analysis = analyze_specialty_vs_generic(df)
-        if not type_analysis.empty:
-            st.markdown("**💊 ÜRÜN TİPİ DAĞILIMI**")
-            for _, row in type_analysis.iterrows():
-                cols = st.columns([3, 3, 2])
-                with cols[0]:
-                    st.text(row['PRODUCT_TYPE'])
-                with cols[1]:
-                    st.text(f"%{row['MARKET_SHARE_%']}")
-                with cols[2]:
-                    growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
-                    st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]}</span>', unsafe_allow_html=True)
+        with col2:
+            st.markdown("**🏭 TOP 5 ÜRETİCİ**")
+            
+            # Üretici performansı
+            manufacturer_perf = analyze_manufacturer_performance(df)
+            if not manufacturer_perf.empty:
+                top_manufacturers = manufacturer_perf.head(5)
+                
+                for _, row in top_manufacturers.iterrows():
+                    cols = st.columns([3, 2, 2])
+                    with cols[0]:
+                        st.text(row['MANUFACTURER'][:20])
+                    with cols[1]:
+                        st.text(f"%{row['MARKET_SHARE_%']:.1f}")
+                    with cols[2]:
+                        growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
+                        st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]:.1f}</span>', unsafe_allow_html=True)
+            else:
+                st.info("Üretici analizi yapılamadı")
+            
+            # Specialty vs Generic
+            type_analysis = analyze_specialty_vs_generic(df)
+            if not type_analysis.empty:
+                st.markdown("**💊 ÜRÜN TİPİ DAĞILIMI**")
+                for _, row in type_analysis.iterrows():
+                    if row['PRODUCT_TYPE'] != 'UNKNOWN':
+                        cols = st.columns([3, 3, 2])
+                        with cols[0]:
+                            st.text(row['PRODUCT_TYPE'])
+                        with cols[1]:
+                            st.text(f"%{row['MARKET_SHARE_%']:.1f}")
+                        with cols[2]:
+                            growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
+                            st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]:.1f}</span>', unsafe_allow_html=True)
+    
+    except Exception as e:
+        st.error(f"Pazar analizi hatası: {str(e)}")
 
 def render_growth_analysis(df):
     """Büyüme analizi bölümü"""
     st.markdown('<div class="section-header">🚀 BÜYÜME ANALİZİ</div>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Zaman serisi büyüme
-        fig = plot_time_series_growth(df)
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
+    try:
+        col1, col2 = st.columns(2)
         
-        # En hızlı büyüyen ürünler
-        growth_df = calculate_growth_rates(df)
-        if not growth_df.empty:
-            fastest_growing = growth_df.nlargest(5, 'SALES_GROWTH_%')
-            st.markdown("**⚡ EN HIZLI BÜYÜYEN ÜRÜNLER**")
-            
-            for _, row in fastest_growing.iterrows():
-                if pd.notna(row['SALES_GROWTH_%']):
-                    cols = st.columns([4, 3])
-                    with cols[0]:
-                        st.text(row['PRODUCT'][:25])
-                    with cols[1]:
-                        st.markdown(f'<span class="trend-up">↗ %{row["SALES_GROWTH_%"]:.0f}</span>', unsafe_allow_html=True)
-    
-    with col2:
-        # Büyüme matrisi
-        growth_df = calculate_growth_rates(df)
-        if not growth_df.empty and 'GROWTH_%' in df.columns:
-            fig = plot_growth_matrix(df)
+        with col1:
+            # Zaman serisi büyüme
+            fig = plot_time_series_growth(df)
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
-        
-        # Yükselen ürünler
-        emerging = identify_emerging_products(df, min_sales=100000, min_growth=50)
-        if not emerging.empty:
-            st.markdown("**🌟 YÜKSELEN ÜRÜNLER**")
+            else:
+                st.info("Zaman serisi verisi bulunamadı")
             
-            for _, row in emerging.head(3).iterrows():
-                cols = st.columns([4, 3])
-                with cols[0]:
-                    st.text(row['INTERNATIONAL PRODUCT'][:25])
-                with cols[1]:
-                    st.markdown(f'<span class="trend-up">🚀 %{row["GROWTH_%"]:.0f}</span>', unsafe_allow_html=True)
+            # En hızlı büyüyen ürünler
+            growth_df = calculate_growth_rates(df)
+            if not growth_df.empty and 'SALES_GROWTH_%' in growth_df.columns:
+                fastest_growing = growth_df.dropna(subset=['SALES_GROWTH_%']).nlargest(5, 'SALES_GROWTH_%')
+                if not fastest_growing.empty:
+                    st.markdown("**⚡ EN HIZLI BÜYÜYEN ÜRÜNLER**")
+                    
+                    for _, row in fastest_growing.iterrows():
+                        if pd.notna(row['SALES_GROWTH_%']):
+                            cols = st.columns([4, 3])
+                            with cols[0]:
+                                product_name = str(row.get('PRODUCT', ''))[:25]
+                                st.text(product_name)
+                            with cols[1]:
+                                st.markdown(f'<span class="trend-up">↗ %{row["SALES_GROWTH_%"]:.0f}</span>', unsafe_allow_html=True)
+        
+        with col2:
+            # Satış kompozisyonu
+            fig = plot_sales_composition(df, group_by='MANUFACTURER')
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Satış kompozisyon grafiği oluşturulamadı")
+            
+            # Yükselen ürünler
+            emerging = identify_emerging_products(df, min_sales=100000, min_growth=50)
+            if not emerging.empty:
+                st.markdown("**🌟 YÜKSELEN ÜRÜNLER**")
+                
+                for _, row in emerging.head(3).iterrows():
+                    cols = st.columns([4, 3])
+                    with cols[0]:
+                        product_name = str(row.get('PRODUCT', ''))[:25]
+                        st.text(product_name)
+                    with cols[1]:
+                        st.markdown(f'<span class="trend-up">🚀 %{row["GROWTH_%"]:.0f}</span>', unsafe_allow_html=True)
+    
+    except Exception as e:
+        st.error(f"Büyüme analizi hatası: {str(e)}")
 
 def render_price_analysis(df):
     """Fiyat analizi bölümü"""
     st.markdown('<div class="section-header">💰 FİYAT ANALİZİ</div>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Fiyat-Volume analizi
-        fig = plot_price_vs_volume(df)
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
+    try:
+        col1, col2 = st.columns(2)
         
-        # Fiyat segmentasyonu
-        price_segments = analyze_price_segments(df)
-        if not price_segments.empty:
-            st.markdown("**📊 FİYAT SEGMENTLERİ**")
-            for _, row in price_segments.iterrows():
-                cols = st.columns([2, 3, 2])
-                with cols[0]:
-                    st.text(row['PRICE_SEGMENT'])
-                with cols[1]:
-                    st.text(f"${row['TOTAL_SALES']:,.0f}")
-                with cols[2]:
-                    st.text(f"{row['PRODUCT_COUNT']} ürün")
-    
-    with col2:
-        # Satış kompozisyonu
-        fig = plot_sales_composition(df, group_by='MANUFACTURER')
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-        
-        # En pahalı ürünler
-        if 'MAT Q3 2024 SU AVG PRICE USD MNF' in df.columns:
-            expensive_products = df.nlargest(5, 'MAT Q3 2024 SU AVG PRICE USD MNF')
-            st.markdown("**💎 EN PAHALI ÜRÜNLER**")
+        with col1:
+            # Fiyat-Volume analizi
+            fig = plot_price_vs_volume(df)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Fiyat-Volume analizi için veri bulunamadı")
             
-            for _, row in expensive_products.iterrows():
-                cols = st.columns([4, 3])
-                with cols[0]:
-                    st.text(row['INTERNATIONAL PRODUCT'][:25])
-                with cols[1]:
-                    st.text(f"${row['MAT Q3 2024 SU AVG PRICE USD MNF']:,.2f}")
+            # Fiyat segmentasyonu
+            price_segments = analyze_price_segments(df)
+            if not price_segments.empty:
+                st.markdown("**📊 FİYAT SEGMENTLERİ**")
+                for _, row in price_segments.iterrows():
+                    cols = st.columns([2, 3, 2])
+                    with cols[0]:
+                        st.text(row['PRICE_SEGMENT'])
+                    with cols[1]:
+                        st.text(f"${row['TOTAL_SALES']:,.0f}")
+                    with cols[2]:
+                        st.text(f"{int(row['PRODUCT_COUNT'])} ürün")
+        
+        with col2:
+            # Molekül bazlı satış
+            fig = plot_sales_composition(df, group_by='MOLECULE')
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # En pahalı ürünler
+            if 'PRICE_2024' in df.columns:
+                expensive_products = df.dropna(subset=['PRICE_2024']).nlargest(5, 'PRICE_2024')
+                if not expensive_products.empty:
+                    st.markdown("**💎 EN PAHALI ÜRÜNLER**")
+                    
+                    for _, row in expensive_products.iterrows():
+                        cols = st.columns([4, 3])
+                        with cols[0]:
+                            product_name = str(row.get('PRODUCT', ''))[:25]
+                            st.text(product_name)
+                        with cols[1]:
+                            st.text(f"${row['PRICE_2024']:,.2f}")
+    
+    except Exception as e:
+        st.error(f"Fiyat analizi hatası: {str(e)}")
 
 def render_competitive_analysis(df):
     """Rekabet analizi bölümü"""
     st.markdown('<div class="section-header">🥊 REKABET ANALİZİ</div>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    try:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Top ürünler
+            top_products = identify_top_performers(df, n=10)
+            if not top_products.empty:
+                st.markdown("**🏆 TOP 10 ÜRÜN**")
+                
+                for idx, row in top_products.iterrows():
+                    cols = st.columns([4, 3, 2])
+                    with cols[0]:
+                        product_name = str(row.get('PRODUCT', ''))[:20]
+                        st.text(product_name)
+                    with cols[1]:
+                        st.text(f"${row['SALES_2024']:,.0f}")
+                    with cols[2]:
+                        growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
+                        st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]:.1f}</span>', unsafe_allow_html=True)
+            else:
+                st.info("Top ürün analizi yapılamadı")
+        
+        with col2:
+            # Molekül bazlı rekabet
+            molecule_perf = analyze_molecule_performance(df)
+            if not molecule_perf.empty:
+                # En rekabetçi moleküller (çok üreticili)
+                competitive_molecules = molecule_perf.nlargest(5, 'MANUFACTURERS')
+                st.markdown("**⚔️ REKABETÇİ MOLEKÜLLER**")
+                
+                for _, row in competitive_molecules.iterrows():
+                    cols = st.columns([4, 2, 2])
+                    with cols[0]:
+                        st.text(row['MOLECULE'][:20])
+                    with cols[1]:
+                        st.text(f"{int(row['MANUFACTURERS'])} firma")
+                    with cols[2]:
+                        st.text(f"%{row['MARKET_SHARE_%']:.1f}")
     
-    with col1:
-        # Top ürünler
-        top_products = identify_top_performers(df, n=10)
-        if not top_products.empty:
-            st.markdown("**🏆 TOP 10 ÜRÜN**")
-            
-            for idx, row in top_products.iterrows():
-                cols = st.columns([4, 3, 2])
-                with cols[0]:
-                    st.text(row['INTERNATIONAL PRODUCT'][:20])
-                with cols[1]:
-                    st.text(f"${row['MAT Q3 2024 USD MNF']:,.0f}")
-                with cols[2]:
-                    growth_class = "trend-up" if row['GROWTH_%'] > 0 else "trend-down"
-                    st.markdown(f'<span class="{growth_class}">%{row["GROWTH_%"]}</span>', unsafe_allow_html=True)
-    
-    with col2:
-        # Molekül bazlı rekabet
-        molecule_perf = analyze_molecule_performance(df)
-        if not molecule_perf.empty:
-            # En rekabetçi moleküller (çok üreticili)
-            competitive_molecules = molecule_perf.nlargest(5, 'MANUFACTURERS')
-            st.markdown("**⚔️ REKABETÇİ MOLEKÜLLER**")
-            
-            for _, row in competitive_molecules.iterrows():
-                cols = st.columns([4, 2, 2])
-                with cols[0]:
-                    st.text(row['MOLECULE'][:20])
-                with cols[1]:
-                    st.text(f"{row['MANUFACTURERS']} firma")
-                with cols[2]:
-                    st.text(f"%{row['MARKET_SHARE_%']}")
+    except Exception as e:
+        st.error(f"Rekabet analizi hatası: {str(e)}")
 
 def render_strategic_recommendations(df):
     """Stratejik öneriler bölümü"""
     st.markdown('<div class="section-header">🎯 STRATEJİK ÖNERİLER</div>', unsafe_allow_html=True)
     
-    recommendations = []
-    
-    # 1. Pazar payı analizi
-    df_with_share = calculate_market_share(df)
-    if not df_with_share.empty:
-        top_5_share = df_with_share['MARKET_SHARE_%'].nlargest(5).sum()
-        if top_5_share > 50:
-            recommendations.append({
-                'type': 'warning',
-                'title': 'Pazar Konsantrasyonu Yüksek',
-                'message': f'Top 5 ürün pazarın %{top_5_share:.0f}\'ini kontrol ediyor. Yeni ürün girişleri zor olabilir.'
-            })
-    
-    # 2. Büyüme analizi
-    growth_df = calculate_growth_rates(df)
-    if not growth_df.empty:
-        avg_growth = growth_df['SALES_GROWTH_%'].mean()
-        if avg_growth > 20:
+    try:
+        recommendations = []
+        
+        # 1. Pazar büyüklüğü analizi
+        total_sales_2024 = df['SALES_2024'].sum() if 'SALES_2024' in df.columns else 0
+        
+        if total_sales_2024 > 100000000:  # 100M USD üzeri
             recommendations.append({
                 'type': 'success',
-                'title': 'Pazar Dinamik ve Büyüyor',
-                'message': f'Ortalama büyüme oranı %{avg_growth:.0f}. Pazar genişleme fırsatları mevcut.'
+                'title': 'Büyük Pazar Fırsatı',
+                'message': f'Pazar büyüklüğü ${total_sales_2024:,.0f}. Yatırım için uygun büyüklükte bir pazar.'
             })
-    
-    # 3. Fiyat analizi
-    if 'MAT Q3 2024 SU AVG PRICE USD MNF' in df.columns:
-        price_std = df['MAT Q3 2024 SU AVG PRICE USD MNF'].std()
-        if price_std > df['MAT Q3 2024 SU AVG PRICE USD MNF'].mean() * 0.5:
-            recommendations.append({
-                'type': 'info',
-                'title': 'Fiyat Segmentasyonu Fırsatı',
-                'message': 'Fiyat varyasyonu yüksek. Farklı segmentlere yönelik ürünler geliştirilebilir.'
-            })
-    
-    # 4. Üretici konsantrasyonu
-    manufacturer_perf = analyze_manufacturer_performance(df)
-    if not manufacturer_perf.empty:
-        top_3_share = manufacturer_perf['MARKET_SHARE_%'].nlargest(3).sum()
-        if top_3_share > 60:
-            recommendations.append({
-                'type': 'warning',
-                'title': 'Üretici Konsantrasyonu',
-                'message': f'Top 3 üretici pazarın %{top_3_share:.0f}\'ini kontrol ediyor. Tedarikçi çeşitlendirmesi önerilir.'
-            })
-    
-    # Önerileri göster
-    cols = st.columns(2)
-    for idx, rec in enumerate(recommendations[:4]):  # Max 4 öneri
-        with cols[idx % 2]:
-            if rec['type'] == 'success':
-                st.success(f"**{rec['title']}**\n\n{rec['message']}")
-            elif rec['type'] == 'warning':
-                st.warning(f"**{rec['title']}**\n\n{rec['message']}")
-            else:
-                st.info(f"**{rec['title']}**\n\n{rec['message']}")
+        
+        # 2. Pazar konsantrasyonu
+        df_with_share = calculate_market_share(df)
+        if not df_with_share.empty and 'MARKET_SHARE_%' in df_with_share.columns:
+            top_5_share = df_with_share['MARKET_SHARE_%'].nlargest(5).sum()
+            if top_5_share > 50:
+                recommendations.append({
+                    'type': 'warning',
+                    'title': 'Yüksek Pazar Konsantrasyonu',
+                    'message': f'Top 5 ürün pazarın %{top_5_share:.0f}\'ini kontrol ediyor.'
+                })
+        
+        # 3. Ortalama fiyat analizi
+        if 'PRICE_2024' in df.columns:
+            avg_price = df['PRICE_2024'].mean()
+            price_std = df['PRICE_2024'].std()
+            
+            if price_std > avg_price * 0.5:
+                recommendations.append({
+                    'type': 'info',
+                    'title': 'Fiyat Segmentasyonu',
+                    'message': f'Fiyat varyasyonu yüksek (Ort: ${avg_price:.2f}). Farklı segmentlere hitap edebilirsiniz.'
+                })
+        
+        # 4. Büyüme potansiyeli
+        if 'SALES_2023' in df.columns and 'SALES_2024' in df.columns:
+            total_growth = ((df['SALES_2024'].sum() - df['SALES_2023'].sum()) / 
+                           df['SALES_2023'].sum() * 100) if df['SALES_2023'].sum() > 0 else 0
+            
+            if total_growth > 15:
+                recommendations.append({
+                    'type': 'success',
+                    'title': 'Yüksek Büyüme Potansiyeli',
+                    'message': f'Pazar %{total_growth:.1f} büyüyor. Genişleme için uygun zaman.'
+                })
+        
+        # Önerileri göster
+        if recommendations:
+            cols = st.columns(2)
+            for idx, rec in enumerate(recommendations[:4]):  # Max 4 öneri
+                with cols[idx % 2]:
+                    if rec['type'] == 'success':
+                        st.success(f"**{rec['title']}**\n\n{rec['message']}")
+                    elif rec['type'] == 'warning':
+                        st.warning(f"**{rec['title']}**\n\n{rec['message']}")
+                    else:
+                        st.info(f"**{rec['title']}**\n\n{rec['message']}")
+        else:
+            st.info("Stratejik öneri üretmek için yeterli veri bulunamadı.")
+            
+    except Exception as e:
+        st.error(f"Stratejik öneriler hatası: {str(e)}")
 
 # ============================================================================
 # ANA UYGULAMA
@@ -882,46 +1022,77 @@ def main():
             try:
                 df = pd.read_excel(uploaded_file)
                 
-                # Kolon isimlerini standardize et
-                df.columns = [str(col).strip().upper() for col in df.columns]
+                # Kolon isimlerini normalize et
+                df = normalize_column_names(df)
+                
+                # Eksik değerleri temizle
+                df = df.fillna(0)
+                
+                # Numerik kolonları dönüştür
+                numeric_cols = ['SALES_2024', 'SALES_2023', 'SALES_2022', 
+                               'UNITS_2024', 'UNITS_2023', 'UNITS_2022',
+                               'PRICE_2024', 'PRICE_2023', 'PRICE_2022']
+                
+                for col in numeric_cols:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
                 
                 # Session state'e kaydet
                 st.session_state['df'] = df
-                st.success(f"✓ {uploaded_file.name} yüklendi!")
+                st.session_state['uploaded_file_name'] = uploaded_file.name
+                
+                st.success(f"✅ {uploaded_file.name} başarıyla yüklendi!")
                 
                 # Hızlı bilgiler
                 st.markdown("---")
                 st.markdown("### 📊 VERİ ÖZETİ")
                 st.write(f"**Satır:** {len(df):,}")
                 st.write(f"**Kolon:** {len(df.columns)}")
-                st.write(f"**Ürün:** {df['INTERNATIONAL PRODUCT'].nunique() if 'INTERNATIONAL PRODUCT' in df.columns else 'N/A'}")
+                
+                if 'PRODUCT' in df.columns:
+                    st.write(f"**Ürün Sayısı:** {df['PRODUCT'].nunique():,}")
+                if 'MOLECULE' in df.columns:
+                    st.write(f"**Molekül Sayısı:** {df['MOLECULE'].nunique():,}")
+                if 'MANUFACTURER' in df.columns:
+                    st.write(f"**Üretici Sayısı:** {df['MANUFACTURER'].nunique():,}")
                 
             except Exception as e:
-                st.error(f"Dosya yükleme hatası: {str(e)}")
+                st.error(f"❌ Dosya yükleme hatası: {str(e)}")
+                st.info("Lütfen farklı bir dosya yükleyin veya formatı kontrol edin.")
         
         # Demo butonu
+        st.markdown("---")
         if st.button("🎮 DEMO VERİSİ İLE DENE", type="primary", use_container_width=True):
-            # Örnek veri oluştur
-            demo_data = pd.DataFrame({
-                'INTERNATIONAL PRODUCT': ['Product A', 'Product B', 'Product C', 'Product D', 'Product E'],
-                'MOLECULE': ['Molecule X', 'Molecule Y', 'Molecule X', 'Molecule Z', 'Molecule Y'],
-                'MANUFACTURER': ['Company A', 'Company B', 'Company A', 'Company C', 'Company B'],
-                'SPECIALTY PRODUCT': ['SPECIALTY INFERRED', 'NON SPECIALTY', 'SPECIALTY INFERRED', 'NON SPECIALTY', 'SPECIALTY INFERRED'],
-                'MAT Q3 2024 USD MNF': [1000000, 750000, 500000, 300000, 250000],
-                'MAT Q3 2023 USD MNF': [900000, 700000, 450000, 280000, 200000],
-                'MAT Q3 2024 STANDARD UNITS': [10000, 15000, 5000, 3000, 2000],
-                'MAT Q3 2023 STANDARD UNITS': [9500, 14000, 4800, 2900, 1900],
-                'MAT Q3 2024 SU AVG PRICE USD MNF': [100, 50, 100, 100, 125],
-                'MAT Q3 2023 SU AVG PRICE USD MNF': [95, 50, 94, 97, 105]
-            })
-            
-            st.session_state['df'] = demo_data
-            st.success("✅ Demo verisi yüklendi!")
-            st.rerun()
+            try:
+                # Örnek veri oluştur
+                demo_data = pd.DataFrame({
+                    'PRODUCT': ['Product A', 'Product B', 'Product C', 'Product D', 'Product E'],
+                    'MOLECULE': ['Molecule X', 'Molecule Y', 'Molecule X', 'Molecule Z', 'Molecule Y'],
+                    'MANUFACTURER': ['Company A', 'Company B', 'Company A', 'Company C', 'Company B'],
+                    'SPECIALTY_PRODUCT': ['SPECIALTY', 'NON-SPECIALTY', 'SPECIALTY', 'NON-SPECIALTY', 'SPECIALTY'],
+                    'SALES_2024': [1000000, 750000, 500000, 300000, 250000],
+                    'SALES_2023': [900000, 700000, 450000, 280000, 200000],
+                    'UNITS_2024': [10000, 15000, 5000, 3000, 2000],
+                    'UNITS_2023': [9500, 14000, 4800, 2900, 1900],
+                    'PRICE_2024': [100, 50, 100, 100, 125],
+                    'PRICE_2023': [95, 50, 94, 97, 105]
+                })
+                
+                st.session_state['df'] = demo_data
+                st.session_state['uploaded_file_name'] = "demo_data.xlsx"
+                
+                st.success("✅ Demo verisi yüklendi!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Demo veri hatası: {str(e)}")
     
     # Ana içerik
     if 'df' in st.session_state and st.session_state['df'] is not None:
         df = st.session_state['df']
+        
+        # Dosya bilgisi
+        if 'uploaded_file_name' in st.session_state:
+            st.info(f"**Yüklenen Dosya:** {st.session_state['uploaded_file_name']}")
         
         # KPI'lar
         render_kpi_cards(df)
@@ -935,7 +1106,7 @@ def main():
         
         # Detaylı tablo (isteğe bağlı)
         with st.expander("📋 DETAYLI VERİ TABLOSU", expanded=False):
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, use_container_width=True, height=400)
             
     else:
         # Hoşgeldin ekranı
@@ -952,16 +1123,34 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        # Örnek analiz çıktısı
-        st.markdown("### 📈 ÖRNEK ANALİZ ÇIKTILARI")
-        col1, col2, col3 = st.columns(3)
+        # Özellikler
+        st.markdown("### ✨ ÖZELLİKLER")
         
-        with col1:
-            st.metric("Pazar Büyüklüğü", "$125M", "%15.2")
-        with col2:
-            st.metric("Ortalama Fiyat", "$85.50", "St. Ünite")
-        with col3:
-            st.metric("Ürün Çeşitliliği", "1,250", "Molekül")
+        cols = st.columns(3)
+        
+        with cols[0]:
+            st.markdown("""
+            <div class="data-card">
+                <h4>📈 Anlık KPI'lar</h4>
+                <p>Veri yüklenir yüklenmez ana performans göstergeleri</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with cols[1]:
+            st.markdown("""
+            <div class="data-card">
+                <h4>📊 Pazar Analizi</h4>
+                <p>Molekül ve üretici bazında pazar payı analizi</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with cols[2]:
+            st.markdown("""
+            <div class="data-card">
+                <h4>🚀 Büyüme Analizi</h4>
+                <p>Yıllık büyüme oranları ve trend analizi</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
