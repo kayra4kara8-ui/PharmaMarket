@@ -1,1616 +1,1656 @@
 """
-🚀 ENDÜSTRİ SEVİYESİ TİCARİ ANALİTİK PLATFORMU
-Kurumsal Strateji, Makine Öğrenmesi, Rekabet Zekası ve Yatırım Optimizasyonu
-
-ENTEGRE MODÜLLER:
-1. 📊 STRATEJİK PORTFÖY ANALİZİ (BCG, Ansoff, SWOT)
-2. 🤖 GELİŞMİŞ ML MODELİ (XGBoost, LSTM, Prophet)
-3. 🗺️ GERÇEK ZAMANLI HARİTA GÖRSELLEŞTİRMELERİ
-4. 📈 ZAMAN SERİSİ & MEVSİMSELLİK ANALİZİ
-5. 🏆 RAKİP ZEKASI & PAZAR DİNAMİKLERİ
-6. 🎯 KARAR ALMA DESTEK SİSTEMİ (AHP, Monte Carlo)
-7. 📊 EXECUTIVE DASHBOARD & KPI TRACKING
-8. 🔮 SENARYO ANALİZİ & RİSK MODELLEMESİ
+================================================================================
+PHARMACEUTICAL MARKET INTELLIGENCE PLATFORM
+MAT Data Analytics Dashboard
+Version: 4.0.0 | Production-Ready | Python 3.11+
+================================================================================
+Author: Analytics Team
+Last Updated: 2024-01-27
+Status: Production
+================================================================================
 """
 
-import textwrap
+# ==============================================================================
+# 1. STREAMLIT PAGE CONFIG - MUST BE FIRST!
+# ==============================================================================
 import streamlit as st
+
+st.set_page_config(
+    page_title='Pharma MAT Intelligence Platform',
+    page_icon='💊',
+    layout='wide',
+    initial_sidebar_state='expanded'
+)
+
+# ==============================================================================
+# 2. IMPORT LIBRARIES
+# ==============================================================================
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 import plotly.express as px
-import plotly.subplots as sp
-from datetime import datetime, timedelta
+import plotly.graph_objects as go
 import warnings
-from io import BytesIO
+import io
+import re
 import json
-import base64
-
-# Makine Öğrenmesi
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, IsolationForest
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans, DBSCAN
-from sklearn.decomposition import PCA
-import xgboost as xgb
-from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.tsa.stattools import adfuller, acf, pacf
-from statsmodels.tsa.seasonal import seasonal_decompose, STL
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-
-# Görselleştirme
-import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.colors import LinearSegmentedColormap
-import geopandas as gpd
-from shapely.geometry import Point, Polygon
-import folium
-from streamlit_folium import folium_static
-
-# İstatistik & Optimizasyon
-from scipy import stats
-from scipy.optimize import curve_fit
-from scipy.signal import savgol_filter
-import networkx as nx
-from scipy.spatial.distance import cdist
+import traceback
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import dataclass
 
 warnings.filterwarnings('ignore')
 
-# =============================================================================
-# KURUMSAL TASARIM KONFİGÜRASYONU
-# =============================================================================
-st.set_page_config(
-    page_title="Enterprise Portfolio Intelligence",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# ==============================================================================
+# 3. CONFIGURATION & CONSTANTS
+# ==============================================================================
+@dataclass
+class AppConfig:
+    """Application configuration constants"""
+    APP_VERSION = "4.0.0"
+    APP_NAME = "Pharmaceutical Market Intelligence Platform"
+    MAX_FILE_SIZE_MB = 200
+    DEFAULT_TOP_N = 15
+    CHART_HEIGHT = 500
+    TABLE_HEIGHT = 400
+    
+    # Column name mappings
+    METRIC_COLUMNS = {
+        'SALES_USD': ['USD MNF', 'SALES', 'REVENUE'],
+        'STANDARD_UNITS': ['STANDARD UNITS', 'SU'],
+        'UNITS': ['UNITS'],
+        'SU_AVG_PRICE': ['SU AVG PRICE', 'AVG PRICE'],
+        'UNIT_AVG_PRICE': ['UNIT AVG PRICE']
+    }
+    
+    # MAT period patterns
+    MAT_PATTERNS = [
+        r'MAT Q\d \d{4}',
+        r'MAT_Q\d_\d{4}',
+        r'MAT\d{1}Q\d{4}',
+        r'Moving Annual Total Q\d \d{4}'
+    ]
 
-# Kurumsal CSS
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+# ==============================================================================
+# 4. CUSTOM CSS STYLING
+# ==============================================================================
+def apply_custom_styling():
+    """Apply professional CSS styling"""
+    st.markdown("""
+    <style>
+    /* ========== IMPORTS ========== */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
+    /* ========== GLOBAL ========== */
     * {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    /* PROFESYONEL ARKA PLAN */
-    .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        background-attachment: fixed;
+    .main {
+        padding: 2rem;
+        background: #f8f9fa;
     }
     
-    /* PREMIUM BAŞLIK */
-    .enterprise-header {
-        background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5rem;
+    /* ========== HEADER ========== */
+    .main-header {
+        font-size: 2.5rem;
         font-weight: 800;
-        text-align: center;
-        padding: 2rem 0;
-        margin-bottom: 1.5rem;
-        letter-spacing: -0.5px;
-        text-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
-    }
-    
-    /* KURUMSAL KARTLAR */
-    .corporate-card {
-        background: rgba(30, 41, 59, 0.7);
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    }
-    
-    .corporate-card:hover {
-        transform: translateY(-4px);
-        border-color: rgba(59, 130, 246, 0.6);
-        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
-    }
-    
-    /* METRİK KUTULARI */
-    div[data-testid="stMetricValue"] {
-        font-size: 2.8rem;
-        font-weight: 700;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 0.5rem;
+        text-align: center;
+        padding: 1rem;
     }
     
-    div[data-testid="stMetricLabel"] {
-        color: #94a3b8;
-        font-weight: 500;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 1.2px;
-    }
-    
-    /* GELİŞMİŞ SEKMELER */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0;
-        background: rgba(15, 23, 42, 0.8);
-        border-radius: 12px;
-        padding: 8px;
+    .main-subheader {
+        text-align: center;
+        color: #64748b;
+        font-size: 1rem;
         margin-bottom: 2rem;
-        border: 1px solid rgba(59, 130, 246, 0.2);
+        font-weight: 500;
+    }
+    
+    /* ========== METRIC CARDS ========== */
+    .metric-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 140px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .metric-value {
+        font-size: 2.25rem;
+        font-weight: 800;
+        color: #1e293b;
+        line-height: 1.2;
+        margin-top: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
+    
+    .metric-change {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .metric-change.positive {
+        color: #10b981;
+    }
+    
+    .metric-change.negative {
+        color: #ef4444;
+    }
+    
+    /* ========== SUB HEADERS ========== */
+    .sub-header {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 2rem 0 1rem 0;
+        padding-bottom: 0.75rem;
+        border-bottom: 3px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* ========== TABS ========== */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        background-color: #f1f5f9;
+        padding: 4px;
+        border-radius: 12px;
     }
     
     .stTabs [data-baseweb="tab"] {
-        padding: 1rem 2rem;
-        background: transparent;
-        color: #64748b;
-        font-weight: 600;
-        font-size: 0.95rem;
         border-radius: 8px;
-        transition: all 0.3s ease;
-        margin: 0 2px;
+        padding: 12px 24px;
+        font-weight: 600;
+        border: none;
+        background-color: transparent;
+        color: #64748b;
+        transition: all 0.2s;
     }
     
     .stTabs [data-baseweb="tab"]:hover {
-        color: #e2e8f0;
-        background: rgba(59, 130, 246, 0.1);
+        background-color: #e2e8f0;
+        color: #1e293b;
     }
     
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-        color: white;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+    }
+    
+    /* ========== SIDEBAR ========== */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+        padding-top: 2rem;
+    }
+    
+    [data-testid="stSidebar"] * {
+        color: #f1f5f9 !important;
+    }
+    
+    [data-testid="stSidebar"] .stSelectbox label,
+    [data-testid="stSidebar"] .stMultiSelect label {
+        color: #f1f5f9 !important;
+        font-weight: 600 !important;
+    }
+    
+    .sidebar-header {
+        font-size: 1.25rem;
         font-weight: 700;
+        color: white !important;
+        margin-bottom: 1.5rem;
+        padding: 1.25rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
     }
     
-    /* GELİŞMİŞ BUTONLAR */
+    .sidebar-section {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    /* ========== BUTTONS ========== */
     .stButton > button {
-        background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3);
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.4);
     }
     
-    /* DASHBOARD KUTULARI */
-    .dashboard-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .dashboard-card {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-        border-radius: 16px;
-        padding: 1.5rem;
-        border: 1px solid rgba(59, 130, 246, 0.2);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    }
-    
-    /* AKILLI TABLOLAR */
-    .smart-table {
+    /* ========== ALERTS ========== */
+    .stAlert {
         border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid rgba(59, 130, 246, 0.2);
-    }
-    
-    .smart-table th {
-        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-        color: white;
-        font-weight: 600;
-        padding: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        font-size: 0.9rem;
-    }
-    
-    .smart-table td {
-        padding: 0.9rem 1rem;
-        border-bottom: 1px solid rgba(59, 130, 246, 0.1);
-    }
-    
-    .smart-table tr:hover {
-        background: rgba(59, 130, 246, 0.1);
-    }
-    
-    /* INSIGHT BUBBLE'LARI */
-    .insight-bubble {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
-        border-radius: 20px;
+        border-left: 4px solid;
         padding: 1rem 1.5rem;
-        margin-bottom: 1rem;
-        border-left: 4px solid #10b981;
-        animation: fadeIn 0.5s ease-in-out;
     }
     
-    .insight-bubble.warning {
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
-        border-left-color: #f59e0b;
+    /* ========== FILE UPLOADER ========== */
+    [data-testid="stFileUploader"] {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        border: 2px dashed #cbd5e1;
+        transition: all 0.3s;
     }
     
-    .insight-bubble.critical {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
-        border-left-color: #ef4444;
+    [data-testid="stFileUploader"]:hover {
+        border-color: #667eea;
+        background: #f8f9fa;
     }
     
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* ========== DATA TABLES ========== */
+    .dataframe {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
     }
     
-    /* SCORECARD */
-    .scorecard {
+    /* ========== FOOTER ========== */
+    .footer {
         text-align: center;
         padding: 2rem;
-        border-radius: 16px;
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-        border: 1px solid rgba(59, 130, 246, 0.3);
+        margin-top: 4rem;
+        color: #64748b;
+        font-size: 0.875rem;
+        border-top: 2px solid #e2e8f0;
+        background: white;
+        border-radius: 12px;
     }
     
-    .scorecard-value {
-        font-size: 3.5rem;
-        font-weight: 800;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    /* ========== INFO BOX ========== */
+    .info-box {
+        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+        border-left: 4px solid #667eea;
+        padding: 1.5rem;
+        border-radius: 8px;
         margin: 1rem 0;
     }
     
-    /* RADIAL PROGRESS */
-    .radial-progress {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        background: conic-gradient(#3b82f6 0% var(--progress), rgba(59, 130, 246, 0.1) var(--progress) 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        margin: 0 auto;
+    /* ========== LOADING ========== */
+    .stSpinner > div {
+        border-color: #667eea transparent transparent transparent;
     }
     
-    .radial-progress::before {
-        content: '';
-        position: absolute;
-        width: 90px;
-        height: 90px;
-        background: #0f172a;
-        border-radius: 50%;
+    /* ========== EXPANDER ========== */
+    .streamlit-expanderHeader {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        font-weight: 600;
     }
-    
-    .radial-progress span {
-        position: relative;
-        z-index: 1;
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #3b82f6;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# =============================================================================
-# PROFESYONEL RENK PALETİ
-# =============================================================================
-CORPORATE_COLORS = {
-    # Ana Renkler
-    "primary": "#3B82F6",
-    "secondary": "#6366F1",
-    "accent": "#8B5CF6",
-    "success": "#10B981",
-    "warning": "#F59E0B",
-    "danger": "#EF4444",
-    "info": "#06B6D4",
-    "dark": "#0F172A",
-    "light": "#F8FAFC",
-    
-    # Bölge Renkleri
-    "MARMARA": "#2563EB",
-    "EGE": "#7C3AED",
-    "AKDENİZ": "#0EA5E9",
-    "İÇ ANADOLU": "#F59E0B",
-    "KARADENİZ": "#10B981",
-    "GÜNEYDOĞU": "#EF4444",
-    "DOĞU ANADOLU": "#8B5CF6",
-    "DİĞER": "#64748B",
-    
-    # Performans Skalası
-    "excellent": "#10B981",
-    "good": "#3B82F6",
-    "average": "#F59E0B",
-    "poor": "#EF4444",
-    "critical": "#DC2626",
-    
-    # BCG Matrix
-    "star": "#FBBF24",
-    "cash_cow": "#10B981",
-    "question_mark": "#3B82F6",
-    "dog": "#64748B",
-    
-    # Strategi Matrisi
-    "aggressive": "#EF4444",
-    "growth": "#F59E0B",
-    "stability": "#3B82F6",
-    "defensive": "#10B981",
-    "divest": "#64748B"
-}
-
-# Gradient Scales
-GRADIENTS = {
-    "blue_purple": ["#1E40AF", "#3B82F6", "#6366F1", "#8B5CF6"],
-    "green_blue": ["#059669", "#10B981", "#06B6D4", "#0EA5E9"],
-    "red_yellow": ["#DC2626", "#EF4444", "#F59E0B", "#FBBF24"],
-    "corporate": ["#0F172A", "#1E293B", "#334155", "#475569"]
-}
-
-# =============================================================================
-# GELİŞMİŞ ANALİZ FONKSİYONLARI
-# =============================================================================
-
-class AdvancedPortfolioAnalyzer:
-    """Kurumsal Portföy Analiz Sistemi"""
-    
-    def __init__(self, df):
-        self.df = df
-        self.features = None
-        self.models = {}
-        self.insights = []
-        
-    # =========================================================================
-    # 1. STRATEJİK PORTFÖY ANALİZİ
-    # =========================================================================
-    
-    def calculate_strategic_matrix(self, product, date_filter=None):
-        """Ansoff Matrix + BCG Matrix entegrasyonu"""
-        cols = self._get_product_columns(product)
-        
-        df_filtered = self._apply_date_filter(date_filter)
-        
-        # BCG Matrix
-        bcg_df = self._calculate_bcg_matrix(df_filtered, product)
-        
-        # Ansoff Matrix (Pazar Penetrasyonu vs Ürün Geliştirme)
-        ansoff_df = self._calculate_ansoff_matrix(df_filtered, product)
-        
-        # SWOT Analizi
-        swot_analysis = self._perform_swot_analysis(df_filtered, product)
-        
-        # Porter 5 Forces
-        porter_analysis = self._analyze_porter_forces(df_filtered, product)
-        
-        # Stratejik Öneriler
-        strategic_recommendations = self._generate_strategic_recommendations(
-            bcg_df, ansoff_df, swot_analysis
-        )
-        
-        return {
-            'bcg_matrix': bcg_df,
-            'ansoff_matrix': ansoff_df,
-            'swot_analysis': swot_analysis,
-            'porter_analysis': porter_analysis,
-            'recommendations': strategic_recommendations
-        }
-    
-    def _calculate_bcg_matrix(self, df, product):
-        """Gelişmiş BCG Matrix"""
-        cols = self._get_product_columns(product)
-        
-        # Brick bazlı performans
-        brick_perf = df.groupby('TERRITORIES').agg({
-            cols['pf']: ['sum', 'mean', 'std'],
-            cols['rakip']: ['sum', 'mean'],
-            'CITY_NORMALIZED': 'nunique'
-        }).reset_index()
-        
-        brick_perf.columns = ['Brick', 'PF_Sum', 'PF_Mean', 'PF_Std', 
-                             'Rakip_Sum', 'Rakip_Mean', 'City_Count']
-        
-        # Pazar payı ve büyüme
-        brick_perf['Market_Share'] = brick_perf['PF_Sum'] / (brick_perf['PF_Sum'] + brick_perf['Rakip_Sum'])
-        brick_perf['Growth_Rate'] = self._calculate_growth_rate(df, product)
-        
-        # BCG kategorileri
-        median_share = brick_perf['Market_Share'].median()
-        median_growth = brick_perf['Growth_Rate'].median()
-        
-        def assign_bcg_category(row):
-            if row['Market_Share'] >= median_share and row['Growth_Rate'] >= median_growth:
-                return "⭐ Star"
-            elif row['Market_Share'] >= median_share and row['Growth_Rate'] < median_growth:
-                return "🐄 Cash Cow"
-            elif row['Market_Share'] < median_share and row['Growth_Rate'] >= median_growth:
-                return "❓ Question Mark"
-            else:
-                return "🐶 Dog"
-        
-        brick_perf['BCG_Category'] = brick_perf.apply(assign_bcg_category, axis=1)
-        
-        # Stratejik öncelik skoru
-        brick_perf['Strategic_Priority'] = brick_perf.apply(
-            lambda x: self._calculate_strategic_priority(x['BCG_Category'], x['PF_Sum'], x['Growth_Rate']),
-            axis=1
-        )
-        
-        return brick_perf.sort_values('Strategic_Priority', ascending=False)
-    
-    def _calculate_ansoff_matrix(self, df, product):
-        """Ansoff Strateji Matrisi"""
-        cols = self._get_product_columns(product)
-        
-        # Pazar büyüme oranı
-        market_growth = self._calculate_market_growth(df, product)
-        
-        # Ürün gelişim indeksi
-        product_development = self._calculate_product_development_index(df, product)
-        
-        # Pazar penetrasyonu
-        market_penetration = self._calculate_market_penetration(df, product)
-        
-        # Diversifikasyon potansiyeli
-        diversification = self._calculate_diversification_potential(df, product)
-        
-        ansoff_data = {
-            'Market_Growth_Rate': market_growth,
-            'Product_Development_Index': product_development,
-            'Market_Penetration_Rate': market_penetration,
-            'Diversification_Potential': diversification,
-            'Recommended_Strategy': self._determine_ansoff_strategy(market_growth, product_development)
-        }
-        
-        return ansoff_data
-    
-    def _perform_swot_analysis(self, df, product):
-        """Kapsamlı SWOT Analizi"""
-        cols = self._get_product_columns(product)
-        
-        strengths = []
-        weaknesses = []
-        opportunities = []
-        threats = []
-        
-        # Güçlü Yönler
-        total_pf = df[cols['pf']].sum()
-        total_market = df[cols['pf']].sum() + df[cols['rakip']].sum()
-        market_share = total_pf / total_market if total_market > 0 else 0
-        
-        if market_share > 0.3:
-            strengths.append(f"Yüksek pazar payı (%{market_share*100:.1f})")
-        
-        # Zayıf Yönler
-        city_coverage = df['CITY_NORMALIZED'].nunique()
-        if city_coverage < 50:
-            weaknesses.append(f"Sınırlı şehir kapsamı ({city_coverage} şehir)")
-        
-        # Fırsatlar
-        growth_rate = self._calculate_growth_rate(df, product)
-        if growth_rate > 10:
-            opportunities.append(f"Yüksek büyüme potansiyeli (%{growth_rate:.1f} yıllık)")
-        
-        # Tehditler
-        competitor_growth = self._calculate_competitor_growth(df, product)
-        if competitor_growth > growth_rate:
-            threats.append(f"Rakipler daha hızlı büyüyor (%{competitor_growth:.1f} vs %{growth_rate:.1f})")
-        
-        return {
-            'Strengths': strengths,
-            'Weaknesses': weaknesses,
-            'Opportunities': opportunities,
-            'Threats': threats,
-            'SWOT_Score': self._calculate_swot_score(strengths, weaknesses, opportunities, threats)
-        }
-    
-    # =========================================================================
-    # 2. GELİŞMİŞ MAKİNE ÖĞRENMESİ MODELİ
-    # =========================================================================
-    
-    def build_advanced_ml_pipeline(self, product, forecast_horizon=12):
-        """Çoklu ML modeli pipeline'ı"""
-        cols = self._get_product_columns(product)
-        
-        # Feature mühendisliği
-        features = self._create_advanced_features(cols)
-        
-        # Zaman serisi hazırlığı
-        time_series = self._prepare_time_series(cols)
-        
-        # Model eğitimi
-        models = {
-            'XGBoost': self._train_xgboost_model(features, time_series),
-            'Random_Forest': self._train_random_forest(features, time_series),
-            'LSTM': self._train_lstm_model(time_series),
-            'Prophet': self._train_prophet_model(time_series),
-            'ARIMA': self._train_arima_model(time_series)
-        }
-        
-        # Ensemble tahmini
-        ensemble_forecast = self._create_ensemble_forecast(models, forecast_horizon)
-        
-        # Anomali tespiti
-        anomalies = self._detect_anomalies(time_series)
-        
-        # Feature importance
-        feature_importance = self._calculate_feature_importance(models['XGBoost'], features)
-        
-        return {
-            'models': models,
-            'ensemble_forecast': ensemble_forecast,
-            'anomalies': anomalies,
-            'feature_importance': feature_importance,
-            'model_metrics': self._calculate_model_metrics(models, time_series)
-        }
-    
-    def _create_advanced_features(self, cols):
-        """Gelişmiş feature mühendisliği"""
-        df_features = self.df.copy()
-        
-        # Temel feature'lar
-        df_features['PF_Sales'] = df_features[cols['pf']]
-        df_features['Competitor_Sales'] = df_features[cols['rakip']]
-        df_features['Total_Market'] = df_features['PF_Sales'] + df_features['Competitor_Sales']
-        df_features['Market_Share'] = df_features['PF_Sales'] / df_features['Total_Market']
-        
-        # Zaman bazlı feature'lar
-        df_features['Year'] = df_features['DATE'].dt.year
-        df_features['Month'] = df_features['DATE'].dt.month
-        df_features['Quarter'] = df_features['DATE'].dt.quarter
-        df_features['Day_of_Week'] = df_features['DATE'].dt.dayofweek
-        df_features['Is_Weekend'] = df_features['Day_of_Week'].isin([5, 6]).astype(int)
-        
-        # Mevsimsel feature'lar
-        df_features['Season'] = df_features['Month'].apply(self._get_season)
-        df_features['Month_Sin'] = np.sin(2 * np.pi * df_features['Month'] / 12)
-        df_features['Month_Cos'] = np.cos(2 * np.pi * df_features['Month'] / 12)
-        
-        # Rolling statistics
-        for window in [3, 6, 12]:
-            df_features[f'Rolling_Mean_{window}'] = df_features.groupby('TERRITORIES')['PF_Sales']\
-                .transform(lambda x: x.rolling(window).mean())
-            df_features[f'Rolling_Std_{window}'] = df_features.groupby('TERRITORIES')['PF_Sales']\
-                .transform(lambda x: x.rolling(window).std())
-        
-        # Lag features
-        for lag in [1, 2, 3, 6, 12]:
-            df_features[f'Lag_{lag}'] = df_features.groupby('TERRITORIES')['PF_Sales'].shift(lag)
-        
-        # Growth features
-        df_features['MoM_Growth'] = df_features.groupby('TERRITORIES')['PF_Sales'].pct_change()
-        df_features['YoY_Growth'] = df_features.groupby('TERRITORIES')['PF_Sales'].pct_change(12)
-        
-        # Volatility features
-        df_features['Volatility_3M'] = df_features.groupby('TERRITORIES')['PF_Sales']\
-            .transform(lambda x: x.rolling(3).std() / x.rolling(3).mean())
-        
-        # Momentum features
-        df_features['Momentum_3M'] = df_features['PF_Sales'] - df_features['Lag_3']
-        df_features['Momentum_6M'] = df_features['PF_Sales'] - df_features['Lag_6']
-        
-        # İnteraction features
-        df_features['Share_Growth'] = df_features['Market_Share'] * df_features['MoM_Growth']
-        df_features['Size_Share'] = df_features['PF_Sales'] * df_features['Market_Share']
-        
-        # Clustering features
-        df_features = self._add_clustering_features(df_features)
-        
-        return df_features
-    
-    def _train_xgboost_model(self, features, time_series):
-        """XGBoost modeli eğitimi"""
-        X = features.select_dtypes(include=[np.number]).fillna(0)
-        y = features['PF_Sales']
-        
-        model = xgb.XGBRegressor(
-            n_estimators=200,
-            max_depth=8,
-            learning_rate=0.1,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            random_state=42,
-            n_jobs=-1
-        )
-        
-        model.fit(X, y)
-        return model
-    
-    def _train_lstm_model(self, time_series):
-        """LSTM modeli eğitimi (basitleştirilmiş)"""
-        # Bu kısım kompleks olduğu için basit bir yaklaşım
-        from sklearn.neural_network import MLPRegressor
-        
-        model = MLPRegressor(
-            hidden_layer_sizes=(100, 50, 25),
-            activation='relu',
-            solver='adam',
-            max_iter=500,
-            random_state=42
-        )
-        
-        X = np.arange(len(time_series)).reshape(-1, 1)
-        y = time_series.values
-        
-        model.fit(X, y)
-        return model
-    
-    def _detect_anomalies(self, time_series):
-        """Anomali tespiti"""
-        from sklearn.ensemble import IsolationForest
-        
-        X = time_series.values.reshape(-1, 1)
-        
-        iso_forest = IsolationForest(
-            contamination=0.1,
-            random_state=42,
-            n_estimators=100
-        )
-        
-        anomalies = iso_forest.fit_predict(X)
-        return anomalies == -1
-    
-    # =========================================================================
-    # 3. KARAR ALMA DESTEK SİSTEMİ
-    # =========================================================================
-    
-    def decision_support_system(self, product, scenario='optimistic'):
-        """AHP + Monte Carlo entegrasyonu"""
-        
-        # Karar kriterleri
-        criteria = {
-            'Profitability': 0.3,
-            'Growth_Potential': 0.25,
-            'Market_Share': 0.2,
-            'Risk_Level': 0.15,
-            'Strategic_Fit': 0.1
-        }
-        
-        # Alternatifler (brick'ler)
-        alternatives = self._evaluate_alternatives(product)
-        
-        # AHP analizi
-        ahp_scores = self._perform_ahp_analysis(criteria, alternatives)
-        
-        # Monte Carlo simülasyonu
-        monte_carlo_results = self._monte_carlo_simulation(alternatives, scenario)
-        
-        # Sensitivite analizi
-        sensitivity = self._sensitivity_analysis(criteria, alternatives)
-        
-        # Optimal karar
-        optimal_decision = self._determine_optimal_decision(ahp_scores, monte_carlo_results)
-        
-        return {
-            'criteria_weights': criteria,
-            'ahp_scores': ahp_scores,
-            'monte_carlo': monte_carlo_results,
-            'sensitivity': sensitivity,
-            'optimal_decision': optimal_decision,
-            'recommended_actions': self._generate_action_plan(optimal_decision)
-        }
-    
-    def _perform_ahp_analysis(self, criteria, alternatives):
-        """Analytic Hierarchy Process"""
-        ahp_scores = {}
-        
-        for alt_name, alt_data in alternatives.items():
-            score = 0
-            for criterion, weight in criteria.items():
-                criterion_score = alt_data.get(criterion, 0)
-                score += criterion_score * weight
-            ahp_scores[alt_name] = score
-        
-        # Normalize scores
-        total = sum(ahp_scores.values())
-        ahp_scores = {k: v/total for k, v in ahp_scores.items()}
-        
-        return dict(sorted(ahp_scores.items(), key=lambda x: x[1], reverse=True))
-    
-    def _monte_carlo_simulation(self, alternatives, scenario, n_simulations=1000):
-        """Monte Carlo risk analizi"""
-        results = {}
-        
-        for alt_name, alt_data in alternatives.items():
-            simulations = []
-            
-            for _ in range(n_simulations):
-                # Senaryo bazlı simülasyon
-                if scenario == 'optimistic':
-                    growth_factor = np.random.normal(1.2, 0.1)
-                elif scenario == 'pessimistic':
-                    growth_factor = np.random.normal(0.8, 0.15)
-                else:  # base
-                    growth_factor = np.random.normal(1.0, 0.1)
-                
-                simulated_value = alt_data['Profitability'] * growth_factor
-                simulations.append(simulated_value)
-            
-            results[alt_name] = {
-                'mean': np.mean(simulations),
-                'std': np.std(simulations),
-                'ci_95': np.percentile(simulations, [2.5, 97.5]),
-                'value_at_risk': np.percentile(simulations, 5),
-                'expected_shortfall': np.mean(simulations[simulations <= np.percentile(simulations, 5)])
-            }
-        
-        return results
-    
-    # =========================================================================
-    # 4. SENARYO ANALİZİ & RİSK MODELLEMESİ
-    # =========================================================================
-    
-    def scenario_analysis(self, product, scenarios=['base', 'optimistic', 'pessimistic']):
-        """Çoklu senaryo analizi"""
-        results = {}
-        
-        for scenario in scenarios:
-            scenario_results = self._analyze_scenario(product, scenario)
-            results[scenario] = scenario_results
-        
-        # Senaryo karşılaştırması
-        comparison = self._compare_scenarios(results)
-        
-        # Risk ölçümleri
-        risk_metrics = self._calculate_risk_metrics(results)
-        
-        # Break-even analizi
-        break_even = self._break_even_analysis(product)
-        
-        return {
-            'scenario_results': results,
-            'comparison': comparison,
-            'risk_metrics': risk_metrics,
-            'break_even': break_even,
-            'recommended_scenario': self._recommend_scenario(results)
-        }
-    
-    def _analyze_scenario(self, product, scenario):
-        """Tekil senaryo analizi"""
-        cols = self._get_product_columns(product)
-        
-        # Senaryo parametreleri
-        scenario_params = self._get_scenario_parameters(scenario)
-        
-        # Projeksiyonlar
-        projections = self._generate_projections(product, scenario_params)
-        
-        # Finansal metrikler
-        financials = self._calculate_financial_metrics(projections)
-        
-        # Risk değerlendirmesi
-        risk_assessment = self._assess_risks(projections)
-        
-        return {
-            'parameters': scenario_params,
-            'projections': projections,
-            'financials': financials,
-            'risk_assessment': risk_assessment
-        }
-    
-    # =========================================================================
-    # 5. GELİŞMİŞ GÖRSELLEŞTİRMELER
-    # =========================================================================
-    
-    def create_executive_dashboard(self, product):
-        """CEO Dashboard"""
-        dashboard_data = {}
-        
-        # KPI'lar
-        dashboard_data['kpis'] = self._calculate_kpis(product)
-        
-        # Trend analizi
-        dashboard_data['trends'] = self._analyze_trends(product)
-        
-        # Performans haritası
-        dashboard_data['performance_map'] = self._create_performance_map(product)
-        
-        # Portföy dağılımı
-        dashboard_data['portfolio_distribution'] = self._analyze_portfolio_distribution(product)
-        
-        # Risk heatmap
-        dashboard_data['risk_heatmap'] = self._create_risk_heatmap(product)
-        
-        # Competitor intelligence
-        dashboard_data['competitor_intel'] = self._analyze_competitors(product)
-        
-        return dashboard_data
-    
-    def _create_performance_map(self, product):
-        """3D Performans haritası"""
-        # Brick bazlı performans verisi
-        brick_data = self.df.groupby(['TERRITORIES', 'REGION']).agg({
-            'CITY_NORMALIZED': 'nunique',
-            'PF_SALES': 'sum',
-            'COMPETITOR_SALES': 'sum'
-        }).reset_index()
-        
-        fig = px.scatter_3d(
-            brick_data,
-            x='PF_SALES',
-            y='COMPETITOR_SALES',
-            z='CITY_NORMALIZED',
-            color='REGION',
-            size='PF_SALES',
-            hover_name='TERRITORIES',
-            title='3D Performans Haritası',
-            color_discrete_map=CORPORATE_COLORS
-        )
-        
-        fig.update_layout(
-            scene=dict(
-                xaxis_title='PF Satış',
-                yaxis_title='Rakip Satış',
-                zaxis_title='Şehir Sayısı'
-            )
-        )
-        
-        return fig
-    
-    def _create_risk_heatmap(self, product):
-        """Risk ısı haritası"""
-        risk_data = self._calculate_risk_factors(product)
-        
-        fig = px.imshow(
-            risk_data,
-            title='Risk Heatmap',
-            color_continuous_scale='RdYlGn_r',
-            aspect='auto'
-        )
-        
-        fig.update_layout(
-            xaxis_title='Risk Faktörleri',
-            yaxis_title='Brick\'ler',
-            coloraxis_colorbar=dict(title='Risk Seviyesi')
-        )
-        
-        return fig
-    
-    # =========================================================================
-    # YARDIMCI FONKSİYONLAR
-    # =========================================================================
-    
-    def _get_product_columns(self, product):
-        """Ürün kolonlarını döndür"""
-        mapping = {
-            "TROCMETAM": {"pf": "TROCMETAM", "rakip": "DIGER TROCMETAM"},
-            "CORTIPOL": {"pf": "CORTIPOL", "rakip": "DIGER CORTIPOL"},
-            "DEKSAMETAZON": {"pf": "DEKSAMETAZON", "rakip": "DIGER DEKSAMETAZON"},
-            "PF IZOTONIK": {"pf": "PF IZOTONIK", "rakip": "DIGER IZOTONIK"}
-        }
-        return mapping.get(product, mapping["TROCMETAM"])
-    
-    def _apply_date_filter(self, date_filter):
-        """Tarih filtresi uygula"""
-        if date_filter:
-            return self.df[
-                (self.df['DATE'] >= date_filter[0]) & 
-                (self.df['DATE'] <= date_filter[1])
-            ]
-        return self.df.copy()
-    
-    def _get_season(self, month):
-        """Ay'dan mevsim belirle"""
-        if month in [12, 1, 2]:
-            return 'Winter'
-        elif month in [3, 4, 5]:
-            return 'Spring'
-        elif month in [6, 7, 8]:
-            return 'Summer'
-        else:
-            return 'Fall'
-    
-    def _calculate_strategic_priority(self, bcg_category, pf_sum, growth_rate):
-        """Stratejik öncelik skoru"""
-        category_weights = {
-            "⭐ Star": 1.0,
-            "🐄 Cash Cow": 0.8,
-            "❓ Question Mark": 0.6,
-            "🐶 Dog": 0.3
-        }
-        
-        sales_weight = np.log1p(pf_sum) / 10  # Log normalization
-        growth_weight = growth_rate / 100
-        
-        return category_weights.get(bcg_category, 0.5) * (0.6 * sales_weight + 0.4 * growth_weight)
-
-# =============================================================================
-# ANA UYGULAMA
-# =============================================================================
-
-def main():
-    # Kurumsal Header
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem 0;">
-        <h1 class="enterprise-header">
-            🚀 ENTERPRISE PORTFOLIO INTELLIGENCE
-        </h1>
-        <p style="color: #94a3b8; font-size: 1.1rem; max-width: 800px; margin: 0 auto;">
-            Stratejik Karar Alma • Makine Öğrenmesi • Risk Analizi • Rekabet Zekası
-        </p>
-    </div>
+    </style>
     """, unsafe_allow_html=True)
+
+# ==============================================================================
+# 5. UTILITY FUNCTIONS
+# ==============================================================================
+class DataValidator:
+    """Data validation utilities"""
     
-    # Sidebar
-    with st.sidebar:
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
-                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-            <h3 style="color: white; margin: 0; text-align: center;">⚙️ SİSTEM KONFİGÜRASYONU</h3>
-        </div>
-        """, unsafe_allow_html=True)
+    @staticmethod
+    def is_valid_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
+        """Validate if dataframe is usable"""
+        if df is None:
+            return False, "DataFrame is None"
         
-        # Veri yükleme
-        uploaded_file = st.file_uploader("📂 Veri Dosyası Yükle", type=['xlsx', 'csv'])
+        if df.empty:
+            return False, "DataFrame is empty"
         
-        if uploaded_file:
-            try:
-                if uploaded_file.name.endswith('.xlsx'):
-                    df = pd.read_excel(uploaded_file)
+        if len(df.columns) == 0:
+            return False, "DataFrame has no columns"
+        
+        return True, "Valid"
+    
+    @staticmethod
+    def check_required_columns(df: pd.DataFrame, required: List[str]) -> Tuple[bool, List[str]]:
+        """Check if required columns exist"""
+        missing = [col for col in required if col not in df.columns]
+        return len(missing) == 0, missing
+    
+    @staticmethod
+    def safe_numeric_conversion(value: Any) -> float:
+        """Safely convert any value to numeric"""
+        if pd.isna(value):
+            return 0.0
+        
+        try:
+            str_val = str(value).strip()
+            # Handle European format (comma as decimal)
+            str_val = str_val.replace(',', '.')
+            # Remove non-numeric characters except dot and minus
+            str_val = re.sub(r'[^\d\.\-]', '', str_val)
+            
+            if str_val == '' or str_val == '-':
+                return 0.0
+            
+            return float(str_val)
+        except Exception:
+            return 0.0
+
+class ErrorHandler:
+    """Centralized error handling"""
+    
+    @staticmethod
+    def handle_error(error: Exception, context: str = "Operation", show_traceback: bool = False):
+        """Display user-friendly error messages"""
+        st.error(f"❌ **Error in {context}**")
+        st.error(f"**Message:** {str(error)}")
+        
+        if show_traceback:
+            with st.expander("🔍 Technical Details"):
+                st.code(traceback.format_exc())
+    
+    @staticmethod
+    def safe_execute(func, default_return=None, error_context="Operation"):
+        """Execute function with error handling"""
+        try:
+            return func()
+        except Exception as e:
+            ErrorHandler.handle_error(e, error_context)
+            return default_return
+
+# ==============================================================================
+# 6. DATA PROCESSING ENGINE
+# ==============================================================================
+class PharmaDataProcessor:
+    """Advanced pharmaceutical data processing engine"""
+    
+    def __init__(self):
+        self.config = AppConfig()
+        self.validator = DataValidator()
+    
+    def load_data(self, uploaded_file) -> Optional[pd.DataFrame]:
+        """Load data from uploaded file with comprehensive error handling"""
+        try:
+            file_name = uploaded_file.name.lower()
+            
+            with st.spinner(f"Loading {uploaded_file.name}..."):
+                if file_name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file, low_memory=False)
+                elif file_name.endswith(('.xlsx', '.xls')):
+                    df = pd.read_excel(uploaded_file, engine='openpyxl')
                 else:
-                    df = pd.read_csv(uploaded_file)
+                    st.error("❌ Unsupported file format. Please upload CSV or Excel file.")
+                    return None
                 
-                # Data preprocessing
-                df['DATE'] = pd.to_datetime(df['DATE'])
-                df['YEAR'] = df['DATE'].dt.year
-                df['MONTH'] = df['DATE'].dt.month
-                df['QUARTER'] = df['DATE'].dt.quarter
+                # Clean column names
+                df.columns = [str(col).strip() for col in df.columns]
                 
-                st.success(f"✅ {len(df):,} satır veri başarıyla yüklendi")
+                # Validate
+                is_valid, message = self.validator.is_valid_dataframe(df)
+                if not is_valid:
+                    st.error(f"❌ Invalid data: {message}")
+                    return None
                 
-                # Analiz nesnesi oluştur
-                analyzer = AdvancedPortfolioAnalyzer(df)
+                return df
                 
-            except Exception as e:
-                st.error(f"❌ Veri yükleme hatası: {str(e)}")
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Data Loading", show_traceback=True)
+            return None
+    
+    def detect_mat_columns(self, df: pd.DataFrame) -> List[str]:
+        """Detect MAT period columns with improved pattern matching"""
+        if df is None or df.empty:
+            return []
+        
+        mat_columns = []
+        for col in df.columns:
+            col_str = str(col)
+            for pattern in self.config.MAT_PATTERNS:
+                if re.search(pattern, col_str, re.IGNORECASE):
+                    mat_columns.append(col)
+                    break
+        
+        return mat_columns
+    
+    def parse_mat_period(self, column_name: str) -> Optional[str]:
+        """Extract MAT period from column name"""
+        match = re.search(r'MAT Q(\d) (\d{4})', str(column_name), re.IGNORECASE)
+        if match:
+            quarter = match.group(1)
+            year = match.group(2)
+            return f"MAT Q{quarter} {year}"
+        return None
+    
+    def parse_mat_metric(self, column_name: str) -> Optional[str]:
+        """Identify metric type from column name"""
+        col_upper = str(column_name).upper()
+        
+        # Check each metric type
+        for metric_key, patterns in self.config.METRIC_COLUMNS.items():
+            for pattern in patterns:
+                if pattern in col_upper:
+                    # Additional checks for price metrics
+                    if metric_key == 'SALES_USD' and 'AVG PRICE' in col_upper:
+                        continue
+                    if metric_key == 'STANDARD_UNITS' and 'PRICE' in col_upper:
+                        continue
+                    return metric_key
+        
+        return None
+    
+    def process_mat_data(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """Transform MAT format data into analytical long format"""
+        try:
+            # Validate input
+            is_valid, message = self.validator.is_valid_dataframe(df)
+            if not is_valid:
+                st.warning(f"⚠️ Cannot process data: {message}")
+                return df
+            
+            # Detect MAT columns
+            mat_columns = self.detect_mat_columns(df)
+            
+            if not mat_columns:
+                st.warning("⚠️ No MAT period columns detected. Showing raw data.")
+                return df
+            
+            st.info(f"✓ Detected {len(mat_columns)} MAT columns")
+            
+            # Identify non-MAT columns
+            non_mat_cols = [col for col in df.columns if col not in mat_columns]
+            
+            # Build period-metric mapping
+            periods = {}
+            for col in mat_columns:
+                period = self.parse_mat_period(col)
+                metric = self.parse_mat_metric(col)
+                
+                if period and metric:
+                    if period not in periods:
+                        periods[period] = {}
+                    periods[period][metric] = col
+            
+            if not periods:
+                st.warning("⚠️ Could not parse MAT periods. Showing raw data.")
+                return df
+            
+            # Transform to long format
+            long_data = []
+            
+            progress_bar = st.progress(0)
+            total_periods = len(periods)
+            
+            for idx, (period, metrics) in enumerate(periods.items()):
+                # Update progress
+                progress_bar.progress((idx + 1) / total_periods)
+                
+                # Create period dataframe
+                period_df = df[non_mat_cols].copy()
+                period_df['PERIOD'] = period
+                
+                # Add metrics with safe conversion
+                for metric, col_name in metrics.items():
+                    if col_name in df.columns:
+                        period_df[metric] = df[col_name].apply(
+                            self.validator.safe_numeric_conversion
+                        )
+                
+                long_data.append(period_df)
+            
+            progress_bar.empty()
+            
+            if not long_data:
+                st.warning("⚠️ No data could be processed.")
+                return df
+            
+            # Combine all periods
+            result_df = pd.concat(long_data, ignore_index=True)
+            
+            # Extract temporal components
+            result_df['YEAR'] = result_df['PERIOD'].str.extract(r'(\d{4})')
+            result_df['QUARTER'] = result_df['PERIOD'].str.extract(r'Q(\d)')
+            result_df['PERIOD_SORT'] = result_df['YEAR'] + result_df['QUARTER'].fillna('0')
+            
+            # Sort by period
+            result_df = result_df.sort_values('PERIOD_SORT')
+            
+            # Standardize column names
+            result_df.columns = [col.upper() for col in result_df.columns]
+            
+            st.success(f"✅ Processed {len(result_df):,} records across {len(periods)} periods")
+            
+            return result_df
+            
+        except Exception as e:
+            ErrorHandler.handle_error(e, "MAT Data Processing", show_traceback=True)
+            return df
+    
+    def calculate_market_metrics(
+        self, 
+        df: pd.DataFrame, 
+        group_by: str, 
+        period: str, 
+        metric: str
+    ) -> pd.DataFrame:
+        """Calculate comprehensive market metrics with growth analysis"""
+        try:
+            # Validate inputs
+            if df is None or df.empty:
+                return pd.DataFrame()
+            
+            if group_by not in df.columns:
+                st.warning(f"⚠️ Column '{group_by}' not found in data")
+                return pd.DataFrame()
+            
+            if metric not in df.columns:
+                st.warning(f"⚠️ Metric '{metric}' not found in data")
+                return pd.DataFrame()
+            
+            # Filter for current period
+            period_data = df[df['PERIOD'] == period].copy()
+            
+            if period_data.empty:
+                st.warning(f"⚠️ No data found for period '{period}'")
+                return pd.DataFrame()
+            
+            # Calculate current period metrics
+            current_metrics = period_data.groupby(group_by).agg({
+                metric: ['sum', 'count', 'mean']
+            }).reset_index()
+            
+            current_metrics.columns = [group_by, 'CURRENT_VALUE', 'PRODUCT_COUNT', 'AVG_VALUE']
+            
+            # Calculate market share
+            total_value = current_metrics['CURRENT_VALUE'].sum()
+            if total_value > 0:
+                current_metrics['MARKET_SHARE_PCT'] = (
+                    current_metrics['CURRENT_VALUE'] / total_value * 100
+                ).round(2)
+            else:
+                current_metrics['MARKET_SHARE_PCT'] = 0
+            
+            # Get previous period for growth calculation
+            periods = sorted(df['PERIOD'].unique())
+            
+            if period in periods:
+                period_idx = periods.index(period)
+                
+                if period_idx > 0:
+                    prev_period = periods[period_idx - 1]
+                    prev_data = df[df['PERIOD'] == prev_period].copy()
+                    
+                    if not prev_data.empty:
+                        # Calculate previous period metrics
+                        prev_metrics = prev_data.groupby(group_by)[metric].sum().reset_index()
+                        prev_metrics.columns = [group_by, 'PREVIOUS_VALUE']
+                        
+                        # Merge with current
+                        current_metrics = pd.merge(
+                            current_metrics, 
+                            prev_metrics, 
+                            on=group_by, 
+                            how='left'
+                        )
+                        
+                        current_metrics['PREVIOUS_VALUE'] = current_metrics['PREVIOUS_VALUE'].fillna(0)
+                        
+                        # Calculate growth metrics
+                        current_metrics['ABS_GROWTH'] = (
+                            current_metrics['CURRENT_VALUE'] - current_metrics['PREVIOUS_VALUE']
+                        ).round(2)
+                        
+                        current_metrics['GROWTH_PCT'] = current_metrics.apply(
+                            lambda x: (
+                                (x['CURRENT_VALUE'] - x['PREVIOUS_VALUE']) / x['PREVIOUS_VALUE'] * 100
+                            ).round(2) if x['PREVIOUS_VALUE'] > 0 else 0,
+                            axis=1
+                        )
+            
+            # Add rankings
+            current_metrics = current_metrics.sort_values('CURRENT_VALUE', ascending=False)
+            current_metrics['RANK'] = range(1, len(current_metrics) + 1)
+            
+            # Remove any NaN values
+            current_metrics = current_metrics.fillna(0)
+            
+            return current_metrics
+            
+        except Exception as e:
+            ErrorHandler.handle_error(e, f"Metric Calculation for {group_by}")
+            return pd.DataFrame()
+
+# ==============================================================================
+# 7. VISUALIZATION ENGINE
+# ==============================================================================
+class PharmaVisualizer:
+    """Professional visualization engine with consistent styling"""
+    
+    def __init__(self):
+        self.config = AppConfig()
+        self.color_scheme = {
+            'primary': '#667eea',
+            'secondary': '#764ba2',
+            'success': '#10b981',
+            'warning': '#f59e0b',
+            'danger': '#ef4444',
+            'info': '#3b82f6'
+        }
+    
+    def create_dashboard_metrics(self, df: pd.DataFrame, period: str):
+        """Create enhanced metric cards with change indicators"""
+        try:
+            period_data = df[df['PERIOD'] == period]
+            
+            if period_data.empty:
+                st.warning(f"⚠️ No data available for period {period}")
                 return
-        
-        else:
-            st.info("👈 Lütfen veri dosyasını yükleyin")
-            return
-        
-        st.markdown("---")
-        
-        # Analiz parametreleri
-        st.markdown("### 🎯 ANALİZ PARAMETRELERİ")
-        
-        selected_product = st.selectbox(
-            "Ürün Seçimi",
-            ["TROCMETAM", "CORTIPOL", "DEKSAMETAZON", "PF IZOTONIK"]
-        )
-        
-        analysis_type = st.selectbox(
-            "Analiz Türü",
-            [
-                "📊 Stratejik Portföy Analizi",
-                "🤖 Makine Öğrenmesi Tahmini",
-                "🎯 Karar Destek Sistemi",
-                "📈 Senaryo & Risk Analizi",
-                "🏆 Executive Dashboard",
-                "🗺️ Coğrafi Analiz",
-                "📉 Rakip İstihbaratı",
-                "💰 Finansal Modelleme"
-            ]
-        )
-        
-        # Tarih aralığı
-        st.markdown("### 📅 ZAMAN ARALIĞI")
-        date_option = st.radio(
-            "Dönem Seçimi",
-            ["Tüm Veri", "Son 1 Yıl", "Son 2 Yıl", "Son 5 Yıl", "Özel Aralık"],
-            horizontal=True
-        )
-        
-        # Filtreler
-        st.markdown("### 🔍 DETAYLI FİLTRELER")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            region_filter = st.multiselect("Bölge", df['REGION'].unique() if 'REGION' in df.columns else [])
-        with col2:
-            city_filter = st.multiselect("Şehir", df['CITY'].unique() if 'CITY' in df.columns else [])
-        
-    # Ana içerik alanı
-    if uploaded_file:
-        # Sekmeler
-        tabs = st.tabs([
-            "📈 ÖZET GÖSTERGE PANELİ",
-            "🎯 STRATEJİK ANALİZ",
-            "🤖 ML & TAHMİN",
-            "📊 PERFORMANS",
-            "🗺️ COĞRAFİ",
-            "📈 RAPORLAR"
-        ])
-        
-        with tabs[0]:
-            st.markdown("""
-            <div class="dashboard-container">
-                <div class="dashboard-card">
-                    <h4>🏆 TOPLAM PERFORMANS</h4>
-                    <div class="scorecard-value">₺12.4M</div>
-                    <p style="color: #10b981; font-weight: 600;">+24.5% vs LY</p>
-                </div>
+            
+            # Get previous period for comparison
+            periods = sorted(df['PERIOD'].unique())
+            prev_period = None
+            if period in periods:
+                idx = periods.index(period)
+                if idx > 0:
+                    prev_period = periods[idx - 1]
+            
+            metrics = []
+            
+            # Sales metric
+            if 'SALES_USD' in period_data.columns:
+                current_sales = period_data['SALES_USD'].sum()
+                prev_sales = 0
+                if prev_period:
+                    prev_data = df[df['PERIOD'] == prev_period]
+                    if 'SALES_USD' in prev_data.columns:
+                        prev_sales = prev_data['SALES_USD'].sum()
                 
-                <div class="dashboard-card">
-                    <h4>📊 PAZAR PAYI</h4>
-                    <div class="radial-progress" style="--progress: 65%">
-                        <span>65%</span>
-                    </div>
-                    <p style="text-align: center; margin-top: 1rem;">+3.2 puan</p>
-                </div>
+                change_pct = ((current_sales - prev_sales) / prev_sales * 100) if prev_sales > 0 else 0
                 
-                <div class="dashboard-card">
-                    <h4>🚀 BÜYÜME ORANI</h4>
-                    <div class="scorecard-value">24.5%</div>
-                    <p style="color: #f59e0b; font-weight: 600;">Sektör ort: 18.2%</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Ana metrikler
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric("Aktif Brick", "142", "+8")
-            with col2:
-                st.metric("Şehir Kapsamı", "67", "+12")
-            with col3:
-                st.metric("Ort. Pazar Payı", "42.3%", "+2.1%")
-            with col4:
-                st.metric("Risk Skoru", "Low", "-15%")
-            
-            # Insight bubbles
-            st.markdown("""
-            <div class="insight-bubble">
-                <strong>📈 PERFORMANS İÇGÖRÜSÜ:</strong> Marmara bölgesinde pazar payı %15 arttı. 
-                İstanbul'daki 3 yeni brick'ten yüksek getiri elde ediliyor.
-            </div>
-            
-            <div class="insight-bubble warning">
-                <strong>⚠️ DİKKAT GEREKTİREN:</strong> İç Anadolu'da rakip agresif fiyatlandırma yapıyor. 
-                Pazar payı 2.3 puan düştü.
-            </div>
-            
-            <div class="insight-bubble">
-                <strong>🎯 FIRSAT ALANI:</strong> Ege bölgesinde 5 yeni şehirde penetrasyon potansiyeli yüksek. 
-                Tahmini ek gelir: ₺2.4M
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with tabs[1]:
-            st.header("🎯 STRATEJİK PORTFÖY ANALİZİ")
-            
-            # BCG Matrix
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.subheader("📊 BCG MATRIX")
-                
-                # BCG verilerini simüle et
-                bcg_data = pd.DataFrame({
-                    'Brick': [f'Brick_{i}' for i in range(1, 21)],
-                    'Market_Share': np.random.uniform(0.1, 0.9, 20),
-                    'Growth_Rate': np.random.uniform(-5, 25, 20),
-                    'Category': np.random.choice(['⭐ Star', '🐄 Cash Cow', '❓ Question Mark', '🐶 Dog'], 20),
-                    'Revenue': np.random.uniform(100000, 5000000, 20)
+                metrics.append({
+                    'label': '💰 Total Sales',
+                    'value': f"${current_sales:,.0f}",
+                    'subtext': period,
+                    'change': f"{change_pct:+.1f}%" if prev_period else ""
                 })
-                
-                fig = px.scatter(
-                    bcg_data,
-                    x='Market_Share',
-                    y='Growth_Rate',
-                    size='Revenue',
-                    color='Category',
-                    hover_name='Brick',
-                    title='BCG Stratejik Matrix',
-                    color_discrete_map={
-                        '⭐ Star': CORPORATE_COLORS['star'],
-                        '🐄 Cash Cow': CORPORATE_COLORS['cash_cow'],
-                        '❓ Question Mark': CORPORATE_COLORS['primary'],
-                        '🐶 Dog': CORPORATE_COLORS['dog']
-                    },
-                    size_max=50
-                )
-                
-                # Ortanca çizgileri ekle
-                fig.add_hline(y=bcg_data['Growth_Rate'].median(), line_dash="dash", line_color="gray")
-                fig.add_vline(x=bcg_data['Market_Share'].median(), line_dash="dash", line_color="gray")
-                
-                fig.update_layout(
-                    height=500,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='white'),
-                    xaxis_title='Pazar Payı',
-                    yaxis_title='Büyüme Oranı (%)'
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
             
-            with col2:
-                st.subheader("📋 STRATEJİ ÖNERİLERİ")
-                
-                recommendations = [
-                    {"brick": "Brick_5", "action": "🚀 Yatırımı Artır", "reason": "Yüksek büyüme potansiyeli"},
-                    {"brick": "Brick_12", "action": "💰 Nakit Çek", "reason": "Olgun pazar, düşük büyüme"},
-                    {"brick": "Brick_8", "action": "🔄 Yeniden Dengele", "reason": "Orta performans, optimizasyon gerekli"},
-                    {"brick": "Brick_15", "action": "📉 Yatırımı Azalt", "reason": "Düşük performans, yüksek risk"}
-                ]
-                
-                for rec in recommendations:
-                    st.markdown(f"""
-                    <div style="background: rgba(30, 41, 59, 0.5); padding: 1rem; 
-                                border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #3b82f6;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <strong>{rec['brick']}</strong>
-                            <span style="color: #10b981; font-weight: 600;">{rec['action']}</span>
+            # Volume metric
+            if 'STANDARD_UNITS' in period_data.columns:
+                volume = period_data['STANDARD_UNITS'].sum()
+                metrics.append({
+                    'label': '📦 Total Volume',
+                    'value': f"{volume:,.0f}",
+                    'subtext': 'Standard Units',
+                    'change': ''
+                })
+            
+            # Manufacturers
+            if 'MANUFACTURER' in period_data.columns:
+                mfg_count = period_data['MANUFACTURER'].nunique()
+                metrics.append({
+                    'label': '🏭 Manufacturers',
+                    'value': f"{mfg_count}",
+                    'subtext': 'Active Companies',
+                    'change': ''
+                })
+            
+            # Molecules
+            if 'MOLECULE' in period_data.columns:
+                mol_count = period_data['MOLECULE'].nunique()
+                metrics.append({
+                    'label': '🧪 Molecules',
+                    'value': f"{mol_count}",
+                    'subtext': 'Unique Products',
+                    'change': ''
+                })
+            
+            # Average Price
+            if 'SU_AVG_PRICE' in period_data.columns:
+                avg_price = period_data[period_data['SU_AVG_PRICE'] > 0]['SU_AVG_PRICE'].mean()
+                if pd.notna(avg_price):
+                    metrics.append({
+                        'label': '💵 Avg Price',
+                        'value': f"${avg_price:.2f}",
+                        'subtext': 'Per Unit',
+                        'change': ''
+                    })
+            
+            # Display metrics
+            if metrics:
+                cols = st.columns(len(metrics))
+                for idx, metric in enumerate(metrics):
+                    with cols[idx]:
+                        change_class = ''
+                        if metric['change']:
+                            change_class = 'positive' if '+' in metric['change'] else 'negative'
+                        
+                        change_html = f'<div class="metric-change {change_class}">{metric["change"]}</div>' if metric['change'] else ''
+                        
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div class="metric-label">{metric['label']}</div>
+                            <div class="metric-value">{metric['value']}</div>
+                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+                                {metric['subtext']}
+                            </div>
+                            {change_html}
                         </div>
-                        <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.3rem;">
-                            {rec['reason']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
         
-        with tabs[2]:
-            st.header("🤖 MAKİNE ÖĞRENMESİ TAHMİNLERİ")
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Dashboard Metrics")
+    
+    def create_market_share_chart(
+        self, 
+        data: pd.DataFrame, 
+        title: str, 
+        group_by: str = 'MANUFACTURER'
+    ) -> Optional[go.Figure]:
+        """Create professional market share visualization"""
+        try:
+            if data.empty or group_by not in data.columns:
+                return None
             
-            # Tahmin seçenekleri
-            col1, col2, col3 = st.columns(3)
+            # Take top N
+            plot_data = data.head(self.config.DEFAULT_TOP_N)
             
-            with col1:
-                forecast_months = st.slider("Tahmin Periyodu (Ay)", 1, 24, 12)
+            fig = px.bar(
+                plot_data,
+                x='MARKET_SHARE_PCT',
+                y=group_by,
+                orientation='h',
+                title=title,
+                text='MARKET_SHARE_PCT',
+                color='MARKET_SHARE_PCT',
+                color_continuous_scale='Viridis',
+                labels={'MARKET_SHARE_PCT': 'Market Share (%)'}
+            )
             
-            with col2:
-                confidence_level = st.select_slider(
-                    "Güven Seviyesi",
-                    options=["Düşük", "Orta", "Yüksek"],
-                    value="Yüksek"
-                )
+            fig.update_traces(
+                texttemplate='%{text:.1f}%',
+                textposition='outside',
+                textfont_size=11
+            )
             
-            with col3:
-                model_type = st.selectbox(
-                    "Model Seçimi",
-                    ["XGBoost", "LSTM", "Ensemble", "Prophet"]
-                )
-            
-            # Tahmin grafiği
-            st.subheader("📈 SATIŞ TAHMİNİ")
-            
-            # Simüle edilmiş tahmin verisi
-            dates = pd.date_range(start='2024-01-01', periods=24, freq='M')
-            actual = np.random.normal(1000000, 200000, 12).tolist()
-            forecast = np.random.normal(1200000, 250000, 12).tolist()
-            
-            fig = go.Figure()
-            
-            # Gerçek veri
-            fig.add_trace(go.Scatter(
-                x=dates[:12],
-                y=actual,
-                mode='lines+markers',
-                name='Gerçek Veri',
-                line=dict(color=CORPORATE_COLORS['primary'], width=3),
-                marker=dict(size=8)
-            ))
-            
-            # Tahmin
-            fig.add_trace(go.Scatter(
-                x=dates[11:],
-                y=[actual[-1]] + forecast,
-                mode='lines+markers',
-                name='Tahmin',
-                line=dict(color=CORPORATE_COLORS['success'], width=3, dash='dash'),
-                marker=dict(size=8)
-            ))
-            
-            # Güven aralığı
-            fig.add_trace(go.Scatter(
-                x=dates[11:],
-                y=[actual[-1] * 0.9] + [x * 0.9 for x in forecast],
-                mode='lines',
-                line=dict(width=0),
+            fig.update_layout(
+                height=self.config.CHART_HEIGHT,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                xaxis_title="Market Share (%)",
+                yaxis_title="",
+                yaxis={'categoryorder': 'total ascending'},
                 showlegend=False,
-                hoverinfo='skip'
-            ))
+                margin=dict(t=60, l=20, r=40, b=50),
+                font=dict(family="Inter, sans-serif")
+            )
             
-            fig.add_trace(go.Scatter(
-                x=dates[11:],
-                y=[actual[-1] * 1.1] + [x * 1.1 for x in forecast],
-                mode='lines',
-                line=dict(width=0),
-                fillcolor='rgba(59, 130, 246, 0.2)',
-                fill='tonexty',
-                name='Güven Aralığı'
-            ))
+            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#f1f5f9')
+            
+            return fig
+            
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Market Share Chart")
+            return None
+    
+    def create_trend_chart(
+        self, 
+        df: pd.DataFrame, 
+        metric: str, 
+        group_by: Optional[str] = None
+    ) -> Optional[go.Figure]:
+        """Create trend analysis visualization"""
+        try:
+            if df.empty or metric not in df.columns:
+                return None
+            
+            if group_by and group_by in df.columns:
+                # Multi-line trend
+                trend_data = df.groupby(['PERIOD', group_by])[metric].sum().reset_index()
+                top_groups = trend_data.groupby(group_by)[metric].sum().nlargest(5).index
+                filtered_data = trend_data[trend_data[group_by].isin(top_groups)]
+                
+                fig = px.line(
+                    filtered_data,
+                    x='PERIOD',
+                    y=metric,
+                    color=group_by,
+                    markers=True,
+                    title=f"{metric.replace('_', ' ').title()} Trend (Top 5 {group_by.title()})",
+                    labels={metric: metric.replace('_', ' ').title()}
+                )
+            else:
+                # Single line trend
+                trend_data = df.groupby('PERIOD')[metric].sum().reset_index()
+                
+                fig = px.line(
+                    trend_data,
+                    x='PERIOD',
+                    y=metric,
+                    markers=True,
+                    title=f"{metric.replace('_', ' ').title()} Trend",
+                    labels={metric: metric.replace('_', ' ').title()}
+                )
+                
+                fig.update_traces(line_color=self.color_scheme['primary'], line_width=3)
             
             fig.update_layout(
-                height=500,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white'),
-                xaxis_title='Tarih',
-                yaxis_title='Satış (₺)',
+                height=450,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                xaxis_title="Period",
+                yaxis_title=metric.replace('_', ' ').title(),
                 hovermode='x unified',
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
-                )
+                font=dict(family="Inter, sans-serif")
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#f1f5f9')
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#f1f5f9')
             
-            # Model performansı
-            st.subheader("📊 MODEL PERFORMANSI")
+            return fig
             
-            col1, col2, col3, col4 = st.columns(4)
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Trend Chart")
+            return None
+    
+    def create_growth_chart(
+        self, 
+        data: pd.DataFrame, 
+        title: str, 
+        group_by: str = 'MANUFACTURER'
+    ) -> Optional[go.Figure]:
+        """Create growth comparison chart"""
+        try:
+            if data.empty or 'GROWTH_PCT' not in data.columns:
+                return None
             
-            with col1:
-                st.metric("MAPE", "4.2%", "-0.8%")
-            with col2:
-                st.metric("RMSE", "124,500", "-15,200")
-            with col3:
-                st.metric("R² Score", "0.92", "+0.03")
-            with col4:
-                st.metric("Doğruluk", "89.3%", "+2.1%")
-        
-        with tabs[3]:
-            st.header("📊 DETAYLI PERFORMANS ANALİZİ")
+            # Filter valid growth data and take top/bottom
+            growth_data = data[data['GROWTH_PCT'] != 0].copy()
+            growth_data = growth_data.sort_values('GROWTH_PCT', ascending=False).head(10)
             
-            # Performans segmentasyonu
-            tab_perf1, tab_perf2, tab_perf3 = st.tabs(["📈 Trend", "🏆 Sıralama", "📊 Dağılım"])
+            if growth_data.empty:
+                return None
             
-            with tab_perf1:
-                # Çoklu trend grafiği
-                fig = sp.make_subplots(
-                    rows=2, cols=2,
-                    subplot_titles=('Aylık Satış Trendi', 'Pazar Payı Gelişimi', 
-                                   'Büyüme Oranları', 'Volatilite Analizi'),
-                    vertical_spacing=0.15,
-                    horizontal_spacing=0.1
-                )
-                
-                # Simüle edilmiş veriler
-                months = list(range(1, 13))
-                
-                # Satış trendi
-                fig.add_trace(
-                    go.Scatter(x=months, y=np.random.normal(1000000, 200000, 12),
-                              mode='lines+markers', name='Satış',
-                              line=dict(color=CORPORATE_COLORS['primary'])),
-                    row=1, col=1
-                )
-                
-                # Pazar payı
-                fig.add_trace(
-                    go.Scatter(x=months, y=np.random.uniform(30, 50, 12),
-                              mode='lines+markers', name='Pazar Payı',
-                              line=dict(color=CORPORATE_COLORS['success'])),
-                    row=1, col=2
-                )
-                
-                # Büyüme oranları
-                fig.add_trace(
-                    go.Bar(x=months, y=np.random.uniform(-5, 20, 12),
-                          name='Büyüme', marker_color=CORPORATE_COLORS['warning']),
-                    row=2, col=1
-                )
-                
-                # Volatilite
-                fig.add_trace(
-                    go.Scatter(x=months, y=np.random.uniform(5, 25, 12),
-                              fill='tozeroy', name='Volatilite',
-                              line=dict(color=CORPORATE_COLORS['danger'])),
-                    row=2, col=2
-                )
-                
-                fig.update_layout(
-                    height=600,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='white'),
-                    showlegend=False
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with tab_perf2:
-                # Performans sıralaması
-                performance_data = pd.DataFrame({
-                    'Brick': [f'Brick_{i}' for i in range(1, 16)],
-                    'Sales': np.random.uniform(500000, 3000000, 15),
-                    'Growth': np.random.uniform(-10, 30, 15),
-                    'Market_Share': np.random.uniform(20, 80, 15),
-                    'Efficiency': np.random.uniform(60, 95, 15)
-                }).sort_values('Sales', ascending=False)
-                
-                performance_data['Rank'] = range(1, len(performance_data) + 1)
-                
-                # Renk skalası
-                colors = px.colors.sequential.Viridis[:15]
-                
-                fig = go.Figure(data=[
-                    go.Bar(
-                        x=performance_data['Sales'],
-                        y=performance_data['Brick'],
-                        orientation='h',
-                        marker=dict(
-                            color=colors,
-                            line=dict(color='white', width=1)
-                        ),
-                        text=performance_data['Sales'].apply(lambda x: f'₺{x:,.0f}'),
-                        textposition='outside'
-                    )
-                ])
-                
-                fig.update_layout(
-                    title='Top 15 Brick Performans Sıralaması',
-                    height=600,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='white'),
-                    xaxis_title='Satış (₺)',
-                    yaxis=dict(categoryorder='total ascending')
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-        
-        with tabs[4]:
-            st.header("🗺️ COĞRAFİ ANALİZ & HARİTA GÖRSELLEŞTİRMELERİ")
-            
-            # Harita seçenekleri
-            map_type = st.radio(
-                "Harita Türü",
-                ["📍 Satış Yoğunluğu", "📊 Pazar Payı", "🚀 Büyüme Haritası", "⚠️ Risk Haritası"],
-                horizontal=True
+            fig = px.bar(
+                growth_data,
+                x=group_by,
+                y='GROWTH_PCT',
+                title=title,
+                text='GROWTH_PCT',
+                color='GROWTH_PCT',
+                color_continuous_scale='RdYlGn',
+                color_continuous_midpoint=0,
+                labels={'GROWTH_PCT': 'Growth (%)'}
             )
             
-            # Türkiye haritası için simüle edilmiş veri
-            turkish_cities = ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 
-                             'Adana', 'Konya', 'Gaziantep', 'Kayseri', 'Mersin']
-            
-            city_data = pd.DataFrame({
-                'City': turkish_cities,
-                'Sales': np.random.uniform(100000, 5000000, len(turkish_cities)),
-                'Market_Share': np.random.uniform(30, 80, len(turkish_cities)),
-                'Growth': np.random.uniform(-5, 25, len(turkish_cities)),
-                'Lat': [41.0082, 39.9334, 38.4237, 40.1825, 36.8969, 
-                       37.0000, 37.8667, 37.0662, 38.7312, 36.8000],
-                'Lon': [28.9784, 32.8597, 27.1428, 29.0669, 30.7133, 
-                       35.3213, 32.4833, 37.3833, 35.4787, 34.6333]
-            })
-            
-            # Bubble haritası
-            fig = px.scatter_mapbox(
-                city_data,
-                lat="Lat",
-                lon="Lon",
-                size="Sales",
-                color="Growth",
-                hover_name="City",
-                hover_data=["Sales", "Market_Share", "Growth"],
-                color_continuous_scale="RdYlGn",
-                size_max=40,
-                zoom=5,
-                title="Türkiye Satış Dağılım Haritası"
+            fig.update_traces(
+                texttemplate='%{text:+.1f}%',
+                textposition='outside'
             )
             
             fig.update_layout(
-                mapbox_style="carto-darkmatter",
-                height=600,
-                margin={"r":0,"t":50,"l":0,"b":0},
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white')
+                height=450,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                xaxis_title="",
+                yaxis_title="Growth (%)",
+                xaxis_tickangle=-45,
+                showlegend=False,
+                font=dict(family="Inter, sans-serif")
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#f1f5f9')
             
-            # Bölge bazlı analiz
-            st.subheader("📊 BÖLGE BAZLI PERFORMANS")
+            return fig
             
-            region_data = pd.DataFrame({
-                'Region': ['MARMARA', 'EGE', 'AKDENİZ', 'İÇ ANADOLU', 'KARADENİZ', 'GÜNEYDOĞU'],
-                'Sales': np.random.uniform(2000000, 8000000, 6),
-                'Growth': np.random.uniform(5, 30, 6),
-                'Market_Share': np.random.uniform(40, 75, 6),
-                'Efficiency': np.random.uniform(65, 95, 6)
-            })
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Growth Chart")
+            return None
+
+# ==============================================================================
+# 8. DASHBOARD COMPONENTS
+# ==============================================================================
+class DashboardComponents:
+    """Reusable UI components"""
+    
+    def __init__(self):
+        self.config = AppConfig()
+    
+    def create_sidebar(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """Create enhanced sidebar with professional styling"""
+        with st.sidebar:
+            st.markdown(
+                '<div class="sidebar-header">🔧 Control Center</div>', 
+                unsafe_allow_html=True
+            )
+            
+            filters = {}
+            
+            # Period Selection
+            if 'PERIOD' in df.columns:
+                periods = sorted(df['PERIOD'].unique(), reverse=True)
+                if periods:
+                    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+                    filters['period'] = st.selectbox(
+                        "📅 Analysis Period",
+                        periods,
+                        index=0,
+                        help="Select the MAT period to analyze"
+                    )
+                    st.markdown('</div>', unsafe_allow_html=True)
+                else:
+                    filters['period'] = None
+            else:
+                filters['period'] = None
+                st.warning("⚠️ No period data available")
+            
+            # Metric Selection
+            available_metrics = []
+            metric_display = {}
+            
+            if 'SALES_USD' in df.columns:
+                available_metrics.append('SALES_USD')
+                metric_display['SALES_USD'] = '💰 Sales (USD)'
+            
+            if 'STANDARD_UNITS' in df.columns:
+                available_metrics.append('STANDARD_UNITS')
+                metric_display['STANDARD_UNITS'] = '📦 Volume (Standard Units)'
+            
+            if 'SU_AVG_PRICE' in df.columns:
+                available_metrics.append('SU_AVG_PRICE')
+                metric_display['SU_AVG_PRICE'] = '💵 Average Price'
+            
+            if available_metrics:
+                st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+                filters['metric'] = st.selectbox(
+                    "📊 Primary Metric",
+                    available_metrics,
+                    format_func=lambda x: metric_display.get(x, x),
+                    index=0,
+                    help="Select the main metric for analysis"
+                )
+                st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                filters['metric'] = None
+                st.error("❌ No metrics available in data")
+            
+            st.markdown("---")
+            
+            # Advanced Filters
+            st.markdown("### 🎯 Advanced Filters")
+            
+            # Manufacturer Filter
+            if 'MANUFACTURER' in df.columns:
+                manufacturers = sorted(df['MANUFACTURER'].dropna().unique())
+                if manufacturers:
+                    filters['manufacturers'] = st.multiselect(
+                        "🏭 Manufacturers",
+                        manufacturers,
+                        default=None,
+                        help="Filter by specific manufacturers"
+                    )
+                else:
+                    filters['manufacturers'] = []
+            else:
+                filters['manufacturers'] = []
+            
+            # Molecule Filter
+            if 'MOLECULE' in df.columns:
+                molecules = sorted(df['MOLECULE'].dropna().unique())
+                if molecules:
+                    filters['molecules'] = st.multiselect(
+                        "🧪 Molecules",
+                        molecules,
+                        default=None,
+                        help="Filter by specific molecules"
+                    )
+                else:
+                    filters['molecules'] = []
+            else:
+                filters['molecules'] = []
+            
+            # Country Filter
+            if 'COUNTRY' in df.columns:
+                countries = sorted(df['COUNTRY'].dropna().unique())
+                if countries:
+                    filters['countries'] = st.multiselect(
+                        "🌍 Countries",
+                        countries,
+                        default=None,
+                        help="Filter by specific countries"
+                    )
+                else:
+                    filters['countries'] = []
+            else:
+                filters['countries'] = []
+            
+            st.markdown("---")
+            
+            # Dataset Information
+            self._show_dataset_info(df)
+            
+            st.markdown("---")
+            
+            # Action Buttons
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📥 Export", use_container_width=True):
+                    st.session_state['show_export'] = True
+            
+            with col2:
+                if st.button("🔄 Refresh", use_container_width=True):
+                    st.rerun()
+            
+            return filters
+    
+    def _show_dataset_info(self, df: pd.DataFrame):
+        """Display dataset information"""
+        st.markdown("### 📊 Dataset Info")
+        
+        info_items = []
+        info_items.append(f"**Records:** {len(df):,}")
+        
+        if 'PERIOD' in df.columns:
+            periods = df['PERIOD'].nunique()
+            latest = df['PERIOD'].max()
+            info_items.append(f"**Periods:** {periods}")
+            info_items.append(f"**Latest:** {latest}")
+        
+        if 'MANUFACTURER' in df.columns:
+            info_items.append(f"**Manufacturers:** {df['MANUFACTURER'].nunique()}")
+        
+        if 'MOLECULE' in df.columns:
+            info_items.append(f"**Molecules:** {df['MOLECULE'].nunique()}")
+        
+        if 'COUNTRY' in df.columns:
+            info_items.append(f"**Countries:** {df['COUNTRY'].nunique()}")
+        
+        info_html = '<div class="sidebar-section">'
+        for item in info_items:
+            info_html += f'<p style="margin: 0.4rem 0; color: #f1f5f9 !important;">{item}</p>'
+        info_html += '</div>'
+        
+        st.markdown(info_html, unsafe_allow_html=True)
+    
+    def show_export_dialog(self, df: pd.DataFrame):
+        """Show export options dialog"""
+        if st.session_state.get('show_export', False):
+            st.markdown("### 📥 Export Data")
             
             col1, col2 = st.columns(2)
             
             with col1:
-                fig1 = px.bar(
-                    region_data,
-                    x='Region',
-                    y='Sales',
-                    color='Region',
-                    title='Bölgelere Göre Satış',
-                    color_discrete_map=CORPORATE_COLORS
+                # CSV Export
+                csv_data = df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📄 Download CSV",
+                    data=csv_data,
+                    file_name=f"pharma_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
                 )
-                fig1.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='white')
-                )
-                st.plotly_chart(fig1, use_container_width=True)
             
             with col2:
-                fig2 = px.pie(
-                    region_data,
-                    values='Sales',
-                    names='Region',
-                    title='Satış Dağılımı',
-                    color='Region',
-                    color_discrete_map=CORPORATE_COLORS
+                # Excel Export
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Data')
+                
+                st.download_button(
+                    label="📊 Download Excel",
+                    data=output.getvalue(),
+                    file_name=f"pharma_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
                 )
-                fig2.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color='white')
-                )
-                st.plotly_chart(fig2, use_container_width=True)
+            
+            if st.button("✖️ Close", use_container_width=True):
+                st.session_state['show_export'] = False
+                st.rerun()
+
+# ==============================================================================
+# 9. MAIN APPLICATION
+# ==============================================================================
+class PharmaAnalyticsApp:
+    """Main application orchestrator"""
+    
+    def __init__(self):
+        self.config = AppConfig()
+        self.processor = PharmaDataProcessor()
+        self.visualizer = PharmaVisualizer()
+        self.components = DashboardComponents()
+        apply_custom_styling()
+        self._init_session_state()
+    
+    def _init_session_state(self):
+        """Initialize session state variables"""
+        if 'data' not in st.session_state:
+            st.session_state.data = None
+        if 'processed' not in st.session_state:
+            st.session_state.processed = False
+        if 'show_export' not in st.session_state:
+            st.session_state.show_export = False
+    
+    def run(self):
+        """Main application entry point"""
+        self._show_header()
+        
+        # File Upload
+        uploaded_file = st.file_uploader(
+            "📁 Upload Pharmaceutical Data File",
+            type=['csv', 'xlsx', 'xls'],
+            help=f"Supported formats: CSV, Excel | Max size: {self.config.MAX_FILE_SIZE_MB}MB"
+        )
+        
+        if uploaded_file:
+            if not st.session_state.processed:
+                self._process_file(uploaded_file)
+            
+            if st.session_state.data is not None:
+                df = st.session_state.data
+                
+                # Show export dialog if requested
+                self.components.show_export_dialog(df)
+                
+                # Create sidebar and get filters
+                filters = self.components.create_sidebar(df)
+                
+                # Apply filters
+                filtered_df = self._apply_filters(df, filters)
+                
+                if not filtered_df.empty:
+                    # Render dashboard tabs
+                    self._render_dashboard_tabs(filtered_df, filters)
+                else:
+                    st.warning("⚠️ No data matches the selected filters. Please adjust your selection.")
+        else:
+            # Reset processed state when file is removed
+            if st.session_state.processed:
+                st.session_state.processed = False
+                st.session_state.data = None
+            
+            self._show_welcome_screen()
+        
+        self._show_footer()
+    
+    def _show_header(self):
+        """Display application header"""
+        st.markdown(f"""
+        <div class="main-header">
+            {self.config.APP_NAME}
+        </div>
+        <div class="main-subheader">
+            Advanced MAT Data Analytics | Version {self.config.APP_VERSION} | Production-Ready
+        </div>
+        """, unsafe_allow_html=True)
+    
+    def _show_welcome_screen(self):
+        """Display welcome screen with instructions"""
+        st.info("👆 **Get Started:** Upload your pharmaceutical MAT data file to begin analysis")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            with st.expander("📋 **Data Format Guide**", expanded=True):
+                st.markdown("""
+                ### Expected Data Structure
+                
+                **Core Columns:**
+                - `Manufacturer` - Company name
+                - `Molecule` - Active pharmaceutical ingredient
+                - `Country` - Market geography
+                - `Sector` - Business sector
+                
+                **MAT Period Columns Format:**
+                ```
+                MAT Q3 2022 USD MNF
+                MAT Q3 2022 Standard Units
+                MAT Q3 2022 SU Avg Price USD MNF
+                MAT Q3 2023 USD MNF
+                MAT Q3 2023 Standard Units
+                ...
+                ```
+                
+                **Supported Metrics:**
+                - Sales (USD MNF)
+                - Volume (Standard Units, Units)
+                - Pricing (SU Avg Price, Unit Avg Price)
+                
+                **File Requirements:**
+                - Format: CSV or Excel (.xlsx, .xls)
+                - Size: Up to 200 MB
+                - Encoding: UTF-8 recommended
+                """)
+        
+        with col2:
+            st.markdown("""
+            <div class="info-box">
+            <h3>✨ Key Features</h3>
+            <ul>
+                <li>📊 Executive Dashboard</li>
+                <li>🏭 Manufacturer Analysis</li>
+                <li>🧪 Molecule Tracking</li>
+                <li>📈 Trend Analysis</li>
+                <li>🌍 Geographic Insights</li>
+                <li>💰 Price Analytics</li>
+                <li>📥 Data Export</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    def _process_file(self, uploaded_file):
+        """Process uploaded data file"""
+        with st.spinner("🔄 Processing data..."):
+            # Load raw data
+            raw_df = self.processor.load_data(uploaded_file)
+            
+            if raw_df is not None:
+                # Process MAT format
+                processed_df = self.processor.process_mat_data(raw_df)
+                
+                if processed_df is not None and not processed_df.empty:
+                    st.session_state.data = processed_df
+                    st.session_state.processed = True
+                    
+                    # Show summary
+                    mat_cols = self.processor.detect_mat_columns(raw_df)
+                    periods = processed_df['PERIOD'].nunique() if 'PERIOD' in processed_df.columns else 0
+                    
+                    st.success(f"""
+                    ✅ **Data Processing Complete!**
+                    
+                    - MAT columns detected: **{len(mat_cols)}**
+                    - Periods identified: **{periods}**
+                    - Total records: **{len(processed_df):,}**
+                    - Columns: **{len(processed_df.columns)}**
+                    """)
+                else:
+                    st.error("❌ Failed to process data. Please check the file format.")
+    
+    def _apply_filters(self, df: pd.DataFrame, filters: Dict[str, Any]) -> pd.DataFrame:
+        """Apply selected filters to dataframe"""
+        filtered_df = df.copy()
+        
+        try:
+            # Period filter
+            if filters.get('period'):
+                filtered_df = filtered_df[filtered_df['PERIOD'] == filters['period']]
+            
+            # Manufacturer filter
+            if filters.get('manufacturers') and len(filters['manufacturers']) > 0:
+                filtered_df = filtered_df[filtered_df['MANUFACTURER'].isin(filters['manufacturers'])]
+            
+            # Molecule filter
+            if filters.get('molecules') and len(filters['molecules']) > 0:
+                filtered_df = filtered_df[filtered_df['MOLECULE'].isin(filters['molecules'])]
+            
+            # Country filter
+            if filters.get('countries') and len(filters['countries']) > 0:
+                filtered_df = filtered_df[filtered_df['COUNTRY'].isin(filters['countries'])]
+            
+            return filtered_df
+            
+        except Exception as e:
+            ErrorHandler.handle_error(e, "Filter Application")
+            return df
+    
+    def _render_dashboard_tabs(self, df: pd.DataFrame, filters: Dict[str, Any]):
+        """Render all dashboard tabs"""
+        tabs = st.tabs([
+            "📊 Dashboard",
+            "🏭 Manufacturers",
+            "🧪 Molecules",
+            "📈 Trends",
+            "🌍 Geography",
+            "💰 Pricing",
+            "📋 Data Explorer"
+        ])
+        
+        with tabs[0]:
+            self._render_dashboard_tab(df, filters)
+        
+        with tabs[1]:
+            self._render_manufacturers_tab(df, filters)
+        
+        with tabs[2]:
+            self._render_molecules_tab(df, filters)
+        
+        with tabs[3]:
+            self._render_trends_tab(df, filters)
+        
+        with tabs[4]:
+            self._render_geography_tab(df, filters)
         
         with tabs[5]:
-            st.header("📈 İLERİ DÜZEY RAPORLAMA")
+            self._render_pricing_tab(df, filters)
+        
+        with tabs[6]:
+            self._render_data_explorer_tab(df)
+    
+    def _render_dashboard_tab(self, df: pd.DataFrame, filters: Dict[str, Any]):
+        """Render executive dashboard"""
+        st.markdown('<div class="sub-header">📊 Executive Dashboard</div>', unsafe_allow_html=True)
+        
+        if not filters.get('period'):
+            st.warning("⚠️ Please select a period from the sidebar")
+            return
+        
+        # Key metrics
+        self.visualizer.create_dashboard_metrics(df, filters['period'])
+        
+        st.markdown("---")
+        
+        # Charts
+        if filters.get('metric'):
+            col1, col2 = st.columns(2)
             
-            # Rapor seçenekleri
-            report_type = st.selectbox(
-                "Rapor Türü",
-                [
-                    "📊 Executive Summary",
-                    "📈 Performans Analizi",
-                    "🎯 Stratejik Öneriler",
-                    "🤖 ML Tahmin Raporu",
-                    "⚠️ Risk Analizi",
-                    "📋 Detaylı Brick Raporu"
-                ]
+            with col1:
+                # Market share
+                market_data = self.processor.calculate_market_metrics(
+                    df, 'MANUFACTURER', filters['period'], filters['metric']
+                )
+                
+                if not market_data.empty:
+                    fig = self.visualizer.create_market_share_chart(
+                        market_data,
+                        f"Top Manufacturers - {filters['period']}"
+                    )
+                    if fig:
+                        st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # Growth
+                if not market_data.empty and 'GROWTH_PCT' in market_data.columns:
+                    fig = self.visualizer.create_growth_chart(
+                        market_data,
+                        f"Growth Leaders - {filters['period']}"
+                    )
+                    if fig:
+                        st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_manufacturers_tab(self, df: pd.DataFrame, filters: Dict[str, Any]):
+        """Render manufacturer analysis"""
+        st.markdown('<div class="sub-header">🏭 Manufacturer Analysis</div>', unsafe_allow_html=True)
+        
+        if not filters.get('period') or not filters.get('metric'):
+            st.warning("⚠️ Please select both period and metric")
+            return
+        
+        manufacturer_data = self.processor.calculate_market_metrics(
+            df, 'MANUFACTURER', filters['period'], filters['metric']
+        )
+        
+        if not manufacturer_data.empty:
+            st.markdown(f"#### Top 20 Manufacturers - {filters['period']}")
+            
+            # Prepare display dataframe
+            display_cols = ['RANK', 'MANUFACTURER', 'CURRENT_VALUE', 'MARKET_SHARE_PCT']
+            if 'GROWTH_PCT' in manufacturer_data.columns:
+                display_cols.append('GROWTH_PCT')
+            
+            display_df = manufacturer_data[display_cols].head(20).copy()
+            display_df.columns = ['Rank', 'Manufacturer', 'Value', 'Market Share %'] + (['Growth %'] if 'GROWTH_PCT' in manufacturer_data.columns else [])
+            
+            # Format values
+            display_df['Value'] = display_df['Value'].apply(lambda x: f"{x:,.0f}")
+            display_df['Market Share %'] = display_df['Market Share %'].apply(lambda x: f"{x:.2f}%")
+            if 'Growth %' in display_df.columns:
+                display_df['Growth %'] = display_df['Growth %'].apply(lambda x: f"{x:+.1f}%")
+            
+            st.dataframe(display_df, use_container_width=True, height=self.config.TABLE_HEIGHT)
+        else:
+            st.info("ℹ️ No manufacturer data available for the selected filters")
+    
+    def _render_molecules_tab(self, df: pd.DataFrame, filters: Dict[str, Any]):
+        """Render molecule analysis"""
+        st.markdown('<div class="sub-header">🧪 Molecule Analysis</div>', unsafe_allow_html=True)
+        
+        if not filters.get('period') or not filters.get('metric'):
+            st.warning("⚠️ Please select both period and metric")
+            return
+        
+        molecule_data = self.processor.calculate_market_metrics(
+            df, 'MOLECULE', filters['period'], filters['metric']
+        )
+        
+        if not molecule_data.empty:
+            fig = px.bar(
+                molecule_data.head(15),
+                x='MOLECULE',
+                y='CURRENT_VALUE',
+                title=f"Top Molecules - {filters['period']}",
+                color='MARKET_SHARE_PCT',
+                color_continuous_scale='Plasma',
+                labels={'CURRENT_VALUE': 'Value', 'MARKET_SHARE_PCT': 'Market Share (%)'}
             )
             
-            # Rapor parametreleri
-            col1, col2, col3 = st.columns(3)
+            fig.update_layout(
+                height=self.config.CHART_HEIGHT,
+                xaxis_tickangle=-45,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font=dict(family="Inter, sans-serif")
+            )
             
-            with col1:
-                time_period = st.selectbox("Zaman Periyodu", ["Son 1 Yıl", "Son 2 Yıl", "Son 5 Yıl", "Tüm Veri"])
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("ℹ️ No molecule data available")
+    
+    def _render_trends_tab(self, df: pd.DataFrame, filters: Dict[str, Any]):
+        """Render trend analysis"""
+        st.markdown('<div class="sub-header">📈 Trend Analysis</div>', unsafe_allow_html=True)
+        
+        if not filters.get('metric'):
+            st.warning("⚠️ Please select a metric")
+            return
+        
+        # Overall trend
+        fig = self.visualizer.create_trend_chart(df, filters['metric'])
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Grouped trends
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'MANUFACTURER' in df.columns:
+                fig = self.visualizer.create_trend_chart(df, filters['metric'], 'MANUFACTURER')
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            if 'MOLECULE' in df.columns:
+                fig = self.visualizer.create_trend_chart(df, filters['metric'], 'MOLECULE')
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_geography_tab(self, df: pd.DataFrame, filters: Dict[str, Any]):
+        """Render geographic analysis"""
+        st.markdown('<div class="sub-header">🌍 Geographic Analysis</div>', unsafe_allow_html=True)
+        
+        if 'COUNTRY' not in df.columns:
+            st.info("ℹ️ Geographic data not available in this dataset")
+            return
+        
+        if not filters.get('period') or not filters.get('metric'):
+            st.warning("⚠️ Please select both period and metric")
+            return
+        
+        country_data = self.processor.calculate_market_metrics(
+            df, 'COUNTRY', filters['period'], filters['metric']
+        )
+        
+        if not country_data.empty:
+            fig = px.bar(
+                country_data.head(15),
+                x='COUNTRY',
+                y='CURRENT_VALUE',
+                title=f"Top Countries - {filters['period']}",
+                color='MARKET_SHARE_PCT',
+                color_continuous_scale='Viridis',
+                labels={'CURRENT_VALUE': 'Value', 'MARKET_SHARE_PCT': 'Market Share (%)'}
+            )
             
-            with col2:
-                detail_level = st.select_slider("Detay Seviyesi", ["Özet", "Orta", "Detaylı", "Çok Detaylı"])
+            fig.update_layout(
+                height=self.config.CHART_HEIGHT,
+                xaxis_tickangle=-45,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font=dict(family="Inter, sans-serif")
+            )
             
-            with col3:
-                format_type = st.radio("Format", ["PDF", "Excel", "HTML"], horizontal=True)
+            st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_pricing_tab(self, df: pd.DataFrame, filters: Dict[str, Any]):
+        """Render pricing analysis"""
+        st.markdown('<div class="sub-header">💰 Price Analysis</div>', unsafe_allow_html=True)
+        
+        if 'SU_AVG_PRICE' not in df.columns:
+            st.info("ℹ️ Pricing data not available in this dataset")
+            return
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Price distribution
+            price_data = df[df['SU_AVG_PRICE'] > 0]
             
-            # Rapor önizleme
-            st.subheader("📋 RAPOR ÖNİZLEME")
-            
-            # Rapor içeriği
-            report_content = f"""
-            # ENTERPRISE PORTFOLIO INTELLIGENCE RAPORU
-            **Rapor Tarihi:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
-            **Analiz Periyodu:** {time_period}
-            **Ürün:** {selected_product}
-            
-            ## 📊 EXECUTIVE SUMMARY
-            
-            ### Başarılı Alanlar:
-            1. **Marmara Bölgesi**: Pazar payı %15 artış, ₺4.2M ek gelir
-            2. **Premium Brick'ler**: Ortalama %28 büyüme oranı
-            3. **Operasyonel Verimlilik**: %12 iyileşme
-            
-            ### Geliştirme Gereken Alanlar:
-            1. **İç Anadolu**: Pazar payı kaybı (-2.3 puan)
-            2. **Rakip Basıncı**: 3 ana bölgede artan rekabet
-            3. **Maliyet Yönetimi**: Dağıtım maliyetleri %8 arttı
-            
-            ## 🎯 STRATEJİK ÖNERİLER
-            
-            ### Acil Eylemler (0-3 Ay):
-            1. **İç Anadolu'da fiyat stratejisi revizyonu**
-            2. **Rakip takibi için AI sistem kurulumu**
-            3. **Verimlilik odaklı 5 brick'in optimizasyonu**
-            
-            ### Orta Vadeli Stratejiler (3-12 Ay):
-            1. **2 yeni bölgede genişleme**
-            2. **Dijital dönüşüm projesi başlatma**
-            3. **Müşteri sadakati programı geliştirme**
-            
-            ## 📈 PERFORMANS METRİKLERİ
-            
-            | Metrik | Değer | Hedef | Durum |
-            |--------|-------|-------|-------|
-            | Toplam Satış | ₺12.4M | ₺11.5M | ✅ Aşıldı |
-            | Pazar Payı | 42.3% | 40.0% | ✅ Aşıldı |
-            | Büyüme Oranı | 24.5% | 20.0% | ✅ Aşıldı |
-            | Karlılık | 18.2% | 16.0% | ✅ Aşıldı |
-            | ROI | 32.1% | 25.0% | ✅ Aşıldı |
-            
-            ## 🤖 MAKİNE ÖĞRENMESİ TAHMİNLERİ
-            
-            **Sonraki 12 Ay Tahmini:**
-            - **Ortalama Satış**: ₺14.2M (±8%)
-            - **Pazar Payı Hedefi**: 45.2%
-            - **Büyüme Beklentisi**: %18-22
-            
-            **Risk Senaryoları:**
-            - **Optimistik**: ₺15.8M (%25 büyüme)
-            - **Baz**: ₺14.2M (%15 büyüme)
-            - **Pesimistik**: ₺12.1M (%2 büyüme)
-            
-            ## 🏆 EN İYİ 5 BRICK
-            
-            1. **Brick_5** - ₺2.8M (%32 büyüme)
-            2. **Brick_12** - ₺2.1M (%28 büyüme)
-            3. **Brick_8** - ₺1.9M (%25 büyüme)
-            4. **Brick_3** - ₺1.7M (%22 büyüme)
-            5. **Brick_15** - ₺1.5M (%20 büyüme)
-            
-            ## ⚠️ RİK ANALİZİ
-            
-            **Yüksek Riskli Alanlar:**
-            1. **Döviz Kuru Dalgalanması**: %35 etkilenme riski
-            2. **Regülasyon Değişiklikleri**: %25 risk
-            3. **Tedarik Zinciri**: %20 risk
-            
-            **Risk Yönetim Önerileri:**
-            - Döviz hedge araçları kullanımı
-            - Alternatif tedarikçi geliştirme
-            - Regülasyon takip sistemi kurulumu
-            
-            ## 🎯 SONRAKİ ADIMLAR
-            
-            1. **30 Gün İçinde:** Risk analizi workshop'u
-            2. **60 Gün İçinde:** Strateji revizyon toplantısı
-            3. **90 Gün İçinde:** Performans değerlendirme
-            
-            ---
-            
-            *Bu rapor Enterprise Portfolio Intelligence System tarafından otomatik oluşturulmuştur.*
-            *Son güncelleme: {datetime.now().strftime('%d/%m/%Y %H:%M')}*
-            """
-            
-            # Rapor görüntüleme
-            st.markdown(report_content)
-            
-            # Rapor indirme butonları
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                if st.button("📥 PDF Olarak İndir", use_container_width=True):
-                    st.success("PDF rapor oluşturuluyor...")
-            
-            with col2:
-                if st.button("📊 Excel Raporu İndir", use_container_width=True):
-                    st.success("Excel rapor oluşturuluyor...")
-            
-            with col3:
-                if st.button("📧 E-posta ile Gönder", use_container_width=True):
-                    st.success("Rapor e-posta ile gönderiliyor...")
-            
-            # Dashboard PDF export
-            st.markdown("---")
-            st.subheader("📊 DASHBOARD PDF EXPORT")
-            
-            if st.button("🎨 Tam Dashboard PDF'i Oluştur", type="primary", use_container_width=True):
-                with st.spinner("Dashboard PDF oluşturuluyor..."):
-                    # Burada PDF oluşturma kodu olacak
-                    st.success("Dashboard PDF başarıyla oluşturuldu!")
+            if len(price_data) > 0:
+                fig = px.histogram(
+                    price_data,
+                    x='SU_AVG_PRICE',
+                    nbins=50,
+                    title="Price Distribution",
+                    labels={'SU_AVG_PRICE': 'Average Price (USD)'}
+                )
+                
+                fig.update_layout(
+                    height=400,
+                    plot_bgcolor='white',
+                    paper_bgcolor='white',
+                    font=dict(family="Inter, sans-serif")
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Price by manufacturer
+            if filters.get('period') and 'MANUFACTURER' in df.columns:
+                period_data = df[df['PERIOD'] == filters['period']]
+                
+                if not period_data.empty:
+                    price_by_mfg = period_data.groupby('MANUFACTURER')['SU_AVG_PRICE'].mean().nlargest(10).reset_index()
                     
-                    # PDF önizleme
-                    st.info("PDF önizlemesi hazırlandı. İndirmek için aşağıdaki butonu kullanın.")
+                    fig = px.bar(
+                        price_by_mfg,
+                        x='MANUFACTURER',
+                        y='SU_AVG_PRICE',
+                        title=f"Average Price by Manufacturer - {filters['period']}",
+                        color='SU_AVG_PRICE',
+                        color_continuous_scale='Viridis',
+                        labels={'SU_AVG_PRICE': 'Avg Price (USD)'}
+                    )
                     
-                    # Simüle edilmiş PDF indirme
-                    pdf_data = base64.b64encode(b"Simulated PDF Content").decode()
-                    href = f'<a href="data:application/pdf;base64,{pdf_data}" download="dashboard_report.pdf">📥 Dashboard PDF\'ini İndir</a>'
-                    st.markdown(href, unsafe_allow_html=True)
+                    fig.update_layout(
+                        height=400,
+                        xaxis_tickangle=-45,
+                        plot_bgcolor='white',
+                        paper_bgcolor='white',
+                        font=dict(family="Inter, sans-serif")
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_data_explorer_tab(self, df: pd.DataFrame):
+        """Render data explorer"""
+        st.markdown('<div class="sub-header">📋 Data Explorer</div>', unsafe_allow_html=True)
+        
+        # Data preview
+        st.dataframe(df, use_container_width=True, height=500)
+        
+        # Data statistics
+        st.markdown("### 📊 Data Statistics")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("**Basic Info**")
+            st.write(f"Rows: {len(df):,}")
+            st.write(f"Columns: {len(df.columns)}")
+            st.write(f"Memory: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+        
+        with col2:
+            st.markdown("**Data Types**")
+            dtype_counts = df.dtypes.value_counts()
+            for dtype, count in dtype_counts.items():
+                st.write(f"{dtype}: {count}")
+        
+        with col3:
+            st.markdown("**Missing Values**")
+            missing = df.isnull().sum()
+            total_missing = missing.sum()
+            st.write(f"Total: {total_missing:,}")
+            if total_missing > 0:
+                st.write(f"Percentage: {total_missing/len(df)*100:.2f}%")
+    
+    def _show_footer(self):
+        """Display application footer"""
+        st.markdown(f"""
+        <div class="footer">
+            <p><strong>{self.config.APP_NAME}</strong> | Version {self.config.APP_VERSION}</p>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">
+                Production-Ready Analytics Platform | Confidential - For Internal Use Only
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ==============================================================================
+# 10. APPLICATION ENTRY POINT
+# ==============================================================================
+def main():
+    """Application entry point with error handling"""
+    try:
+        app = PharmaAnalyticsApp()
+        app.run()
+    except Exception as e:
+        st.error("🚨 **Critical Application Error**")
+        st.error(f"**Error:** {str(e)}")
+        
+        with st.expander("🔍 Error Details"):
+            st.code(traceback.format_exc())
+        
+        st.info("💡 **Troubleshooting:** Try refreshing the page or uploading a different file.")
 
 if __name__ == "__main__":
     main()
