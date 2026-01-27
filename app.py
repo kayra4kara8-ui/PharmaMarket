@@ -28,8 +28,19 @@ from scipy import stats
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-import networkx as nx
+try:
+    import networkx as nx
+    NETWORKX_AVAILABLE = True
+except ImportError:
+    NETWORKX_AVAILABLE = False
+    st.warning("networkx kütüphanesi yüklü değil. Bazı özellikler devre dışı.")
 
+# networkx kullanılan yerde
+if NETWORKX_AVAILABLE:
+    # networkx kodları
+    pass
+else:
+    st.warning("Bu özellik networkx kütüphanesi gerektirir.")
 # Uyarıları kapat
 warnings.filterwarnings('ignore')
 
@@ -2355,5 +2366,6 @@ def main():
 # Uygulamayı başlat
 if __name__ == "__main__":
     main()
+
 
 
