@@ -1,5 +1,21 @@
-streamlit==1.31.0
-pandas==1.5.3
-numpy==1.24.3
+# Pharmaceutical Market Intelligence Platform
+# Requirements File
+# Python 3.11+ Compatible
+
+# Core Data Processing
+pandas==2.2.0
+numpy==1.26.4
+
+# Visualization
 plotly==5.18.0
+
+# Streamlit Framework
+streamlit==1.31.0
+
+# Excel Support
 openpyxl==3.1.2
+xlrd==2.0.1
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2024.1
