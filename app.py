@@ -363,7 +363,7 @@ def optimize_data_types(df):
             unique_count = df[col].nunique()
             total_count = len(df[col])
             
-            if unique_count / total_count < 0.5:  #%50'den az benzersiz değer
+            if unique_count / total_count < 0.5:  # %50'den az benzersiz değer
                 df[col] = df[col].astype('category')
     
     return df
@@ -2355,4 +2355,5 @@ def main():
 # Uygulamayı başlat
 if __name__ == "__main__":
     main()
+
 
