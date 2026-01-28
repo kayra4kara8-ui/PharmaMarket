@@ -1,4 +1,4 @@
-# app.py - Profesyonel İlaç Pazarı Dashboard
+# app.py - Profesyonel İlaç Pazarı Dashboard (Hata Düzeltmeli)
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -293,11 +293,6 @@ PROFESSIONAL_CSS = """
         background: var(--bg-card) !important;
         color: var(--text-primary) !important;
     }
-    
-    /* === PROGRESS BAR === */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)) !important;
-    }
 </style>
 """
 
@@ -324,14 +319,11 @@ class DataProcessor:
                 # İlk 1000 satırı okuyarak yapıyı anla
                 preview_df = pd.read_excel(file, nrows=1000)
                 
-                # Toplam satır sayısını tahmin et
-                total_chunks = max(1, int((file_size * 1000000) / (chunk_size * 100)))
-                
                 progress_bar = st.progress(0)
                 status_text = st.empty()
                 
                 # Chunk'ları oku
-                for i in range(0, len(preview_df) if sample_size else total_chunks * chunk_size, chunk_size):
+                for i in range(0, len(preview_df) if sample_size else 1000000, chunk_size):
                     if sample_size and i >= sample_size:
                         break
                     
@@ -339,9 +331,11 @@ class DataProcessor:
                     if not chunk.empty:
                         chunks.append(chunk)
                     
-                    progress = min((i + 1) / (sample_size if sample_size else total_chunks * chunk_size), 1.0)
-                    progress_bar.progress(progress)
-                    status_text.text(f"📊 Veri yükleniyor: {len(pd.concat(chunks, ignore_index=True)):,} satır")
+                    if len(chunks) > 0:
+                        current_rows = len(pd.concat(chunks, ignore_index=True))
+                        progress = min(current_rows / (sample_size if sample_size else 1000000), 1.0)
+                        progress_bar.progress(progress)
+                        status_text.text(f"📊 Veri yükleniyor: {current_rows:,} satır")
                 
                 df = pd.concat(chunks, ignore_index=True)
                 progress_bar.empty()
@@ -390,6 +384,11 @@ class DataProcessor:
         if price_cols:
             df['Avg_Price'] = df[price_cols].mean(axis=1, skipna=True)
         
+        # Birim verilerini temizle (negatif veya sıfır değerleri düzelt)
+        unit_cols = [col for col in df.columns if 'Units' in col]
+        for col in unit_cols:
+            df[col] = df[col].apply(lambda x: max(x, 0.01) if pd.notnull(x) else x)
+        
         return df
 
 # ================================================
@@ -424,19 +423,25 @@ class PharmaAnalytics:
         # Molekül çeşitliliği
         if 'Molecule' in df.columns:
             metrics['Unique_Molecules'] = df['Molecule'].nunique()
-            metrics['Molecule_Concentration'] = (
-                df.groupby('Molecule')[sales_cols[-1]].sum().nlargest(10).sum() / 
-                df[sales_cols[-1]].sum() * 100
-            )
+            if sales_cols:
+                molecule_sales = df.groupby('Molecule')[sales_cols[-1]].sum()
+                total_sales_molecule = molecule_sales.sum()
+                if total_sales_molecule > 0:
+                    metrics['Molecule_Concentration'] = (
+                        molecule_sales.nlargest(10).sum() / total_sales_molecule * 100
+                    )
         
         # Coğrafi dağılım
         if 'Country' in df.columns:
             metrics['Country_Coverage'] = df['Country'].nunique()
         
         # Terapötik alan (varsa)
-        if 'Specialty Product' in df.columns:
-            specialty_share = df[df['Specialty Product'] == 'Yes'][sales_cols[-1]].sum() / df[sales_cols[-1]].sum() * 100
-            metrics['Specialty_Share'] = specialty_share
+        if 'Specialty Product' in df.columns and sales_cols:
+            total_sales = df[sales_cols[-1]].sum()
+            if total_sales > 0:
+                specialty_mask = df['Specialty Product'].astype(str).str.contains('Yes', case=False, na=False)
+                specialty_sales = df[specialty_mask][sales_cols[-1]].sum()
+                metrics['Specialty_Share'] = specialty_sales / total_sales * 100
         
         return metrics
     
@@ -454,20 +459,25 @@ class PharmaAnalytics:
                 curr_col = sales_cols[i]
                 
                 if prev_col in df.columns and curr_col in df.columns:
-                    year_growth = df.groupby('Country')[curr_col].sum() - df.groupby('Country')[prev_col].sum()
-                    percent_growth = (year_growth / df.groupby('Country')[prev_col].sum().replace(0, np.nan)) * 100
+                    # Grup bazında hesapla
+                    prev_sales = df.groupby('Country')[prev_col].sum()
+                    curr_sales = df.groupby('Country')[curr_col].sum()
                     
-                    for country in percent_growth.index:
-                        if not pd.isna(percent_growth[country]):
+                    for country in prev_sales.index:
+                        if country in curr_sales.index and prev_sales[country] > 0:
+                            growth = (curr_sales[country] - prev_sales[country]) / prev_sales[country] * 100
+                            sales_change = curr_sales[country] - prev_sales[country]
+                            
                             growth_data.append({
                                 'Country': country,
                                 'Period': f"{prev_col.split(' ')[2]}-{curr_col.split(' ')[2]}",
-                                'Growth_Rate': percent_growth[country],
-                                'Sales_Change': year_growth[country]
+                                'Growth_Rate': growth,
+                                'Sales_Change': sales_change
                             })
             
             return pd.DataFrame(growth_data)
-        except:
+        except Exception as e:
+            st.warning(f"Büyüme analizi hatası: {str(e)}")
             return pd.DataFrame()
     
     @staticmethod
@@ -485,6 +495,9 @@ class PharmaAnalytics:
                 }).dropna()
                 
                 if len(market_data) > n_clusters:
+                    # NaN ve infinite değerleri temizle
+                    market_data = market_data.replace([np.inf, -np.inf], np.nan).dropna()
+                    
                     # Standardize et
                     scaler = StandardScaler()
                     features_scaled = scaler.fit_transform(market_data)
@@ -518,6 +531,9 @@ class PharmaAnalytics:
                 # İlk 5 sayısal sütunu kullan
                 features = df[numeric_cols[:5]].fillna(0)
                 
+                # NaN ve infinite değerleri temizle
+                features = features.replace([np.inf, -np.inf], np.nan).fillna(0)
+                
                 # Isolation Forest
                 iso_forest = IsolationForest(contamination=contamination, random_state=42)
                 anomalies = iso_forest.fit_predict(features)
@@ -530,7 +546,8 @@ class PharmaAnalytics:
                 return result_df[result_df['Is_Anomaly']]
             
             return pd.DataFrame()
-        except:
+        except Exception as e:
+            st.warning(f"Anomali tespiti hatası: {str(e)}")
             return pd.DataFrame()
 
 # ================================================
@@ -576,7 +593,7 @@ class VisualizationEngine:
                 )
                 
                 # Bar chart - Son yılın ülke bazlı dağılımı
-                if 'Country' in df.columns:
+                if 'Country' in df.columns and sales_cols:
                     country_sales = df.groupby('Country')[sales_cols[-1]].sum().nlargest(15)
                     
                     fig2 = go.Figure()
@@ -600,7 +617,8 @@ class VisualizationEngine:
                 return fig1, fig2 if 'fig2' in locals() else None
             
             return None, None
-        except:
+        except Exception as e:
+            st.warning(f"Satış grafiği hatası: {str(e)}")
             return None, None
     
     @staticmethod
@@ -640,7 +658,8 @@ class VisualizationEngine:
                 return fig
             
             return None
-        except:
+        except Exception as e:
+            st.warning(f"Pazar payı grafiği hatası: {str(e)}")
             return None
     
     @staticmethod
@@ -650,7 +669,7 @@ class VisualizationEngine:
             if 'Country' in df.columns and 'Region' in df.columns:
                 sales_cols = [col for col in df.columns if 'USD MNF' in col and 'MAT Q3' in col]
                 if not sales_cols:
-                    return None
+                    return None, None
                 
                 latest_col = sales_cols[-1]
                 
@@ -704,7 +723,8 @@ class VisualizationEngine:
                 return fig1, fig2
             
             return None, None
-        except:
+        except Exception as e:
+            st.warning(f"Coğrafi analiz hatası: {str(e)}")
             return None, None
     
     @staticmethod
@@ -742,7 +762,51 @@ class VisualizationEngine:
             )
             
             return fig
-        except:
+        except Exception as e:
+            st.warning(f"Ürün analiz hatası: {str(e)}")
+            return None
+    
+    @staticmethod
+    def create_price_volume_scatter(df):
+        """Fiyat-Hacim scatter plot'u (log scale olmadan)"""
+        try:
+            if 'MAT Q3 2024 Unit Avg Price USD MNF' in df.columns and 'MAT Q3 2024 Units' in df.columns:
+                # Negatif veya sıfır değerleri filtrele
+                sample_df = df[
+                    (df['MAT Q3 2024 Unit Avg Price USD MNF'] > 0) &
+                    (df['MAT Q3 2024 Units'] > 0)
+                ].copy()
+                
+                if len(sample_df) > 0:
+                    # Örneklem al
+                    sample_size = min(1000, len(sample_df))
+                    sample_df = sample_df.sample(sample_size, random_state=42)
+                    
+                    fig = px.scatter(
+                        sample_df,
+                        x='MAT Q3 2024 Unit Avg Price USD MNF',
+                        y='MAT Q3 2024 Units',
+                        size='MAT Q3 2024 USD MNF',
+                        color='Country' if 'Country' in df.columns else None,
+                        hover_name='Molecule' if 'Molecule' in df.columns else None,
+                        title='Fiyat-Hacim İlişkisi',
+                        size_max=50
+                    )
+                    
+                    fig.update_layout(
+                        height=500,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#c0caf5',
+                        xaxis_title='Ortalama Fiyat (USD)',
+                        yaxis_title='Birim Sayısı'
+                    )
+                    
+                    return fig
+            
+            return None
+        except Exception as e:
+            st.warning(f"Scatter plot hatası: {str(e)}")
             return None
 
 # ================================================
@@ -1063,7 +1127,7 @@ def main():
             
             # Specialty vs Non-specialty
             if 'Specialty Product' in df.columns:
-                specialty_sales = df[df['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum()
+                specialty_sales = df[df['Specialty Product'].astype(str).str.contains('Yes', case=False, na=False)]['MAT Q3 2024 USD MNF'].sum()
                 total_sales = df['MAT Q3 2024 USD MNF'].sum()
                 specialty_share = (specialty_sales / total_sales) * 100 if total_sales > 0 else 0
                 
@@ -1141,46 +1205,6 @@ def main():
                     font_color='#c0caf5'
                 )
                 st.plotly_chart(fig, use_container_width=True)
-        
-        # Pazar Segmentasyonu
-        st.markdown('<h3 class="subsection-title">Pazar Segmentasyonu</h3>', unsafe_allow_html=True)
-        
-        if st.button("🔍 Segmentasyon Analizi Yap", type="primary"):
-            with st.spinner("Pazar segmentasyonu analiz ediliyor..."):
-                segmentation_results = analytics.perform_market_segmentation(df)
-                
-                if segmentation_results:
-                    seg_col1, seg_col2 = st.columns(2)
-                    
-                    with seg_col1:
-                        st.markdown("**Segment Profilleri**")
-                        st.dataframe(
-                            segmentation_results['data'].groupby('Cluster').mean(),
-                            use_container_width=True
-                        )
-                    
-                    with seg_col2:
-                        st.metric("Segment Sayısı", len(segmentation_results['data']['Cluster'].unique()))
-                        st.metric("Inertia", f"{segmentation_results['inertia']:,.0f}")
-                    
-                    # Segmentasyon görselleştirme
-                    fig = px.scatter(
-                        segmentation_results['data'].reset_index(),
-                        x='MAT Q3 2024 USD MNF',
-                        y='MAT Q3 2024 Unit Avg Price USD MNF',
-                        color='Cluster',
-                        size='MAT Q3 2024 Units',
-                        hover_data=['Country', 'Corporation'],
-                        title='Pazar Segmentasyonu',
-                        color_continuous_scale='Viridis'
-                    )
-                    fig.update_layout(
-                        height=500,
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        font_color='#c0caf5'
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
     
     # TAB 3: FİYAT ANALİZİ
     with tab3:
@@ -1205,7 +1229,7 @@ def main():
                 fig.update_layout(
                     height=400,
                     plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
                     font_color='#c0caf5',
                     xaxis_title='Fiyat (USD)',
                     yaxis_title='Frekans'
@@ -1265,30 +1289,14 @@ def main():
                 )
                 st.plotly_chart(fig, use_container_width=True)
         
-        # Fiyat-Hacim İlişkisi
+        # Fiyat-Hacim İlişkisi (HATA DÜZELTİLMİŞ)
         st.markdown('<h3 class="subsection-title">Fiyat-Hacim İlişkisi</h3>', unsafe_allow_html=True)
         
-        if 'MAT Q3 2024 Unit Avg Price USD MNF' in df.columns and 'MAT Q3 2024 Units' in df.columns:
-            sample_df = df.sample(min(1000, len(df)))
-            
-            fig = px.scatter(
-                sample_df,
-                x='MAT Q3 2024 Unit Avg Price USD MNF',
-                y='MAT Q3 2024 Units',
-                size='MAT Q3 2024 USD MNF',
-                color='Country' if 'Country' in df.columns else None,
-                hover_name='Molecule' if 'Molecule' in df.columns else None,
-                title='Fiyat-Hacim İlişkisi',
-                log_x=True,
-                log_y=True
-            )
-            fig.update_layout(
-                height=500,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#c0caf5'
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        scatter_fig = VisualizationEngine.create_price_volume_scatter(df)
+        if scatter_fig:
+            st.plotly_chart(scatter_fig, use_container_width=True)
+        else:
+            st.info("Fiyat-Hacim analizi için yeterli veri bulunamadı.")
     
     # TAB 4: REKABET ANALİZİ
     with tab4:
@@ -1335,8 +1343,7 @@ def main():
                     ("Toplam Şirket", market_metrics.get('unique_companies', 0)),
                     ("HHI İndeksi", f"{market_metrics.get('HHI_Index', 0):,.0f}"),
                     ("Top 3 Payı", f"{market_metrics.get('Top3_Share', 0):.1f}%"),
-                    ("Top 5 Payı", f"{market_metrics.get('Top5_Share', 0):.1f}%"),
-                    ("Lider Şirket Payı", f"{(top_companies.iloc[0] / top_companies.sum() * 100):.1f}%")
+                    ("Top 5 Payı", f"{market_metrics.get('Top5_Share', 0):.1f}%")
                 ]
                 
                 for metric_name, metric_value in metrics_data:
@@ -1352,6 +1359,46 @@ def main():
     # TAB 5: GELİŞMİŞ ANALİTİK
     with tab5:
         st.markdown('<h2 class="section-title">Gelişmiş Analitik</h2>', unsafe_allow_html=True)
+        
+        # Pazar Segmentasyonu
+        st.markdown('<h3 class="subsection-title">Pazar Segmentasyonu</h3>', unsafe_allow_html=True)
+        
+        if st.button("🔍 Segmentasyon Analizi Yap", type="primary"):
+            with st.spinner("Pazar segmentasyonu analiz ediliyor..."):
+                segmentation_results = analytics.perform_market_segmentation(df)
+                
+                if segmentation_results:
+                    seg_col1, seg_col2 = st.columns(2)
+                    
+                    with seg_col1:
+                        st.markdown("**Segment Profilleri**")
+                        st.dataframe(
+                            segmentation_results['data'].groupby('Cluster').mean(),
+                            use_container_width=True
+                        )
+                    
+                    with seg_col2:
+                        st.metric("Segment Sayısı", len(segmentation_results['data']['Cluster'].unique()))
+                        st.metric("Inertia", f"{segmentation_results['inertia']:,.0f}")
+                    
+                    # Segmentasyon görselleştirme
+                    fig = px.scatter(
+                        segmentation_results['data'].reset_index(),
+                        x='MAT Q3 2024 USD MNF',
+                        y='MAT Q3 2024 Unit Avg Price USD MNF',
+                        color='Cluster',
+                        size='MAT Q3 2024 Units',
+                        hover_data=['Country', 'Corporation'],
+                        title='Pazar Segmentasyonu',
+                        color_continuous_scale='Viridis'
+                    )
+                    fig.update_layout(
+                        height=500,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#c0caf5'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
         
         # Anomali Tespiti
         st.markdown('<h3 class="subsection-title">Anomali Tespiti</h3>', unsafe_allow_html=True)
@@ -1413,28 +1460,6 @@ def main():
         with quality_cols[3]:
             numeric_cols = len(df.select_dtypes(include=[np.number]).columns)
             st.metric("Sayısal Sütun", numeric_cols)
-        
-        # Korelasyon Analizi
-        st.markdown('<h3 class="subsection-title">Korelasyon Analizi</h3>', unsafe_allow_html=True)
-        
-        numeric_df = df.select_dtypes(include=[np.number])
-        if len(numeric_df.columns) > 1:
-            corr_matrix = numeric_df.corr()
-            
-            fig = px.imshow(
-                corr_matrix,
-                text_auto='.2f',
-                aspect='auto',
-                color_continuous_scale='RdBu',
-                title='Korelasyon Matrisi'
-            )
-            fig.update_layout(
-                height=600,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#c0caf5'
-            )
-            st.plotly_chart(fig, use_container_width=True)
         
         # Veri Önizleme
         st.markdown('<h3 class="subsection-title">Veri Önizleme</h3>', unsafe_allow_html=True)
@@ -1578,4 +1603,8 @@ def main():
 
 if __name__ == "__main__":
     gc.collect()
-    main()
+    try:
+        main()
+    except Exception as e:
+        st.error(f"Uygulama hatası: {str(e)}")
+        st.info("Lütfen sayfayı yenileyin ve tekrar deneyin.")
