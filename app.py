@@ -439,6 +439,96 @@ PROFESSIONAL_CSS = """
         padding-bottom: 0.5rem;
         border-bottom: 2px solid var(--accent-blue);
     }
+    
+    /* === FEATURE CARDS === */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+    
+    .feature-card {
+        background: linear-gradient(145deg, var(--bg-card), var(--bg-hover));
+        padding: 1.5rem;
+        border-radius: var(--radius-md);
+        border-left: 4px solid;
+        transition: all var(--transition-normal);
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .feature-card-blue { border-left-color: var(--accent-blue); }
+    .feature-card-purple { border-left-color: var(--accent-purple); }
+    .feature-card-green { border-left-color: var(--accent-green); }
+    .feature-card-yellow { border-left-color: var(--accent-yellow); }
+    
+    .feature-icon {
+        font-size: 2.2rem;
+        margin-bottom: 0.8rem;
+        opacity: 0.9;
+    }
+    
+    .feature-title {
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+    }
+    
+    .feature-description {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    
+    /* === WELCOME CONTAINER === */
+    .welcome-container {
+        background: linear-gradient(145deg, var(--bg-card), var(--bg-secondary));
+        padding: 3rem;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-xl);
+        text-align: center;
+        margin: 2rem auto;
+        max-width: 900px;
+        border: 1px solid var(--bg-hover);
+    }
+    
+    .welcome-icon {
+        font-size: 5rem;
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1rem;
+    }
+    
+    /* === GET STARTED BOX === */
+    .get-started-box {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.1));
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        margin-top: 2rem;
+    }
+    
+    .get-started-title {
+        font-weight: 600;
+        color: var(--accent-blue);
+        margin-bottom: 0.8rem;
+        font-size: 1.1rem;
+    }
+    
+    .get-started-steps {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
 </style>
 """
 
@@ -1125,7 +1215,7 @@ class AdvancedPharmaAnalytics:
             # International Product metrikleri
             metrics['International_Product_Count'] = len(international_products)
             metrics['International_Product_Sales'] = sum(data['total_sales'] for data in international_products.values())
-            metrics['International_Product_Share'] = (metrics['International_Product_Sales'] / metrics['Total_Market_Value'] * 100) if metrics['Total_Market_Value'] > 0 else 0
+            metrics['International_Product_Share'] = (metrics['International_Product_Sales'] / metrics['Total_Market_Value'] * 100) if metrics.get('Total_Market_Value', 0) > 0 else 0
             
             # Ortalama International Product özellikleri
             if international_products:
@@ -1138,7 +1228,7 @@ class AdvancedPharmaAnalytics:
                                      reverse=True)[:10]
             
             metrics['Top_10_International_Sales'] = sum(data['total_sales'] for _, data in top_international)
-            metrics['Top_10_International_Share'] = (metrics['Top_10_International_Sales'] / metrics['International_Product_Sales'] * 100) if metrics['International_Product_Sales'] > 0 else 0
+            metrics['Top_10_International_Share'] = (metrics['Top_10_International_Sales'] / metrics['International_Product_Sales'] * 100) if metrics.get('International_Product_Sales', 0) > 0 else 0
             
             # Growth karşılaştırması
             if 'Growth_23_24' in df.columns:
@@ -1196,16 +1286,16 @@ class AdvancedPharmaAnalytics:
                 
                 # Corporation distribution
                 if 'Corporation' in df.columns:
-                    top_corp = molecule_df.groupby('Corporation')[latest_sales_col].sum().idxmax()
-                    corp_market_share = (molecule_df[molecule_df['Corporation'] == top_corp][latest_sales_col].sum() / total_sales * 100) if total_sales > 0 else 0
+                    top_corp = molecule_df.groupby('Corporation')[latest_sales_col].sum().idxmax() if not molecule_df['Corporation'].empty else None
+                    corp_market_share = (molecule_df[molecule_df['Corporation'] == top_corp][latest_sales_col].sum() / total_sales * 100) if total_sales > 0 and top_corp else 0
                 else:
                     top_corp = None
                     corp_market_share = 0
                 
                 # Country distribution
                 if 'Country' in df.columns:
-                    top_country = molecule_df.groupby('Country')[latest_sales_col].sum().idxmax()
-                    country_market_share = (molecule_df[molecule_df['Country'] == top_country][latest_sales_col].sum() / total_sales * 100) if total_sales > 0 else 0
+                    top_country = molecule_df.groupby('Country')[latest_sales_col].sum().idxmax() if not molecule_df['Country'].empty else None
+                    country_market_share = (molecule_df[molecule_df['Country'] == top_country][latest_sales_col].sum() / total_sales * 100) if total_sales > 0 and top_country else 0
                 else:
                     top_country = None
                     country_market_share = 0
@@ -1233,7 +1323,7 @@ class AdvancedPharmaAnalytics:
             analysis_df = pd.DataFrame(international_analysis)
             
             # Segmentasyon
-            if len(analysis_df) > 0:
+            if len(analysis_df) > 0 and 'complexity_score' in analysis_df.columns:
                 analysis_df['international_segment'] = pd.cut(
                     analysis_df['complexity_score'],
                     bins=[0, 0.5, 1.5, 3, float('inf')],
@@ -2401,42 +2491,40 @@ def show_welcome_screen():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("""
-        <div style="text-align: center; padding: 3rem 2rem; background: #334155; 
-                 border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); margin: 2rem 0;">
-            <div style="font-size: 5rem; margin-bottom: 1rem; background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
-                     -webkit-background-clip: text; -webkit-text-fill-color: transparent;">💊</div>
+        <div class="welcome-container">
+            <div class="welcome-icon">💊</div>
             <h2 style="color: #f1f5f9; margin-bottom: 1rem;">PharmaIntelligence Pro'ya Hoşgeldiniz</h2>
             <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">
             İlaç pazarı verilerinizi yükleyin ve güçlü analitik özelliklerin kilidini açın.
             <br>International Product analizi ile çoklu pazar stratejilerinizi optimize edin.
             </p>
             
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 2rem 0;">
-                <div style="text-align: left; padding: 1.5rem; background: #475569; border-radius: 12px; border-left: 4px solid #3b82f6;">
-                    <div style="font-size: 2rem; color: #3b82f6; margin-bottom: 0.5rem;">🌍</div>
-                    <div style="font-weight: 700; color: #f1f5f9; font-size: 1.1rem;">International Product</div>
-                    <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.5rem;">Çoklu pazar ürün analizi</div>
+            <div class="feature-grid">
+                <div class="feature-card feature-card-blue">
+                    <div class="feature-icon">🌍</div>
+                    <div class="feature-title">International Product</div>
+                    <div class="feature-description">Çoklu pazar ürün analizi ve strateji geliştirme</div>
                 </div>
-                <div style="text-align: left; padding: 1.5rem; background: #475569; border-radius: 12px; border-left: 4px solid #8b5cf6;">
-                    <div style="font-size: 2rem; color: #8b5cf6; margin-bottom: 0.5rem;">📈</div>
-                    <div style="font-weight: 700; color: #f1f5f9; font-size: 1.1rem;">Pazar Analizi</div>
-                    <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.5rem;">Derin pazar içgörüleri ve trend analizi</div>
+                <div class="feature-card feature-card-purple">
+                    <div class="feature-icon">📈</div>
+                    <div class="feature-title">Pazar Analizi</div>
+                    <div class="feature-description">Derin pazar içgörüleri ve trend analizi</div>
                 </div>
-                <div style="text-align: left; padding: 1.5rem; background: #475569; border-radius: 12px; border-left: 4px solid #10b981;">
-                    <div style="font-size: 2rem; color: #10b981; margin-bottom: 0.5rem;">💰</div>
-                    <div style="font-weight: 700; color: #f1f5f9; font-size: 1.1rem;">Fiyat Zekası</div>
-                    <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.5rem;">Rekabetçi fiyatlandırma analizi</div>
+                <div class="feature-card feature-card-green">
+                    <div class="feature-icon">💰</div>
+                    <div class="feature-title">Fiyat Zekası</div>
+                    <div class="feature-description">Rekabetçi fiyatlandırma ve optimizasyon analizi</div>
                 </div>
-                <div style="text-align: left; padding: 1.5rem; background: #475569; border-radius: 12px; border-left: 4px solid #f59e0b;">
-                    <div style="font-size: 2rem; color: #f59e0b; margin-bottom: 0.5rem;">🏆</div>
-                    <div style="font-weight: 700; color: #f1f5f9; font-size: 1.1rem;">Rekabet Analizi</div>
-                    <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.5rem;">Rakiplerinizi analiz edin ve fırsatları belirleyin</div>
+                <div class="feature-card feature-card-yellow">
+                    <div class="feature-icon">🏆</div>
+                    <div class="feature-title">Rekabet Analizi</div>
+                    <div class="feature-description">Rakiplerinizi analiz edin ve fırsatları belirleyin</div>
                 </div>
             </div>
             
-            <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                <div style="font-weight: 600; color: #3b82f6; margin-bottom: 0.5rem;">🎯 Başlamak İçin</div>
-                <div style="color: #cbd5e1; font-size: 0.95rem;">
+            <div class="get-started-box">
+                <div class="get-started-title">🎯 Başlamak İçin</div>
+                <div class="get-started-steps">
                 1. Sol taraftaki panelden veri dosyanızı yükleyin<br>
                 2. İstediğiniz örneklem boyutunu seçin<br>
                 3. "Yükle & Analiz Et" butonuna tıklayın
@@ -2895,9 +2983,10 @@ def show_international_product_tab(df, analysis_df, metrics):
             display_columns = [col for col in display_columns if col in analysis_df.columns]
             
             intl_df_display = analysis_df[display_columns].copy()
-            intl_df_display['total_sales'] = intl_df_display['total_sales'].apply(lambda x: f"${x/1e6:.2f}M")
-            intl_df_display['avg_growth'] = intl_df_display['avg_growth'].apply(lambda x: f"{x:.1f}%" if not pd.isna(x) else "N/A")
-            intl_df_display['avg_price'] = intl_df_display['avg_price'].apply(lambda x: f"${x:.2f}" if not pd.isna(x) else "N/A")
+            # HATA DÜZELTME: pandas.isna yerine np.isnan kullan
+            intl_df_display['total_sales'] = intl_df_display['total_sales'].apply(lambda x: f"${x/1e6:.2f}M" if pd.notnull(x) else "N/A")
+            intl_df_display['avg_growth'] = intl_df_display['avg_growth'].apply(lambda x: f"{x:.1f}%" if pd.notnull(x) else "N/A")
+            intl_df_display['avg_price'] = intl_df_display['avg_price'].apply(lambda x: f"${x:.2f}" if pd.notnull(x) else "N/A")
             
             st.dataframe(
                 intl_df_display,
@@ -2919,8 +3008,8 @@ def show_international_product_tab(df, analysis_df, metrics):
                 top_display_columns = [col for col in top_display_columns if col in top_intl.columns]
                 
                 top_intl_display = top_intl[top_display_columns].copy()
-                top_intl_display['total_sales'] = top_intl_display['total_sales'].apply(lambda x: f"${x/1e6:.2f}M")
-                top_intl_display['avg_growth'] = top_intl_display['avg_growth'].apply(lambda x: f"{x:.1f}%" if not pd.isna(x) else "N/A")
+                top_intl_display['total_sales'] = top_intl_display['total_sales'].apply(lambda x: f"${x/1e6:.2f}M" if pd.notnull(x) else "N/A")
+                top_intl_display['avg_growth'] = top_intl_display['avg_growth'].apply(lambda x: f"{x:.1f}%" if pd.notnull(x) else "N/A")
                 
                 st.dataframe(
                     top_intl_display,
@@ -2940,8 +3029,8 @@ def show_international_product_tab(df, analysis_df, metrics):
             }).round(2)
             
             segment_analysis.columns = ['Molecule Count', 'Total Sales', 'Avg Growth %', 'Avg Corps', 'Avg Countries']
-            segment_analysis['Total Sales'] = segment_analysis['Total Sales'].apply(lambda x: f"${x/1e6:.2f}M")
-            segment_analysis['Avg Growth %'] = segment_analysis['Avg Growth %'].apply(lambda x: f"{x:.1f}%" if not pd.isna(x) else "N/A")
+            segment_analysis['Total Sales'] = segment_analysis['Total Sales'].apply(lambda x: f"${x/1e6:.2f}M" if pd.notnull(x) else "N/A")
+            segment_analysis['Avg Growth %'] = segment_analysis['Avg Growth %'].apply(lambda x: f"{x:.1f}%" if pd.notnull(x) else "N/A")
             
             st.dataframe(
                 segment_analysis,
