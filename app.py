@@ -2967,7 +2967,7 @@ def show_international_product_tab(df, analysis_df, metrics):
     if intl_fig:
         st.plotly_chart(intl_fig, use_container_width=True, config={'displayModeBar': True})
     
-    # Detaylı tablo
+    # Detaylı tablo - HATA DÜZELTİLMİŞ VERSİYON
     st.markdown('<h3 class="subsection-title">📋 International Product Detaylı Listesi</h3>', unsafe_allow_html=True)
     
     tab1, tab2, tab3 = st.tabs(["Tüm International Product'lar", "Top Performanslılar", "Segment Bazlı"])
@@ -2983,10 +2983,22 @@ def show_international_product_tab(df, analysis_df, metrics):
             display_columns = [col for col in display_columns if col in analysis_df.columns]
             
             intl_df_display = analysis_df[display_columns].copy()
-            # HATA DÜZELTME: pandas.isna yerine np.isnan kullan
-            intl_df_display['total_sales'] = intl_df_display['total_sales'].apply(lambda x: f"${x/1e6:.2f}M" if pd.notnull(x) else "N/A")
-            intl_df_display['avg_growth'] = intl_df_display['avg_growth'].apply(lambda x: f"{x:.1f}%" if pd.notnull(x) else "N/A")
-            intl_df_display['avg_price'] = intl_df_display['avg_price'].apply(lambda x: f"${x:.2f}" if pd.notnull(x) else "N/A")
+            
+            # HATA DÜZELTME: apply metodunu düzgün kullan
+            if 'total_sales' in intl_df_display.columns:
+                intl_df_display['total_sales'] = intl_df_display['total_sales'].apply(
+                    lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
+                )
+            
+            if 'avg_growth' in intl_df_display.columns:
+                intl_df_display['avg_growth'] = intl_df_display['avg_growth'].apply(
+                    lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
+                )
+            
+            if 'avg_price' in intl_df_display.columns:
+                intl_df_display['avg_price'] = intl_df_display['avg_price'].apply(
+                    lambda x: f"${float(x):.2f}" if x is not None and not pd.isna(x) else "N/A"
+                )
             
             st.dataframe(
                 intl_df_display,
@@ -3008,8 +3020,17 @@ def show_international_product_tab(df, analysis_df, metrics):
                 top_display_columns = [col for col in top_display_columns if col in top_intl.columns]
                 
                 top_intl_display = top_intl[top_display_columns].copy()
-                top_intl_display['total_sales'] = top_intl_display['total_sales'].apply(lambda x: f"${x/1e6:.2f}M" if pd.notnull(x) else "N/A")
-                top_intl_display['avg_growth'] = top_intl_display['avg_growth'].apply(lambda x: f"{x:.1f}%" if pd.notnull(x) else "N/A")
+                
+                # HATA DÜZELTME: apply metodunu düzgün kullan
+                if 'total_sales' in top_intl_display.columns:
+                    top_intl_display['total_sales'] = top_intl_display['total_sales'].apply(
+                        lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
+                    )
+                
+                if 'avg_growth' in top_intl_display.columns:
+                    top_intl_display['avg_growth'] = top_intl_display['avg_growth'].apply(
+                        lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
+                    )
                 
                 st.dataframe(
                     top_intl_display,
@@ -3029,8 +3050,17 @@ def show_international_product_tab(df, analysis_df, metrics):
             }).round(2)
             
             segment_analysis.columns = ['Molecule Count', 'Total Sales', 'Avg Growth %', 'Avg Corps', 'Avg Countries']
-            segment_analysis['Total Sales'] = segment_analysis['Total Sales'].apply(lambda x: f"${x/1e6:.2f}M" if pd.notnull(x) else "N/A")
-            segment_analysis['Avg Growth %'] = segment_analysis['Avg Growth %'].apply(lambda x: f"{x:.1f}%" if pd.notnull(x) else "N/A")
+            
+            # HATA DÜZELTME: apply metodunu düzgün kullan
+            if 'Total Sales' in segment_analysis.columns:
+                segment_analysis['Total Sales'] = segment_analysis['Total Sales'].apply(
+                    lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
+                )
+            
+            if 'Avg Growth %' in segment_analysis.columns:
+                segment_analysis['Avg Growth %'] = segment_analysis['Avg Growth %'].apply(
+                    lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
+                )
             
             st.dataframe(
                 segment_analysis,
@@ -3068,8 +3098,19 @@ def show_international_product_tab(df, analysis_df, metrics):
                             display_columns.append(col)
                     
                     if display_columns:
+                        # Veriyi formatlamadan önce kopyala
+                        data_display = insight['data'][display_columns].copy()
+                        if 'total_sales' in data_display.columns:
+                            data_display['total_sales'] = data_display['total_sales'].apply(
+                                lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
+                            )
+                        if 'avg_growth' in data_display.columns:
+                            data_display['avg_growth'] = data_display['avg_growth'].apply(
+                                lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
+                            )
+                        
                         st.dataframe(
-                            insight['data'][display_columns],
+                            data_display,
                             use_container_width=True
                         )
     
