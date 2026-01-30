@@ -535,80 +535,67 @@ PROFESSIONAL_CSS = """
 st.markdown(PROFESSIONAL_CSS, unsafe_allow_html=True)
 
 # ================================================
-# 2. OPTİMİZE VERİ İŞLEME SİSTEMİ
+# 2. OPTİMİZE VERİ İŞLEME SİSTEMİ - TÜM VERİ İÇİN DÜZENLENDİ
 # ================================================
 
 class OptimizedDataProcessor:
-    """Optimize edilmiş veri işleme sınıfı - 500K+ satır için"""
+    """Optimize edilmiş veri işleme sınıfı - TÜM VERİ için"""
     
     @staticmethod
     @st.cache_data(ttl=3600, show_spinner=False, max_entries=10)
-    def load_large_dataset(file, sample_size=None, chunk_size=50000):
-        """Büyük veri setlerini optimize şekilde yükle"""
+    def load_large_dataset(file):
+        """TÜM veri setlerini optimize şekilde yükle - örneklem yok"""
         try:
             start_time = time.time()
+            st.info(f"📥 Veri yükleniyor: {file.name}")
             
-            if file.name.endswith('.csv'):
-                total_rows = sum(1 for line in file) - 1
-                file.seek(0)
-                
-                if total_rows > 100000 and sample_size:
-                    df = pd.read_csv(file, nrows=sample_size)
-                else:
+            # Excel dosyası mı kontrol et
+            if file.name.endswith(('.xlsx', '.xls')):
+                # Excel dosyası için
+                with st.spinner("Excel dosyası işleniyor..."):
+                    # Tüm veriyi yükle
+                    df = pd.read_excel(file, engine='openpyxl')
+                    
+                    # Bellek optimizasyonu
+                    original_memory = df.memory_usage(deep=True).sum() / 1024**2
+                    df = OptimizedDataProcessor.optimize_dataframe(df)
+                    optimized_memory = df.memory_usage(deep=True).sum() / 1024**2
+                    
+                    load_time = time.time() - start_time
+                    
+                    # Bilgilendirme mesajı
+                    st.success(f"""
+                    ✅ Veri yükleme tamamlandı:
+                    - **{len(df):,}** satır
+                    - **{len(df.columns)}** sütun
+                    - Bellek: {original_memory:.1f}MB → {optimized_memory:.1f}MB
+                    - Süre: {load_time:.2f}s
+                    """)
+                    
+            elif file.name.endswith('.csv'):
+                # CSV dosyası için
+                with st.spinner("CSV dosyası işleniyor..."):
+                    # Tüm veriyi yükle
                     df = pd.read_csv(file)
                     
-            elif file.name.endswith(('.xlsx', '.xls')):
-                file_size = file.size / (1024 ** 2)
-                
-                if file_size > 50 or (sample_size and sample_size < 100000):
-                    chunks = []
-                    total_chunks = (sample_size // chunk_size) + 1 if sample_size else 10
+                    # Bellek optimizasyonu
+                    original_memory = df.memory_usage(deep=True).sum() / 1024**2
+                    df = OptimizedDataProcessor.optimize_dataframe(df)
+                    optimized_memory = df.memory_usage(deep=True).sum() / 1024**2
                     
-                    with st.spinner(f"📥 Büyük veri seti yükleniyor..."):
-                        progress_bar = st.progress(0)
-                        status_text = st.empty()
-                        
-                        for i in range(total_chunks):
-                            chunk = pd.read_excel(
-                                file, 
-                                skiprows=i * chunk_size,
-                                nrows=chunk_size,
-                                engine='openpyxl'
-                            )
-                            
-                            if chunk.empty:
-                                break
-                            
-                            chunks.append(chunk)
-                            
-                            loaded_rows = sum(len(c) for c in chunks)
-                            if sample_size:
-                                progress = min(loaded_rows / sample_size, 1.0)
-                            else:
-                                progress = min(i / total_chunks, 0.95)
-                            
-                            progress_bar.progress(progress)
-                            status_text.text(f"📊 {loaded_rows:,} satır yüklendi...")
-                            
-                            if sample_size and loaded_rows >= sample_size:
-                                break
-                        
-                        df = pd.concat(chunks, ignore_index=True)
-                        progress_bar.progress(1.0)
-                        status_text.text(f"✅ {len(df):,} satır başarıyla yüklendi")
-                        time.sleep(0.5)
-                        progress_bar.empty()
-                        status_text.empty()
-                else:
-                    df = pd.read_excel(file, engine='openpyxl')
-            
-            if sample_size and len(df) > sample_size:
-                df = df.sample(n=min(sample_size, len(df)), random_state=42)
-            
-            df = OptimizedDataProcessor.optimize_dataframe(df)
-            
-            load_time = time.time() - start_time
-            st.success(f"✅ Veri yükleme tamamlandı: {len(df):,} satır, {len(df.columns)} sütun ({load_time:.2f}s)")
+                    load_time = time.time() - start_time
+                    
+                    # Bilgilendirme mesajı
+                    st.success(f"""
+                    ✅ Veri yükleme tamamlandı:
+                    - **{len(df):,}** satır
+                    - **{len(df.columns)}** sütun
+                    - Bellek: {original_memory:.1f}MB → {optimized_memory:.1f}MB
+                    - Süre: {load_time:.2f}s
+                    """)
+            else:
+                st.error("Desteklenmeyen dosya formatı. Lütfen Excel (.xlsx, .xls) veya CSV (.csv) dosyası yükleyin.")
+                return None
             
             return df
             
@@ -621,15 +608,17 @@ class OptimizedDataProcessor:
     def optimize_dataframe(df):
         """DataFrame'i optimize et"""
         try:
-            original_memory = df.memory_usage(deep=True).sum() / 1024**2
-            
+            # Sütun isimlerini temizle
             df.columns = OptimizedDataProcessor.clean_column_names(df.columns)
             
+            # String sütunları için kategoriye çevir
             for col in df.select_dtypes(include=['object']).columns:
                 num_unique = df[col].nunique()
-                if num_unique / len(df) < 0.5:
+                total_rows = len(df)
+                if num_unique / total_rows < 0.5:  # Eğer unique değerler toplamın %50'sinden azsa
                     df[col] = df[col].astype('category')
             
+            # Sayısal sütunları optimize et
             for col in df.select_dtypes(include=[np.number]).columns:
                 col_min = df[col].min()
                 col_max = df[col].max()
@@ -642,6 +631,8 @@ class OptimizedDataProcessor:
                             df[col] = df[col].astype(np.uint16)
                         elif col_max < 4294967295:
                             df[col] = df[col].astype(np.uint32)
+                        else:
+                            df[col] = df[col].astype(np.uint64)
                     else:
                         if col_min > -128 and col_max < 127:
                             df[col] = df[col].astype(np.int8)
@@ -649,9 +640,13 @@ class OptimizedDataProcessor:
                             df[col] = df[col].astype(np.int16)
                         elif col_min > -2147483648 and col_max < 2147483647:
                             df[col] = df[col].astype(np.int32)
+                        else:
+                            df[col] = df[col].astype(np.int64)
                 else:
+                    # Float değerleri
                     df[col] = pd.to_numeric(df[col], errors='coerce').astype(np.float32)
             
+            # Tarih sütunlarını bul ve çevir
             date_columns = [col for col in df.columns if 'date' in col.lower() or 'time' in col.lower()]
             for col in date_columns:
                 try:
@@ -659,14 +654,9 @@ class OptimizedDataProcessor:
                 except:
                     pass
             
+            # String sütunları temizle
             for col in df.select_dtypes(include=['object']).columns:
                 df[col] = df[col].astype(str).str.strip()
-            
-            optimized_memory = df.memory_usage(deep=True).sum() / 1024**2
-            memory_saved = original_memory - optimized_memory
-            
-            if memory_saved > 0:
-                st.info(f"💾 Bellek optimizasyonu: {original_memory:.1f}MB → {optimized_memory:.1f}MB (%{memory_saved/original_memory*100:.1f} tasarruf)")
             
             return df
             
@@ -680,6 +670,7 @@ class OptimizedDataProcessor:
         cleaned = []
         for col in columns:
             if isinstance(col, str):
+                # Türkçe karakterleri İngilizce'ye çevir
                 replacements = {
                     'İ': 'I', 'ı': 'i', 'Ş': 'S', 'ş': 's',
                     'Ğ': 'G', 'ğ': 'g', 'Ü': 'U', 'ü': 'u',
@@ -688,13 +679,13 @@ class OptimizedDataProcessor:
                 for tr, en in replacements.items():
                     col = col.replace(tr, en)
                 
+                # Özel karakterleri kaldır
                 col = col.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-                col = ' '.join(col.split())
+                col = ' '.join(col.split())  # Fazla boşlukları kaldır
                 
-                original_col = col
-                
+                # Özel isimlendirmeleri düzelt
                 if 'USD' in col and 'MNF' in col and 'MAT' in col:
-                    if '2022' in col or '2021' in col or '2020' in col:
+                    if '2022' in col:
                         if 'Units' in col:
                             col = 'Units_2022'
                         elif 'Avg Price' in col:
@@ -716,8 +707,7 @@ class OptimizedDataProcessor:
                         else:
                             col = 'Sales_2024'
                 
-                if col == original_col:
-                    col = col.strip()
+                col = col.strip()
             
             cleaned.append(str(col).strip())
         
@@ -727,12 +717,14 @@ class OptimizedDataProcessor:
     def prepare_analytics_data(df):
         """Analiz için veriyi hazırla"""
         try:
+            # Satış sütunlarını bul
             sales_cols = {}
             for col in df.columns:
                 if 'Sales_' in col:
                     year = col.split('_')[-1]
                     sales_cols[year] = col
             
+            # Büyüme oranlarını hesapla
             years = sorted([int(y) for y in sales_cols.keys() if y.isdigit()])
             
             for i in range(1, len(years)):
@@ -743,13 +735,16 @@ class OptimizedDataProcessor:
                     prev_col = sales_cols[prev_year]
                     curr_col = sales_cols[curr_year]
                     
+                    # Büyüme oranını hesapla
                     df[f'Growth_{prev_year}_{curr_year}'] = ((df[curr_col] - df[prev_col]) / 
                                                              df[prev_col].replace(0, np.nan)) * 100
             
+            # Fiyat analizi
             price_cols = [col for col in df.columns if 'Avg_Price' in col]
             if price_cols:
                 df['Avg_Price_Overall'] = df[price_cols].mean(axis=1, skipna=True)
             
+            # CAGR hesapla
             if len(years) >= 2:
                 first_year = str(years[0])
                 last_year = str(years[-1])
@@ -757,24 +752,16 @@ class OptimizedDataProcessor:
                     df['CAGR'] = ((df[sales_cols[last_year]] / df[sales_cols[first_year]].replace(0, np.nan)) ** 
                                  (1/len(years)) - 1) * 100
             
+            # Pazar payı hesapla
             if years and str(years[-1]) in sales_cols:
                 last_sales_col = sales_cols[str(years[-1])]
                 total_sales = df[last_sales_col].sum()
                 if total_sales > 0:
                     df['Market_Share'] = (df[last_sales_col] / total_sales) * 100
             
+            # Fiyat-hacim oranı
             if 'Avg_Price_2024' in df.columns and 'Units_2024' in df.columns:
                 df['Price_Volume_Ratio'] = df['Avg_Price_2024'] * df['Units_2024']
-            
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            if len(numeric_cols) >= 3:
-                try:
-                    scaler = StandardScaler()
-                    numeric_data = df[numeric_cols].fillna(0)
-                    scaled_data = scaler.fit_transform(numeric_data)
-                    df['Performance_Score'] = scaled_data.mean(axis=1)
-                except:
-                    pass
             
             return df
             
@@ -805,35 +792,35 @@ class AdvancedFilterSystem:
             filter_config = {}
             available_columns = df.columns.tolist()
             
+            # Ülke filtresi
             if 'Country' in available_columns:
                 countries = sorted(df['Country'].dropna().unique())
                 selected_countries = AdvancedFilterSystem.create_searchable_multiselect_with_all(
                     "🌍 Ülkeler",
                     countries,
-                    key="countries_filter",
-                    select_all_by_default=True
+                    key="countries_filter"
                 )
                 if selected_countries and "Tümü" not in selected_countries:
                     filter_config['Country'] = selected_countries
             
+            # Şirket filtresi
             if 'Corporation' in available_columns:
                 companies = sorted(df['Corporation'].dropna().unique())
                 selected_companies = AdvancedFilterSystem.create_searchable_multiselect_with_all(
                     "🏢 Şirketler",
                     companies,
-                    key="companies_filter",
-                    select_all_by_default=True
+                    key="companies_filter"
                 )
                 if selected_companies and "Tümü" not in selected_companies:
                     filter_config['Corporation'] = selected_companies
             
+            # Molekül filtresi
             if 'Molecule' in available_columns:
                 molecules = sorted(df['Molecule'].dropna().unique())
                 selected_molecules = AdvancedFilterSystem.create_searchable_multiselect_with_all(
                     "🧪 Moleküller",
                     molecules,
-                    key="molecules_filter",
-                    select_all_by_default=True
+                    key="molecules_filter"
                 )
                 if selected_molecules and "Tümü" not in selected_molecules:
                     filter_config['Molecule'] = selected_molecules
@@ -841,113 +828,81 @@ class AdvancedFilterSystem:
             st.markdown("---")
             st.markdown('<div class="filter-title">📊 Numerik Filtreler</div>', unsafe_allow_html=True)
             
+            # Satış filtresi
             sales_cols = [col for col in df.columns if 'Sales_' in col]
             if sales_cols:
                 latest_sales_col = sales_cols[-1]
                 min_sales = float(df[latest_sales_col].min())
                 max_sales = float(df[latest_sales_col].max())
                 
-                col_slider1, col_slider2 = st.columns(2)
-                with col_slider1:
-                    min_value = st.number_input(
-                        "Min Satış ($)",
-                        min_value=min_sales,
-                        max_value=max_sales,
-                        value=min_sales,
-                        step=1000.0,
-                        key="sales_min"
-                    )
-                with col_slider2:
-                    max_value = st.number_input(
-                        "Max Satış ($)",
-                        min_value=min_sales,
-                        max_value=max_sales,
-                        value=max_sales,
-                        step=1000.0,
-                        key="sales_max"
-                    )
-                
-                if min_value <= max_value:
-                    filter_config['sales_range'] = ((min_value, max_value), latest_sales_col)
-                else:
-                    st.warning("Min değer Max değerden küçük olmalıdır")
+                sales_range = st.slider(
+                    f"Satış Aralığı ({latest_sales_col})",
+                    min_value=float(min_sales),
+                    max_value=float(max_sales),
+                    value=(float(min_sales), float(max_sales)),
+                    step=(max_sales - min_sales) / 1000,
+                    help="Satış aralığını seçin"
+                )
+                filter_config['sales_range'] = (sales_range, latest_sales_col)
             
+            # Büyüme filtresi
             growth_cols = [col for col in df.columns if 'Growth_' in col]
             if growth_cols:
                 latest_growth_col = growth_cols[-1]
                 min_growth = float(df[latest_growth_col].min())
                 max_growth = float(df[latest_growth_col].max())
                 
-                col_growth1, col_growth2 = st.columns(2)
-                with col_growth1:
-                    min_growth_val = st.number_input(
-                        "Min Büyüme (%)",
-                        min_value=min_growth,
-                        max_value=max_growth,
-                        value=min(min_growth, -50.0),
-                        step=5.0,
-                        key="growth_min"
-                    )
-                with col_growth2:
-                    max_growth_val = st.number_input(
-                        "Max Büyüme (%)",
-                        min_value=min_growth,
-                        max_value=max_growth,
-                        value=max(max_growth, 150.0),
-                        step=5.0,
-                        key="growth_max"
-                    )
-                
-                if min_growth_val <= max_growth_val:
-                    filter_config['growth_range'] = ((min_growth_val, max_growth_val), latest_growth_col)
+                growth_range = st.slider(
+                    f"Büyüme Oranı (%)",
+                    min_value=float(min_growth),
+                    max_value=float(max_growth),
+                    value=(float(min(min_growth, -50.0)), float(max(max_growth, 150.0))),
+                    step=5.0,
+                    help="Büyüme oranı aralığını seçin"
+                )
+                filter_config['growth_range'] = (growth_range, latest_growth_col)
             
             st.markdown("---")
             st.markdown('<div class="filter-title">⚙️ Ek Filtreler</div>', unsafe_allow_html=True)
             
-            only_positive_growth = st.checkbox("📈 Sadece Pozitif Büyüyen Ürünler", value=False)
-            if only_positive_growth and growth_cols:
-                filter_config['positive_growth'] = True
+            # Ek filtreler
+            if growth_cols:
+                only_positive_growth = st.checkbox("📈 Sadece Pozitif Büyüyen Ürünler", value=False)
+                if only_positive_growth:
+                    filter_config['positive_growth'] = True
             
             if sales_cols:
-                sales_threshold = st.number_input(
-                    "Satış Eşiği ($)",
-                    min_value=0.0,
-                    max_value=float(df[sales_cols[-1]].max()),
-                    value=0.0,
-                    step=1000.0,
-                    key="sales_threshold"
-                )
-                if sales_threshold > 0:
-                    filter_config['sales_threshold'] = (sales_threshold, sales_cols[-1])
+                high_sales = st.checkbox("💰 Yüksek Satışlı Ürünler (Top 20%)", value=False)
+                if high_sales:
+                    latest_sales_col = sales_cols[-1]
+                    threshold = df[latest_sales_col].quantile(0.8)  # Top 20%
+                    filter_config['high_sales'] = (threshold, latest_sales_col)
             
-            st.markdown("---")
-            col1, col2, col3 = st.columns(3)
+            # Filtre butonları
+            col1, col2 = st.columns(2)
             with col1:
-                apply_filter = st.button("✅ Filtre Uygula", width='stretch', key="apply_filter")
+                apply_filter = st.button("✅ Filtre Uygula", type="primary", use_container_width=True)
             with col2:
-                clear_filter = st.button("🗑️ Filtreleri Temizle", width='stretch', key="clear_filter")
-            with col3:
-                save_filter = st.button("💾 Filtreyi Kaydet", width='stretch', key="save_filter")
+                clear_filter = st.button("🗑️ Temizle", use_container_width=True)
             
-            if 'saved_filters' not in st.session_state:
-                st.session_state.saved_filters = {}
-            
-            if save_filter and filter_config:
-                filter_name = st.text_input("Filtre Adı", placeholder="Örn: Yüksek Büyüyen Ürünler")
-                if filter_name:
-                    st.session_state.saved_filters[filter_name] = filter_config
-                    st.success(f"✅ '{filter_name}' filtresi kaydedildi!")
-            
-            if st.session_state.saved_filters:
-                st.markdown('<div class="filter-title">💾 Kayıtlı Filtreler</div>', unsafe_allow_html=True)
-                saved_filter = st.selectbox(
-                    "Kayıtlı Filtreler",
-                    options=[""] + list(st.session_state.saved_filters.keys()),
-                    key="saved_filters_select"
-                )
+            # Filtre kaydetme
+            with st.expander("💾 Filtre Yönetimi", expanded=False):
+                if st.button("Filtreyi Kaydet", use_container_width=True):
+                    filter_name = st.text_input("Filtre Adı", placeholder="Örn: Yüksek Büyüyen Ürünler")
+                    if filter_name and filter_config:
+                        if 'saved_filters' not in st.session_state:
+                            st.session_state.saved_filters = {}
+                        st.session_state.saved_filters[filter_name] = filter_config
+                        st.success(f"✅ '{filter_name}' filtresi kaydedildi!")
                 
-                if saved_filter:
-                    if st.button("📂 Bu Filtreyi Yükle", width='stretch'):
+                if 'saved_filters' in st.session_state and st.session_state.saved_filters:
+                    saved_filter = st.selectbox(
+                        "Kayıtlı Filtreler",
+                        options=[""] + list(st.session_state.saved_filters.keys()),
+                        key="saved_filters_select"
+                    )
+                    
+                    if saved_filter and st.button("Seçili Filtreyi Yükle", use_container_width=True):
                         st.session_state.current_filters = st.session_state.saved_filters[saved_filter]
                         st.success(f"✅ '{saved_filter}' filtresi yüklendi!")
                         st.rerun()
@@ -955,13 +910,14 @@ class AdvancedFilterSystem:
             return search_term, filter_config, apply_filter, clear_filter
     
     @staticmethod
-    def create_searchable_multiselect_with_all(label, options, key, select_all_by_default=False):
+    def create_searchable_multiselect_with_all(label, options, key):
         """Arama yapılabilir multiselect - Tümü seçeneği dahil"""
         if not options:
             return []
         
         all_options = ["Tümü"] + options
         
+        # Arama kutusu
         search_query = st.text_input(f"{label} Ara", key=f"{key}_search", placeholder="Arama yapın...")
         
         if search_query:
@@ -969,24 +925,24 @@ class AdvancedFilterSystem:
         else:
             filtered_options = all_options
         
-        if select_all_by_default:
-            default_options = ["Tümü"]
-        else:
-            default_options = filtered_options[:min(5, len(filtered_options))]
-        
+        # Multi-select
         selected = st.multiselect(
             label,
             options=filtered_options,
-            default=default_options,
+            default=["Tümü"],
             key=key,
             help="'Tümü' seçildiğinde diğer tüm seçenekler otomatik seçilir"
         )
         
+        # "Tümü" mantığı
         if "Tümü" in selected and len(selected) > 1:
+            # "Tümü" ve başka seçenekler seçilmişse, "Tümü"yü kaldır
             selected = [opt for opt in selected if opt != "Tümü"]
         elif "Tümü" in selected and len(selected) == 1:
+            # Sadece "Tümü" seçilmişse, tümünü seç
             selected = options
         
+        # Seçim bilgisi
         if selected:
             if len(selected) == len(options):
                 st.caption(f"✅ TÜMÜ seçildi ({len(options)} öğe)")
@@ -1000,6 +956,7 @@ class AdvancedFilterSystem:
         """Filtreleri uygula"""
         filtered_df = df.copy()
         
+        # Global arama
         if search_term:
             search_mask = pd.Series(False, index=filtered_df.index)
             for col in filtered_df.columns:
@@ -1018,10 +975,13 @@ class AdvancedFilterSystem:
             if len(filtered_df) == 0:
                 st.warning("Arama sonucu bulunamadı!")
         
+        # Kategorik filtreler
         for column, values in filter_config.items():
-            if column in filtered_df.columns and values and column not in ['sales_range', 'growth_range', 'positive_growth', 'sales_threshold']:
-                filtered_df = filtered_df[filtered_df[column].isin(values)]
+            if column in ['Country', 'Corporation', 'Molecule'] and column in filtered_df.columns:
+                if values:
+                    filtered_df = filtered_df[filtered_df[column].isin(values)]
         
+        # Satış aralığı filtresi
         if 'sales_range' in filter_config:
             (min_val, max_val), col_name = filter_config['sales_range']
             if col_name in filtered_df.columns:
@@ -1030,6 +990,7 @@ class AdvancedFilterSystem:
                     (filtered_df[col_name] <= max_val)
                 ]
         
+        # Büyüme aralığı filtresi
         if 'growth_range' in filter_config:
             (min_val, max_val), col_name = filter_config['growth_range']
             if col_name in filtered_df.columns:
@@ -1038,13 +999,15 @@ class AdvancedFilterSystem:
                     (filtered_df[col_name] <= max_val)
                 ]
         
-        if 'positive_growth' in filter_config and filter_config['positive_growth']:
+        # Pozitif büyüme filtresi
+        if 'positive_growth' in filter_config:
             growth_cols = [col for col in filtered_df.columns if 'Growth_' in col]
             if growth_cols:
                 filtered_df = filtered_df[filtered_df[growth_cols[-1]] > 0]
         
-        if 'sales_threshold' in filter_config:
-            threshold, col_name = filter_config['sales_threshold']
+        # Yüksek satış filtresi
+        if 'high_sales' in filter_config:
+            threshold, col_name = filter_config['high_sales']
             if col_name in filtered_df.columns:
                 filtered_df = filtered_df[filtered_df[col_name] >= threshold]
         
@@ -1072,24 +1035,19 @@ class AdvancedFilterSystem:
                     filter_items.append(f"Büyüme: %{min_val:.1f}-%{max_val:.1f}")
                 elif key == 'positive_growth':
                     filter_items.append("Pozitif Büyüme")
-                elif key == 'sales_threshold':
+                elif key == 'high_sales':
                     threshold, col_name = value
-                    filter_items.append(f"Satış > ${threshold:,.0f}")
+                    filter_items.append(f"Yüksek Satış (Top 20%)")
             
             filter_info += " | ".join(filter_items)
             filter_info += f" | **Gösterilen:** {len(filtered_df):,} / {len(original_df):,} satır"
             
             st.markdown(f'<div class="filter-status">{filter_info}</div>', unsafe_allow_html=True)
             
-            col1, col2 = st.columns([3, 1])
-            with col2:
-                if st.button("❌ Tüm Filtreleri Temizle", width='stretch', key="clear_all_filters"):
-                    st.session_state.filtered_df = st.session_state.df.copy()
-                    st.session_state.current_filters = {}
-                    st.session_state.metrics = AdvancedPharmaAnalytics().calculate_comprehensive_metrics(st.session_state.df)
-                    st.session_state.insights = AdvancedPharmaAnalytics().detect_strategic_insights(st.session_state.df)
-                    st.success("✅ Tüm filtreler temizlendi")
-                    st.rerun()
+            if st.button("❌ Tüm Filtreleri Temizle", key="clear_all_filters"):
+                st.session_state.filtered_df = st.session_state.df.copy()
+                st.session_state.current_filters = {}
+                st.rerun()
 
 # ================================================
 # 4. GELİŞMİŞ ANALİTİK MOTORU (INTERNATIONAL PRODUCT EKLENDİ)
@@ -1104,9 +1062,11 @@ class AdvancedPharmaAnalytics:
         metrics = {}
         
         try:
+            # Temel metrikler
             metrics['Total_Rows'] = len(df)
             metrics['Total_Columns'] = len(df.columns)
             
+            # Satış metrikleri
             sales_cols = [col for col in df.columns if 'Sales_' in col]
             if sales_cols:
                 latest_sales_col = sales_cols[-1]
@@ -1116,10 +1076,12 @@ class AdvancedPharmaAnalytics:
                 metrics['Median_Sales'] = df[latest_sales_col].median()
                 metrics['Sales_Std_Dev'] = df[latest_sales_col].std()
                 
+                # Çeyreklikler
                 metrics['Sales_Q1'] = df[latest_sales_col].quantile(0.25)
                 metrics['Sales_Q3'] = df[latest_sales_col].quantile(0.75)
                 metrics['Sales_IQR'] = metrics['Sales_Q3'] - metrics['Sales_Q1']
             
+            # Büyüme metrikleri
             growth_cols = [col for col in df.columns if 'Growth_' in col]
             if growth_cols:
                 latest_growth_col = growth_cols[-1]
@@ -1129,6 +1091,7 @@ class AdvancedPharmaAnalytics:
                 metrics['Negative_Growth_Products'] = (df[latest_growth_col] < 0).sum()
                 metrics['High_Growth_Products'] = (df[latest_growth_col] > 20).sum()
             
+            # Şirket bazlı metrikler
             if 'Corporation' in df.columns and sales_cols:
                 latest_sales_col = sales_cols[-1]
                 corp_sales = df.groupby('Corporation')[latest_sales_col].sum().sort_values(ascending=False)
@@ -1138,12 +1101,14 @@ class AdvancedPharmaAnalytics:
                     market_shares = (corp_sales / total_sales * 100)
                     metrics['HHI_Index'] = (market_shares ** 2).sum() / 10000
                     
+                    # Top şirket payları
                     top_n = [1, 3, 5, 10]
                     for n in top_n:
                         metrics[f'Top_{n}_Share'] = corp_sales.nlargest(n).sum() / total_sales * 100
                     
-                    metrics['CR4_Ratio'] = metrics['Top_4_Share'] if 'Top_4_Share' in metrics else 0
+                    metrics['CR4_Ratio'] = metrics.get('Top_4_Share', 0)
             
+            # Molekül metrikleri
             if 'Molecule' in df.columns:
                 metrics['Unique_Molecules'] = df['Molecule'].nunique()
                 if sales_cols:
@@ -1152,12 +1117,14 @@ class AdvancedPharmaAnalytics:
                     if total_mol_sales > 0:
                         metrics['Top_10_Molecule_Share'] = mol_sales.nlargest(10).sum() / total_mol_sales * 100
             
+            # Ülke metrikleri
             if 'Country' in df.columns:
                 metrics['Country_Coverage'] = df['Country'].nunique()
                 if sales_cols:
                     country_sales = df.groupby('Country')[latest_sales_col].sum()
                     metrics['Top_5_Country_Share'] = country_sales.nlargest(5).sum() / country_sales.sum() * 100
             
+            # Fiyat metrikleri
             price_cols = [col for col in df.columns if 'Avg_Price' in col]
             if price_cols:
                 latest_price_col = price_cols[-1]
@@ -1170,10 +1137,7 @@ class AdvancedPharmaAnalytics:
                 metrics['Price_Median'] = price_quartiles[0.5]
                 metrics['Price_Q3'] = price_quartiles[0.75]
             
-            metrics['Missing_Values'] = df.isnull().sum().sum()
-            metrics['Missing_Percentage'] = (metrics['Missing_Values'] / (len(df) * len(df.columns))) * 100
-            
-            # INTERNATIONAL PRODUCT ANALİZİ EKLENDİ
+            # International Product metrikleri
             if 'Molecule' in df.columns and sales_cols:
                 metrics = AdvancedPharmaAnalytics.add_international_product_metrics(df, metrics, sales_cols)
             
@@ -1188,66 +1152,46 @@ class AdvancedPharmaAnalytics:
         """International Product analiz metriklerini ekle"""
         try:
             latest_sales_col = sales_cols[-1]
-            year = latest_sales_col.split('_')[-1]
             
-            # International Product'ları tespit et
-            international_products = {}
+            # International Product analizi
+            intl_analysis = AdvancedPharmaAnalytics.analyze_international_products(df)
             
-            # Molekül bazında International Product tespiti
-            for molecule in df['Molecule'].unique():
-                molecule_df = df[df['Molecule'] == molecule]
+            if intl_analysis is not None and len(intl_analysis) > 0:
+                # International Product sayısı
+                intl_count = intl_analysis['is_international'].sum()
+                metrics['International_Product_Count'] = intl_count
                 
-                # Eğer aynı molekül birden fazla şirkette veya ülkede varsa International Product
-                unique_corporations = molecule_df['Corporation'].nunique() if 'Corporation' in df.columns else 0
-                unique_countries = molecule_df['Country'].nunique() if 'Country' in df.columns else 0
+                # International Product satışları
+                intl_sales = intl_analysis[intl_analysis['is_international']]['total_sales'].sum()
+                metrics['International_Product_Sales'] = intl_sales
                 
-                if unique_corporations > 1 or unique_countries > 1:
-                    total_sales = molecule_df[latest_sales_col].sum()
-                    if total_sales > 0:
-                        international_products[molecule] = {
-                            'total_sales': total_sales,
-                            'corporation_count': unique_corporations,
-                            'country_count': unique_countries,
-                            'product_count': len(molecule_df),
-                            'avg_growth': molecule_df['Growth_23_24'].mean() if 'Growth_23_24' in df.columns else None
-                        }
-            
-            # International Product metrikleri
-            metrics['International_Product_Count'] = len(international_products)
-            metrics['International_Product_Sales'] = sum(data['total_sales'] for data in international_products.values())
-            metrics['International_Product_Share'] = (metrics['International_Product_Sales'] / metrics['Total_Market_Value'] * 100) if metrics.get('Total_Market_Value', 0) > 0 else 0
-            
-            # Ortalama International Product özellikleri
-            if international_products:
-                metrics['Avg_International_Corporations'] = np.mean([data['corporation_count'] for data in international_products.values()])
-                metrics['Avg_International_Countries'] = np.mean([data['country_count'] for data in international_products.values()])
-            
-            # Top International Products
-            top_international = sorted(international_products.items(), 
-                                     key=lambda x: x[1]['total_sales'], 
-                                     reverse=True)[:10]
-            
-            metrics['Top_10_International_Sales'] = sum(data['total_sales'] for _, data in top_international)
-            metrics['Top_10_International_Share'] = (metrics['Top_10_International_Sales'] / metrics['International_Product_Sales'] * 100) if metrics.get('International_Product_Sales', 0) > 0 else 0
-            
-            # Growth karşılaştırması
-            if 'Growth_23_24' in df.columns:
-                international_growth = []
-                local_growth = []
+                # Pazar payı
+                total_sales = metrics.get('Total_Market_Value', 0)
+                if total_sales > 0:
+                    metrics['International_Product_Share'] = (intl_sales / total_sales) * 100
                 
-                for molecule in df['Molecule'].unique():
-                    molecule_df = df[df['Molecule'] == molecule]
-                    avg_growth = molecule_df['Growth_23_24'].mean()
+                # Ortalama özellikler
+                intl_df = intl_analysis[intl_analysis['is_international']]
+                if len(intl_df) > 0:
+                    metrics['Avg_International_Corporations'] = intl_df['corporation_count'].mean()
+                    metrics['Avg_International_Countries'] = intl_df['country_count'].mean()
                     
-                    if molecule in international_products:
-                        international_growth.append(avg_growth)
-                    else:
-                        local_growth.append(avg_growth)
+                    # Büyüme karşılaştırması
+                    if 'avg_growth' in intl_df.columns:
+                        intl_growth = intl_df['avg_growth'].mean()
+                        local_growth = intl_analysis[~intl_analysis['is_international']]['avg_growth'].mean()
+                        
+                        if not pd.isna(intl_growth) and not pd.isna(local_growth):
+                            metrics['International_Avg_Growth'] = intl_growth
+                            metrics['Local_Avg_Growth'] = local_growth
+                            metrics['International_Growth_Premium'] = intl_growth - local_growth
                 
-                if international_growth and local_growth:
-                    metrics['International_Avg_Growth'] = np.mean(international_growth)
-                    metrics['Local_Avg_Growth'] = np.mean(local_growth)
-                    metrics['International_Growth_Premium'] = metrics['International_Avg_Growth'] - metrics['Local_Avg_Growth']
+                # Top International Products
+                top_intl = intl_df.nlargest(10, 'total_sales')
+                if len(top_intl) > 0:
+                    metrics['Top_10_International_Sales'] = top_intl['total_sales'].sum()
+                    if intl_sales > 0:
+                        metrics['Top_10_International_Share'] = (metrics['Top_10_International_Sales'] / intl_sales) * 100
             
             return metrics
             
@@ -1274,61 +1218,92 @@ class AdvancedPharmaAnalytics:
             for molecule in df['Molecule'].unique():
                 molecule_df = df[df['Molecule'] == molecule]
                 
-                unique_corporations = molecule_df['Corporation'].nunique() if 'Corporation' in df.columns else 0
-                unique_countries = molecule_df['Country'].nunique() if 'Country' in df.columns else 0
+                # Benzersiz şirket ve ülke sayıları
+                unique_corporations = molecule_df['Corporation'].nunique() if 'Corporation' in molecule_df.columns else 0
+                unique_countries = molecule_df['Country'].nunique() if 'Country' in molecule_df.columns else 0
                 
                 # International Product kriteri
                 is_international = (unique_corporations > 1 or unique_countries > 1)
                 
+                # Temel metrikler
                 total_sales = molecule_df[latest_sales_col].sum()
-                avg_price = molecule_df['Avg_Price_2024'].mean() if 'Avg_Price_2024' in molecule_df.columns else None
-                avg_growth = molecule_df['Growth_23_24'].mean() if 'Growth_23_24' in molecule_df.columns else None
                 
-                # Corporation distribution
-                if 'Corporation' in df.columns:
-                    top_corp = molecule_df.groupby('Corporation')[latest_sales_col].sum().idxmax() if not molecule_df['Corporation'].empty else None
-                    corp_market_share = (molecule_df[molecule_df['Corporation'] == top_corp][latest_sales_col].sum() / total_sales * 100) if total_sales > 0 and top_corp else 0
+                # International Product için detaylı analiz
+                if is_international:
+                    analysis_entry = {
+                        'Molecule': molecule,
+                        'is_international': is_international,
+                        'total_sales': total_sales,
+                        'corporation_count': unique_corporations,
+                        'country_count': unique_countries,
+                        'product_count': len(molecule_df),
+                    }
+                    
+                    # Ek metrikler
+                    price_cols = [col for col in molecule_df.columns if 'Avg_Price' in col]
+                    if price_cols:
+                        analysis_entry['avg_price'] = molecule_df[price_cols[-1]].mean()
+                    
+                    growth_cols = [col for col in molecule_df.columns if 'Growth_' in col]
+                    if growth_cols:
+                        analysis_entry['avg_growth'] = molecule_df[growth_cols[-1]].mean()
+                    
+                    # Lider şirket ve ülke
+                    if 'Corporation' in molecule_df.columns:
+                        corp_sales = molecule_df.groupby('Corporation')[latest_sales_col].sum()
+                        if len(corp_sales) > 0:
+                            analysis_entry['top_corporation'] = corp_sales.idxmax()
+                            analysis_entry['corp_market_share'] = (corp_sales.max() / total_sales * 100) if total_sales > 0 else 0
+                    
+                    if 'Country' in molecule_df.columns:
+                        country_sales = molecule_df.groupby('Country')[latest_sales_col].sum()
+                        if len(country_sales) > 0:
+                            analysis_entry['top_country'] = country_sales.idxmax()
+                            analysis_entry['country_market_share'] = (country_sales.max() / total_sales * 100) if total_sales > 0 else 0
+                    
+                    # Karmaşıklık skoru
+                    complexity_score = (unique_corporations * 0.6 + unique_countries * 0.4) / 2
+                    analysis_entry['complexity_score'] = complexity_score
+                    
+                    # Satış konsantrasyonu
+                    corp_share = analysis_entry.get('corp_market_share', 0)
+                    country_share = analysis_entry.get('country_market_share', 0)
+                    analysis_entry['sales_concentration'] = max(corp_share, country_share)
+                    
+                    international_analysis.append(analysis_entry)
                 else:
-                    top_corp = None
-                    corp_market_share = 0
-                
-                # Country distribution
-                if 'Country' in df.columns:
-                    top_country = molecule_df.groupby('Country')[latest_sales_col].sum().idxmax() if not molecule_df['Country'].empty else None
-                    country_market_share = (molecule_df[molecule_df['Country'] == top_country][latest_sales_col].sum() / total_sales * 100) if total_sales > 0 and top_country else 0
-                else:
-                    top_country = None
-                    country_market_share = 0
-                
-                # Complexity score (ne kadar yaygın)
-                complexity_score = (unique_corporations * 0.6 + unique_countries * 0.4) / 2
-                
-                international_analysis.append({
-                    'Molecule': molecule,
-                    'is_international': is_international,
-                    'total_sales': total_sales,
-                    'corporation_count': unique_corporations,
-                    'country_count': unique_countries,
-                    'product_count': len(molecule_df),
-                    'avg_price': avg_price,
-                    'avg_growth': avg_growth,
-                    'top_corporation': top_corp,
-                    'corp_market_share': corp_market_share,
-                    'top_country': top_country,
-                    'country_market_share': country_market_share,
-                    'complexity_score': complexity_score,
-                    'sales_concentration': max(corp_market_share, country_market_share)
-                })
+                    # Local ürünler için basit kayıt
+                    international_analysis.append({
+                        'Molecule': molecule,
+                        'is_international': False,
+                        'total_sales': total_sales,
+                        'corporation_count': unique_corporations,
+                        'country_count': unique_countries,
+                        'product_count': len(molecule_df),
+                        'avg_price': molecule_df[price_cols[-1]].mean() if price_cols else None,
+                        'avg_growth': molecule_df[growth_cols[-1]].mean() if growth_cols else None,
+                    })
             
             analysis_df = pd.DataFrame(international_analysis)
             
             # Segmentasyon
             if len(analysis_df) > 0 and 'complexity_score' in analysis_df.columns:
-                analysis_df['international_segment'] = pd.cut(
-                    analysis_df['complexity_score'],
-                    bins=[0, 0.5, 1.5, 3, float('inf')],
-                    labels=['Local', 'Regional', 'Multi-National', 'Global']
-                )
+                analysis_df['international_segment'] = 'Local'
+                
+                # Sadece International Product'ları segmentlere ayır
+                intl_mask = analysis_df['is_international']
+                if intl_mask.any():
+                    intl_df = analysis_df[intl_mask]
+                    
+                    # Karmaşıklık skoruna göre segmentasyon
+                    conditions = [
+                        intl_df['complexity_score'] <= 1.5,
+                        intl_df['complexity_score'] <= 2.5,
+                        intl_df['complexity_score'] > 2.5
+                    ]
+                    choices = ['Regional', 'Multi-National', 'Global']
+                    
+                    analysis_df.loc[intl_mask, 'international_segment'] = np.select(conditions, choices, default='Local')
             
             return analysis_df.sort_values('total_sales', ascending=False)
             
@@ -1350,30 +1325,35 @@ class AdvancedPharmaAnalytics:
             # International Product sayısı
             intl_count = analysis_df['is_international'].sum()
             total_molecules = len(analysis_df)
-            intl_percentage = (intl_count / total_molecules * 100) if total_molecules > 0 else 0
             
-            insights.append({
-                'type': 'info',
-                'title': f'🌍 International Product Dağılımı',
-                'description': f"Toplam {total_molecules} molekülden {intl_count} tanesi (%{intl_percentage:.1f}) International Product.",
-                'data': analysis_df[analysis_df['is_international']]
-            })
+            if total_molecules > 0:
+                intl_percentage = (intl_count / total_molecules * 100)
+                
+                insights.append({
+                    'type': 'info',
+                    'title': f'🌍 International Product Dağılımı',
+                    'description': f"Toplam {total_molecules} molekülden {intl_count} tanesi (%{intl_percentage:.1f}) International Product.",
+                    'data': analysis_df[analysis_df['is_international']]
+                })
             
             # Sales konsantrasyonu
             intl_df = analysis_df[analysis_df['is_international']]
             if len(intl_df) > 0:
                 total_intl_sales = intl_df['total_sales'].sum()
-                total_sales = df['Sales_2024'].sum() if 'Sales_2024' in df.columns else 0
+                sales_cols = [col for col in df.columns if 'Sales_' in col]
                 
-                if total_sales > 0:
-                    intl_sales_share = (total_intl_sales / total_sales * 100)
+                if sales_cols:
+                    total_sales = df[sales_cols[-1]].sum()
                     
-                    insights.append({
-                        'type': 'success',
-                        'title': f'💰 International Product Pazar Payı',
-                        'description': f"International Product'lar toplam pazarın %{intl_sales_share:.1f}'ini oluşturuyor.",
-                        'data': None
-                    })
+                    if total_sales > 0:
+                        intl_sales_share = (total_intl_sales / total_sales * 100)
+                        
+                        insights.append({
+                            'type': 'success',
+                            'title': f'💰 International Product Pazar Payı',
+                            'description': f"International Product'lar toplam pazarın %{intl_sales_share:.1f}'ini oluşturuyor.",
+                            'data': None
+                        })
             
             # Top International Products
             top_intl = analysis_df[analysis_df['is_international']].nlargest(5, 'total_sales')
@@ -1458,101 +1438,6 @@ class AdvancedPharmaAnalytics:
             return {}
     
     @staticmethod
-    def perform_advanced_segmentation(df, n_clusters=4, method='kmeans'):
-        """Gelişmiş pazar segmentasyonu"""
-        try:
-            features = []
-            
-            sales_cols = [col for col in df.columns if 'Sales_' in col]
-            if sales_cols:
-                features.extend(sales_cols[-2:])
-            
-            growth_cols = [col for col in df.columns if 'Growth_' in col]
-            if growth_cols:
-                features.append(growth_cols[-1])
-            
-            price_cols = [col for col in df.columns if 'Avg_Price' in col]
-            if price_cols:
-                features.append(price_cols[-1])
-            
-            if len(features) < 2:
-                st.warning("Segmentasyon için yeterli özellik bulunamadı")
-                return None
-            
-            segmentation_data = df[features].fillna(0)
-            
-            if len(segmentation_data) < n_clusters * 10:
-                st.warning("Segmentasyon için yeterli veri noktası yok")
-                return None
-            
-            scaler = StandardScaler()
-            features_scaled = scaler.fit_transform(segmentation_data)
-            
-            if method == 'kmeans':
-                model = KMeans(
-                    n_clusters=n_clusters,
-                    random_state=42,
-                    n_init=10,
-                    max_iter=300,
-                    tol=1e-4
-                )
-            elif method == 'dbscan':
-                model = DBSCAN(eps=0.5, min_samples=10)
-            else:
-                model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-            
-            clusters = model.fit_predict(features_scaled)
-            
-            if hasattr(model, 'inertia_'):
-                inertia = model.inertia_
-            else:
-                inertia = None
-            
-            if len(np.unique(clusters)) > 1:
-                try:
-                    silhouette = silhouette_score(features_scaled, clusters)
-                    calinski = calinski_harabasz_score(features_scaled, clusters)
-                except:
-                    silhouette = None
-                    calinski = None
-            else:
-                silhouette = None
-                calinski = None
-            
-            result_df = df.copy()
-            result_df['Segment'] = clusters
-            
-            segment_names = {
-                0: 'Gelişen Ürünler',
-                1: 'Olgun Ürünler',
-                2: 'Yenilikçi Ürünler',
-                3: 'Riskli Ürünler',
-                4: 'Niş Ürünler',
-                5: 'Volume Ürünleri',
-                6: 'Premium Ürünler',
-                7: 'Economy Ürünler'
-            }
-            
-            result_df['Segment_Name'] = result_df['Segment'].map(
-                lambda x: segment_names.get(x, f'Segment_{x}')
-            )
-            
-            return {
-                'data': result_df,
-                'metrics': {
-                    'inertia': inertia,
-                    'silhouette_score': silhouette,
-                    'calinski_score': calinski,
-                    'n_clusters': len(np.unique(clusters))
-                },
-                'features_used': features
-            }
-            
-        except Exception as e:
-            st.warning(f"Segmentasyon hatası: {str(e)}")
-            return None
-    
-    @staticmethod
     def detect_strategic_insights(df):
         """Stratejik içgörüleri tespit et"""
         insights = []
@@ -1570,48 +1455,56 @@ class AdvancedPharmaAnalytics:
             
             # 1. En çok satan ürünler
             top_products = df.nlargest(10, latest_sales_col)
-            insights.append({
-                'type': 'success',
-                'title': f'🏆 Top 10 Ürün - {year}',
-                'description': f"En çok satan 10 ürün toplam pazarın %{(top_products[latest_sales_col].sum() / df[latest_sales_col].sum() * 100):.1f}'ini oluşturuyor.",
-                'data': top_products
-            })
+            if not top_products.empty:
+                total_sales = df[latest_sales_col].sum()
+                if total_sales > 0:
+                    top_products_share = (top_products[latest_sales_col].sum() / total_sales * 100)
+                    
+                    insights.append({
+                        'type': 'success',
+                        'title': f'🏆 Top 10 Ürün - {year}',
+                        'description': f"En çok satan 10 ürün toplam pazarın %{top_products_share:.1f}'ini oluşturuyor.",
+                        'data': top_products
+                    })
             
             # 2. En hızlı büyüyen ürünler
             if latest_growth_col:
                 top_growth = df.nlargest(10, latest_growth_col)
-                insights.append({
-                    'type': 'info',
-                    'title': f'🚀 En Hızlı Büyüyen 10 Ürün',
-                    'description': f"En hızlı büyüyen ürünler ortalama %{top_growth[latest_growth_col].mean():.1f} büyüme gösteriyor.",
-                    'data': top_growth
-                })
+                if not top_growth.empty:
+                    insights.append({
+                        'type': 'info',
+                        'title': f'🚀 En Hızlı Büyüyen 10 Ürün',
+                        'description': f"En hızlı büyüyen ürünler ortalama %{top_growth[latest_growth_col].mean():.1f} büyüme gösteriyor.",
+                        'data': top_growth
+                    })
             
             # 3. En çok satan şirketler
             if 'Corporation' in df.columns:
                 top_companies = df.groupby('Corporation')[latest_sales_col].sum().nlargest(5)
-                top_company = top_companies.index[0]
-                top_company_share = (top_companies.iloc[0] / df[latest_sales_col].sum()) * 100
-                
-                insights.append({
-                    'type': 'warning',
-                    'title': f'🏢 Pazar Lideri - {year}',
-                    'description': f"{top_company} %{top_company_share:.1f} pazar payı ile lider konumda.",
-                    'data': None
-                })
+                if not top_companies.empty:
+                    top_company = top_companies.index[0]
+                    top_company_share = (top_companies.iloc[0] / df[latest_sales_col].sum()) * 100
+                    
+                    insights.append({
+                        'type': 'warning',
+                        'title': f'🏢 Pazar Lideri - {year}',
+                        'description': f"{top_company} %{top_company_share:.1f} pazar payı ile lider konumda.",
+                        'data': None
+                    })
             
             # 4. Coğrafi dağılım
             if 'Country' in df.columns:
                 top_countries = df.groupby('Country')[latest_sales_col].sum().nlargest(5)
-                top_country = top_countries.index[0]
-                top_country_share = (top_countries.iloc[0] / df[latest_sales_col].sum()) * 100
-                
-                insights.append({
-                    'type': 'geographic',
-                    'title': f'🌍 En Büyük Pazar - {year}',
-                    'description': f"{top_country} %{top_country_share:.1f} pay ile en büyük pazar.",
-                    'data': None
-                })
+                if not top_countries.empty:
+                    top_country = top_countries.index[0]
+                    top_country_share = (top_countries.iloc[0] / df[latest_sales_col].sum()) * 100
+                    
+                    insights.append({
+                        'type': 'geographic',
+                        'title': f'🌍 En Büyük Pazar - {year}',
+                        'description': f"{top_country} %{top_country_share:.1f} pay ile en büyük pazar.",
+                        'data': None
+                    })
             
             # 5. Fiyat analizi
             price_cols = [col for col in df.columns if 'Avg_Price' in col]
@@ -1626,7 +1519,7 @@ class AdvancedPharmaAnalytics:
                     'data': None
                 })
             
-            # 6. International Product içgörüleri (YENİ EKLENDİ)
+            # 6. International Product içgörüleri
             intl_insights = AdvancedPharmaAnalytics.get_international_product_insights(df)
             insights.extend(intl_insights)
             
@@ -1771,6 +1664,12 @@ class ProfessionalVisualization:
             if analysis_df is None or len(analysis_df) == 0:
                 return None
             
+            # Sadece International Product'ları filtrele
+            intl_df = analysis_df[analysis_df['is_international']]
+            
+            if len(intl_df) == 0:
+                return None
+            
             fig = make_subplots(
                 rows=2, cols=2,
                 subplot_titles=('International vs Local Dağılımı', 'International Product Pazar Payı',
@@ -1779,7 +1678,7 @@ class ProfessionalVisualization:
                 horizontal_spacing=0.15
             )
             
-            # International vs Local dağılımı
+            # 1. International vs Local dağılımı
             intl_counts = analysis_df['is_international'].value_counts()
             fig.add_trace(
                 go.Pie(
@@ -1793,24 +1692,28 @@ class ProfessionalVisualization:
                 row=1, col=1
             )
             
-            # Pazar payı karşılaştırması
-            intl_sales = analysis_df[analysis_df['is_international']]['total_sales'].sum()
+            # 2. Pazar payı karşılaştırması
+            intl_sales = intl_df['total_sales'].sum()
             local_sales = analysis_df[~analysis_df['is_international']]['total_sales'].sum()
+            total_sales = intl_sales + local_sales
             
-            fig.add_trace(
-                go.Bar(
-                    x=['International', 'Local'],
-                    y=[intl_sales, local_sales],
-                    marker_color=['#3b82f6', '#64748b'],
-                    text=[f'${intl_sales/1e6:.1f}M', f'${local_sales/1e6:.1f}M'],
-                    textposition='auto'
-                ),
-                row=1, col=2
-            )
+            if total_sales > 0:
+                intl_share = (intl_sales / total_sales) * 100
+                local_share = (local_sales / total_sales) * 100
+                
+                fig.add_trace(
+                    go.Bar(
+                        x=['International', 'Local'],
+                        y=[intl_share, local_share],
+                        marker_color=['#3b82f6', '#64748b'],
+                        text=[f'{intl_share:.1f}%', f'{local_share:.1f}%'],
+                        textposition='auto'
+                    ),
+                    row=1, col=2
+                )
             
-            # Coğrafi yayılım (International Product'lar için)
-            intl_df = analysis_df[analysis_df['is_international']]
-            if len(intl_df) > 0:
+            # 3. Coğrafi yayılım
+            if 'country_count' in intl_df.columns:
                 country_dist = intl_df['country_count'].value_counts().sort_index()
                 fig.add_trace(
                     go.Bar(
@@ -1819,12 +1722,12 @@ class ProfessionalVisualization:
                         marker_color='#10b981',
                         name='Ülke Sayısı'
                     ),
-                row=2, col=1
+                    row=2, col=1
                 )
             
-            # Büyüme karşılaştırması
+            # 4. Büyüme karşılaştırması
             if 'avg_growth' in analysis_df.columns:
-                intl_growth = analysis_df[analysis_df['is_international']]['avg_growth'].mean()
+                intl_growth = intl_df['avg_growth'].mean()
                 local_growth = analysis_df[~analysis_df['is_international']]['avg_growth'].mean()
                 
                 if not pd.isna(intl_growth) and not pd.isna(local_growth):
@@ -1854,383 +1757,6 @@ class ProfessionalVisualization:
         except Exception as e:
             st.warning(f"International Product grafiği hatası: {str(e)}")
             return None
-    
-    @staticmethod
-    def create_sales_trend_chart(df):
-        """Satış trend grafikleri"""
-        try:
-            sales_cols = [col for col in df.columns if 'Sales_' in col]
-            if len(sales_cols) >= 2:
-                yearly_data = []
-                for col in sorted(sales_cols):
-                    year = col.split('_')[-1]
-                    yearly_data.append({
-                        'Year': year,
-                        'Total_Sales': df[col].sum(),
-                        'Avg_Sales': df[col].mean(),
-                        'Product_Count': (df[col] > 0).sum()
-                    })
-                
-                yearly_df = pd.DataFrame(yearly_data)
-                
-                fig = make_subplots(
-                    rows=2, cols=2,
-                    subplot_titles=('Yıllık Toplam Satış', 'Ortalama Satış Trendi', 
-                                   'Ürün Sayısı Trendi', 'Büyüme Oranları'),
-                    vertical_spacing=0.15,
-                    horizontal_spacing=0.15
-                )
-                
-                fig.add_trace(
-                    go.Bar(
-                        x=yearly_df['Year'],
-                        y=yearly_df['Total_Sales'],
-                        name='Toplam Satış',
-                        marker_color='#3b82f6',
-                        text=[f'${x/1e6:.0f}M' for x in yearly_df['Total_Sales']],
-                        textposition='auto'
-                    ),
-                    row=1, col=1
-                )
-                
-                fig.add_trace(
-                    go.Scatter(
-                        x=yearly_df['Year'],
-                        y=yearly_df['Avg_Sales'],
-                        mode='lines+markers',
-                        name='Ortalama Satış',
-                        line=dict(color='#8b5cf6', width=3),
-                        marker=dict(size=10)
-                    ),
-                    row=1, col=2
-                )
-                
-                fig.add_trace(
-                    go.Bar(
-                        x=yearly_df['Year'],
-                        y=yearly_df['Product_Count'],
-                        name='Ürün Sayısı',
-                        marker_color='#10b981',
-                        text=yearly_df['Product_Count'],
-                        textposition='auto'
-                    ),
-                    row=2, col=1
-                )
-                
-                if len(yearly_df) > 1:
-                    growth_rates = []
-                    for i in range(1, len(yearly_df)):
-                        growth = ((yearly_df['Total_Sales'].iloc[i] - yearly_df['Total_Sales'].iloc[i-1]) / 
-                                  yearly_df['Total_Sales'].iloc[i-1] * 100) if yearly_df['Total_Sales'].iloc[i-1] > 0 else 0
-                        growth_rates.append(growth)
-                    
-                    fig.add_trace(
-                        go.Bar(
-                            x=yearly_df['Year'].iloc[1:],
-                            y=growth_rates,
-                            name='Büyüme (%)',
-                            marker_color=['#ef4444' if g < 0 else '#10b981' for g in growth_rates],
-                            text=[f'{g:.1f}%' for g in growth_rates],
-                            textposition='auto'
-                        ),
-                        row=2, col=2
-                    )
-                
-                fig.update_layout(
-                    height=700,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color='#f1f5f9',
-                    showlegend=False,
-                    title_text="Satış Trendleri Analizi",
-                    title_x=0.5,
-                    title_font=dict(size=20)
-                )
-                
-                fig.update_xaxes(showgrid=False)
-                fig.update_yaxes(showgrid=False, gridcolor='rgba(255,255,255,0.1)')
-                
-                return fig
-            
-            return None
-            
-        except Exception as e:
-            st.warning(f"Trend grafiği oluşturma hatası: {str(e)}")
-            return None
-    
-    @staticmethod
-    def create_market_share_analysis(df):
-        """Pazar payı analiz grafikleri"""
-        try:
-            sales_cols = [col for col in df.columns if 'Sales_' in col]
-            if not sales_cols:
-                return None
-            
-            latest_sales_col = sales_cols[-1]
-            
-            if 'Corporation' in df.columns:
-                company_sales = df.groupby('Corporation')[latest_sales_col].sum().sort_values(ascending=False)
-                top_companies = company_sales.nlargest(15)
-                others_sales = company_sales.iloc[15:].sum() if len(company_sales) > 15 else 0
-                
-                pie_data = top_companies.copy()
-                if others_sales > 0:
-                    pie_data['Diğer'] = others_sales
-                
-                fig = make_subplots(
-                    rows=1, cols=2,
-                    subplot_titles=('Pazar Payı Dağılımı', 'Top 10 Şirket Satışları'),
-                    specs=[[{'type': 'pie'}, {'type': 'bar'}]],
-                    column_widths=[0.4, 0.6]
-                )
-                
-                fig.add_trace(
-                    go.Pie(
-                        labels=pie_data.index,
-                        values=pie_data.values,
-                        hole=0.4,
-                        marker_colors=px.colors.qualitative.Bold,
-                        textinfo='percent+label',
-                        textposition='outside',
-                        insidetextorientation='radial'
-                    ),
-                    row=1, col=1
-                )
-                
-                fig.add_trace(
-                    go.Bar(
-                        x=top_companies.values[:10],
-                        y=top_companies.index[:10],
-                        orientation='h',
-                        marker_color='#3b82f6',
-                        text=[f'${x/1e6:.1f}M' for x in top_companies.values[:10]],
-                        textposition='auto'
-                    ),
-                    row=1, col=2
-                )
-                
-                fig.update_layout(
-                    height=500,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color='#f1f5f9',
-                    showlegend=False,
-                    title_text="Pazar Konsantrasyonu Analizi",
-                    title_x=0.5
-                )
-                
-                return fig
-            
-            return None
-            
-        except Exception as e:
-            st.warning(f"Pazar payı grafiği hatası: {str(e)}")
-            return None
-    
-    @staticmethod
-    def create_geographic_distribution(df):
-        """Coğrafi dağılım grafikleri"""
-        try:
-            sales_cols = [col for col in df.columns if 'Sales_' in col]
-            if not sales_cols:
-                return None
-            
-            latest_sales_col = sales_cols[-1]
-            
-            if 'Country' in df.columns:
-                country_sales = df.groupby('Country')[latest_sales_col].sum().reset_index()
-                country_sales = country_sales.sort_values(latest_sales_col, ascending=False)
-                
-                fig = make_subplots(
-                    rows=2, cols=2,
-                    subplot_titles=('Coğrafi Satış Dağılımı', 'Top 15 Ülke'),
-                    specs=[[{'type': 'choropleth'}, {'type': 'bar'}],
-                           [{'type': 'treemap'}, {'type': 'scatter'}]],
-                    vertical_spacing=0.15,
-                    horizontal_spacing=0.15
-                )
-                
-                try:
-                    fig.add_trace(
-                        go.Choropleth(
-                            locations=country_sales['Country'],
-                            locationmode='country names',
-                            z=country_sales[latest_sales_col],
-                            colorscale='Blues',
-                            colorbar_title="Satış (USD)",
-                            hoverinfo='location+z'
-                        ),
-                        row=1, col=1
-                    )
-                except:
-                    fig.add_trace(
-                        go.Scatter(x=[0], y=[0], mode='text', text=['Harita yüklenemedi']),
-                        row=1, col=1
-                    )
-                
-                top_countries = country_sales.head(15)
-                fig.add_trace(
-                    go.Bar(
-                        x=top_countries[latest_sales_col],
-                        y=top_countries['Country'],
-                        orientation='h',
-                        marker_color='#8b5cf6',
-                        text=[f'${x/1e6:.1f}M' for x in top_countries[latest_sales_col]],
-                        textposition='auto'
-                    ),
-                    row=1, col=2
-                )
-                
-                fig.add_trace(
-                    go.Treemap(
-                        labels=country_sales['Country'].head(20),
-                        parents=[''] * min(20, len(country_sales)),
-                        values=country_sales[latest_sales_col].head(20),
-                        textinfo="label+value",
-                        marker_colorscale='Viridis'
-                    ),
-                    row=2, col=1
-                )
-                
-                if 'Growth_' in ''.join(df.columns):
-                    growth_cols = [col for col in df.columns if 'Growth_' in col]
-                    if growth_cols:
-                        country_growth = df.groupby('Country')[growth_cols[-1]].mean().reset_index()
-                        country_combined = pd.merge(country_sales, country_growth, on='Country')
-                        
-                        fig.add_trace(
-                            go.Scatter(
-                                x=country_combined[latest_sales_col],
-                                y=country_combined[growth_cols[-1]],
-                                mode='markers',
-                                marker=dict(
-                                    size=country_combined[latest_sales_col] / country_combined[latest_sales_col].max() * 50,
-                                    color=country_combined[growth_cols[-1]],
-                                    colorscale='RdYlGn',
-                                    showscale=True,
-                                    colorbar=dict(title="Büyüme %")
-                                ),
-                                text=country_combined['Country'],
-                                hoverinfo='text+x+y'
-                            ),
-                            row=2, col=2
-                        )
-                
-                fig.update_layout(
-                    height=800,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color='#f1f5f9',
-                    showlegend=False,
-                    title_text="Coğrafi Analiz",
-                    title_x=0.5
-                )
-                
-                return fig
-            
-            return None
-            
-        except Exception as e:
-            st.warning(f"Coğrafi analiz grafiği hatası: {str(e)}")
-            return None
-    
-    @staticmethod
-    def create_price_volume_analysis(df):
-        """Fiyat-hacim analiz grafikleri"""
-        try:
-            price_cols = [col for col in df.columns if 'Avg_Price' in col]
-            units_cols = [col for col in df.columns if 'Units_' in col]
-            
-            if not price_cols or not units_cols:
-                return None
-            
-            latest_price_col = price_cols[-1]
-            latest_units_col = units_cols[-1]
-            
-            sample_df = df[
-                (df[latest_price_col] > 0) & 
-                (df[latest_units_col] > 0)
-            ].copy()
-            
-            if len(sample_df) > 10000:
-                sample_df = sample_df.sample(10000, random_state=42)
-            
-            fig = make_subplots(
-                rows=2, cols=2,
-                subplot_titles=('Fiyat-Hacim İlişkisi', 'Fiyat Dağılımı',
-                               'Hacim Dağılımı', 'Fiyat-Hacim Kategorileri'),
-                vertical_spacing=0.15,
-                horizontal_spacing=0.15
-            )
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=sample_df[latest_price_col],
-                    y=sample_df[latest_units_col],
-                    mode='markers',
-                    marker=dict(
-                        size=8,
-                        color=sample_df[latest_units_col],
-                        colorscale='Viridis',
-                        showscale=True,
-                        colorbar=dict(title="Hacim")
-                    ),
-                    text=sample_df['Molecule'] if 'Molecule' in sample_df.columns else None,
-                    hoverinfo='text+x+y'
-                ),
-                row=1, col=1
-            )
-            
-            fig.add_trace(
-                go.Histogram(
-                    x=df[latest_price_col],
-                    nbinsx=50,
-                    marker_color='#3b82f6',
-                    name='Fiyat Dağılımı'
-                ),
-                row=1, col=2
-            )
-            
-            fig.add_trace(
-                go.Histogram(
-                    x=df[latest_units_col],
-                    nbinsx=50,
-                    marker_color='#10b981',
-                    name='Hacim Dağılımı'
-                ),
-                row=2, col=1
-            )
-            
-            if 'Corporation' in df.columns:
-                top_companies = df['Corporation'].value_counts().nlargest(5).index
-                company_data = df[df['Corporation'].isin(top_companies)]
-                
-                fig.add_trace(
-                    go.Box(
-                        x=company_data['Corporation'],
-                        y=company_data[latest_price_col],
-                        marker_color='#8b5cf6',
-                        name='Şirket Bazlı Fiyat'
-                    ),
-                    row=2, col=2
-                )
-            
-            fig.update_layout(
-                height=700,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#f1f5f9',
-                showlegend=False
-            )
-            
-            fig.update_xaxes(showgrid=False)
-            fig.update_yaxes(showgrid=False, gridcolor='rgba(255,255,255,0.1)')
-            
-            return fig
-            
-        except Exception as e:
-            st.warning(f"Fiyat-hacim grafiği hatası: {str(e)}")
-            return None
 
 # ================================================
 # 6. RAPORLAMA SİSTEMİ
@@ -2246,11 +1772,14 @@ class ProfessionalReporting:
             output = BytesIO()
             
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                # Ham veri
                 df.to_excel(writer, sheet_name='HAM_VERI', index=False)
                 
+                # Özet metrikler
                 metrics_df = pd.DataFrame(list(metrics.items()), columns=['METRİK', 'DEĞER'])
                 metrics_df.to_excel(writer, sheet_name='OZET_METRIKLER', index=False)
                 
+                # Pazar payı analizi
                 sales_cols = [col for col in df.columns if 'Sales_' in col]
                 if sales_cols and 'Corporation' in df.columns:
                     latest_sales_col = sales_cols[-1]
@@ -2261,29 +1790,11 @@ class ProfessionalReporting:
                     market_share_df['KÜMÜLATİF_PAY'] = market_share_df['PAY (%)'].cumsum()
                     market_share_df.to_excel(writer, sheet_name='PAZAR_PAYI', index=False)
                 
-                if 'Country' in df.columns:
-                    if sales_cols:
-                        latest_sales_col = sales_cols[-1]
-                        country_analysis = df.groupby('Country').agg({
-                            latest_sales_col: ['sum', 'mean', 'count']
-                        }).round(2)
-                        country_analysis.columns = ['_'.join(col).strip() for col in country_analysis.columns.values]
-                        country_analysis.to_excel(writer, sheet_name='ULKE_ANALIZI')
-                
-                if 'Molecule' in df.columns:
-                    if sales_cols:
-                        latest_sales_col = sales_cols[-1]
-                        molecule_analysis = df.groupby('Molecule').agg({
-                            latest_sales_col: ['sum', 'mean', 'count']
-                        }).round(2)
-                        molecule_analysis.columns = ['_'.join(col).strip() for col in molecule_analysis.columns.values]
-                        molecule_analysis.nlargest(50, (latest_sales_col, 'sum')).to_excel(
-                            writer, sheet_name='MOLEKUL_ANALIZI'
-                        )
-                
+                # International Product analizi
                 if analysis_df is not None:
                     analysis_df.to_excel(writer, sheet_name='INTERNATIONAL_ANALIZI', index=False)
                 
+                # İçgörüler
                 if insights:
                     insights_data = []
                     for insight in insights:
@@ -2322,6 +1833,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
+    # Session state başlatma
     if 'df' not in st.session_state:
         st.session_state.df = None
     if 'filtered_df' not in st.session_state:
@@ -2332,11 +1844,10 @@ def main():
         st.session_state.insights = []
     if 'current_filters' not in st.session_state:
         st.session_state.current_filters = {}
-    if 'saved_filters' not in st.session_state:
-        st.session_state.saved_filters = {}
     if 'international_analysis' not in st.session_state:
         st.session_state.international_analysis = None
     
+    # Sidebar
     with st.sidebar:
         st.markdown('<h2 class="sidebar-title">🎛️ KONTROL PANELİ</h2>', unsafe_allow_html=True)
         
@@ -2344,39 +1855,26 @@ def main():
             uploaded_file = st.file_uploader(
                 "Excel/CSV Dosyası Yükleyin",
                 type=['xlsx', 'xls', 'csv'],
-                help="500K+ satır desteklenir. Büyük dosyalar için örneklem önerilir."
+                help="TÜM VERİ yüklenecektir (örneklem yok). Büyük dosyalar için yükleme süresi uzun olabilir."
             )
             
             if uploaded_file:
-                col1, col2 = st.columns(2)
-                with col1:
-                    use_sample = st.checkbox("Örneklem Kullan", value=True)
-                with col2:
-                    sample_size = st.number_input(
-                        "Örneklem Büyüklüğü", 
-                        min_value=1000,
-                        max_value=500000,
-                        value=50000,
-                        step=10000,
-                        disabled=not use_sample
-                    )
-                
-                if st.button("🚀 Yükle & Analiz Et", type="primary", width='stretch'):
-                    with st.spinner("Veri işleniyor..."):
+                if st.button("🚀 TÜM VERİYİ YÜKLE & ANALİZ ET", type="primary", use_container_width=True):
+                    with st.spinner("Tüm veri yükleniyor ve analiz ediliyor..."):
                         processor = OptimizedDataProcessor()
                         
-                        if use_sample and sample_size:
-                            df = processor.load_large_dataset(uploaded_file, sample_size=sample_size)
-                        else:
-                            df = processor.load_large_dataset(uploaded_file)
+                        # TÜM veriyi yükle
+                        df = processor.load_large_dataset(uploaded_file)
                         
                         if df is not None and len(df) > 0:
-                            df = processor.optimize_dataframe(df)
+                            # Veriyi hazırla
                             df = processor.prepare_analytics_data(df)
                             
+                            # Session state güncelle
                             st.session_state.df = df
                             st.session_state.filtered_df = df.copy()
                             
+                            # Analiz yap
                             analytics = AdvancedPharmaAnalytics()
                             st.session_state.metrics = analytics.calculate_comprehensive_metrics(df)
                             st.session_state.insights = analytics.detect_strategic_insights(df)
@@ -2385,6 +1883,7 @@ def main():
                             st.success(f"✅ {len(df):,} satır veri başarıyla yüklendi!")
                             st.rerun()
         
+        # Filtreleme (veri yüklendiyse)
         if st.session_state.df is not None:
             st.markdown("---")
             df = st.session_state.df
@@ -2398,6 +1897,7 @@ def main():
                     st.session_state.filtered_df = filtered_df
                     st.session_state.current_filters = filter_config
                     
+                    # Analizleri güncelle
                     analytics = AdvancedPharmaAnalytics()
                     st.session_state.metrics = analytics.calculate_comprehensive_metrics(filtered_df)
                     st.session_state.insights = analytics.detect_strategic_insights(filtered_df)
@@ -2409,20 +1909,9 @@ def main():
             if clear_filter:
                 st.session_state.filtered_df = st.session_state.df.copy()
                 st.session_state.current_filters = {}
-                st.session_state.metrics = AdvancedPharmaAnalytics().calculate_comprehensive_metrics(st.session_state.df)
-                st.session_state.insights = AdvancedPharmaAnalytics().detect_strategic_insights(st.session_state.df)
-                st.session_state.international_analysis = AdvancedPharmaAnalytics().analyze_international_products(st.session_state.df)
-                st.success("✅ Filtreler temizlendi")
                 st.rerun()
         
-        if st.session_state.df is not None:
-            with st.expander("⚙️ ANALİZ AYARLARI", expanded=False):
-                analysis_mode = st.selectbox(
-                    "Analiz Modu",
-                    ['Temel Analiz', 'Gelişmiş Analiz', 'Derin Öğrenme'],
-                    help="Analiz derinliğini seçin"
-                )
-        
+        # Footer
         st.markdown("---")
         st.markdown("""
         <div style="text-align: center; font-size: 0.8rem; color: #64748b;">
@@ -2432,15 +1921,18 @@ def main():
         </div>
         """, unsafe_allow_html=True)
     
+    # Ana içerik
     if st.session_state.df is None:
         show_welcome_screen()
         return
     
+    # Değişkenleri al
     df = st.session_state.filtered_df
     metrics = st.session_state.metrics
     insights = st.session_state.insights
     intl_analysis = st.session_state.international_analysis
     
+    # Filtre durumunu göster
     if st.session_state.current_filters:
         AdvancedFilterSystem.show_filter_status(
             st.session_state.current_filters,
@@ -2450,13 +1942,13 @@ def main():
     else:
         st.info(f"🎯 Aktif filtre yok | Gösterilen: {len(df):,} satır")
     
-    # YENİ TAB EKLENDİ: INTERNATIONAL PRODUCT ANALİZİ
+    # Tab'lar
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 GENEL BAKIŞ",
         "📈 PAZAR ANALİZİ",
         "💰 FİYAT ANALİZİ",
         "🏆 REKABET ANALİZİ",
-        "🌍 INTERNATIONAL PRODUCT",  # YENİ TAB
+        "🌍 INTERNATIONAL PRODUCT",
         "🔮 STRATEJİK ANALİZ",
         "📑 RAPORLAMA"
     ])
@@ -2473,7 +1965,7 @@ def main():
     with tab4:
         show_competition_analysis_tab(df, metrics)
     
-    with tab5:  # YENİ TAB
+    with tab5:
         show_international_product_tab(df, intl_analysis, metrics)
     
     with tab6:
@@ -2483,7 +1975,7 @@ def main():
         show_reporting_tab(df, metrics, insights, intl_analysis)
 
 # ================================================
-# TAB FONKSİYONLARI (INTERNATIONAL PRODUCT TAB EKLENDİ)
+# TAB FONKSİYONLARI
 # ================================================
 
 def show_welcome_screen():
@@ -2496,38 +1988,15 @@ def show_welcome_screen():
             <h2 style="color: #f1f5f9; margin-bottom: 1rem;">PharmaIntelligence Pro'ya Hoşgeldiniz</h2>
             <p style="color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6;">
             İlaç pazarı verilerinizi yükleyin ve güçlü analitik özelliklerin kilidini açın.
-            <br>International Product analizi ile çoklu pazar stratejilerinizi optimize edin.
+            <br><strong>TÜM VERİ</strong> yüklenir (örneklem yok) - 500K+ satır desteklenir.
             </p>
-            
-            <div class="feature-grid">
-                <div class="feature-card feature-card-blue">
-                    <div class="feature-icon">🌍</div>
-                    <div class="feature-title">International Product</div>
-                    <div class="feature-description">Çoklu pazar ürün analizi ve strateji geliştirme</div>
-                </div>
-                <div class="feature-card feature-card-purple">
-                    <div class="feature-icon">📈</div>
-                    <div class="feature-title">Pazar Analizi</div>
-                    <div class="feature-description">Derin pazar içgörüleri ve trend analizi</div>
-                </div>
-                <div class="feature-card feature-card-green">
-                    <div class="feature-icon">💰</div>
-                    <div class="feature-title">Fiyat Zekası</div>
-                    <div class="feature-description">Rekabetçi fiyatlandırma ve optimizasyon analizi</div>
-                </div>
-                <div class="feature-card feature-card-yellow">
-                    <div class="feature-icon">🏆</div>
-                    <div class="feature-title">Rekabet Analizi</div>
-                    <div class="feature-description">Rakiplerinizi analiz edin ve fırsatları belirleyin</div>
-                </div>
-            </div>
             
             <div class="get-started-box">
                 <div class="get-started-title">🎯 Başlamak İçin</div>
                 <div class="get-started-steps">
                 1. Sol taraftaki panelden veri dosyanızı yükleyin<br>
-                2. İstediğiniz örneklem boyutunu seçin<br>
-                3. "Yükle & Analiz Et" butonuna tıklayın
+                2. "TÜM VERİYİ YÜKLE & ANALİZ ET" butonuna tıklayın<br>
+                3. Analiz sonuçlarını tablarda inceleyin
                 </div>
             </div>
         </div>
@@ -2537,76 +2006,59 @@ def show_overview_tab(df, metrics, insights):
     """Genel Bakış tab'ını göster"""
     st.markdown('<h2 class="section-title">Genel Bakış ve Performans Göstergeleri</h2>', unsafe_allow_html=True)
     
+    # Metrik kartları
     viz = ProfessionalVisualization()
     viz.create_dashboard_metrics(df, metrics)
     
+    # İçgörüler
     st.markdown('<h3 class="subsection-title">🔍 Stratejik İçgörüler</h3>', unsafe_allow_html=True)
     
     if insights:
-        insight_cols = st.columns(2)
-        
-        for idx, insight in enumerate(insights[:6]):
-            with insight_cols[idx % 2]:
-                icon = "💡"
-                if insight['type'] == 'warning':
-                    icon = "⚠️"
-                elif insight['type'] == 'success':
-                    icon = "✅"
-                elif insight['type'] == 'info':
-                    icon = "ℹ️"
-                elif insight['type'] == 'geographic':
-                    icon = "🌍"
-                elif insight['type'] == 'price':
-                    icon = "💰"
-                
-                st.markdown(f"""
-                <div class="insight-card {insight['type']}">
-                    <div class="insight-icon">{icon}</div>
-                    <div class="insight-title">{insight['title']}</div>
-                    <div class="insight-content">{insight['description']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if insight.get('data') is not None and not insight['data'].empty:
-                    with st.expander("📋 Detaylı Liste"):
-                        display_columns = []
-                        for col in ['Molecule', 'Corporation', 'Country', 'Sales_2024', 'Growth_23_24']:
-                            if col in insight['data'].columns:
-                                display_columns.append(col)
-                        
-                        if display_columns:
-                            st.dataframe(
-                                insight['data'][display_columns].head(10),
-                                use_container_width=True
-                            )
+        for insight in insights[:6]:  # İlk 6 içgörüyü göster
+            icon = "💡"
+            if insight['type'] == 'warning':
+                icon = "⚠️"
+            elif insight['type'] == 'success':
+                icon = "✅"
+            elif insight['type'] == 'info':
+                icon = "ℹ️"
+            elif insight['type'] == 'geographic':
+                icon = "🌍"
+            elif insight['type'] == 'price':
+                icon = "💰"
+            
+            st.markdown(f"""
+            <div class="insight-card {insight['type']}">
+                <div class="insight-icon">{icon}</div>
+                <div class="insight-title">{insight['title']}</div>
+                <div class="insight-content">{insight['description']}</div>
+            </div>
+            """, unsafe_allow_html=True)
     else:
         st.info("Verileriniz analiz ediliyor... Stratejik içgörüler burada görünecek.")
     
+    # Veri önizleme
     st.markdown('<h3 class="subsection-title">📋 Veri Önizleme</h3>', unsafe_allow_html=True)
     
     preview_col1, preview_col2 = st.columns([1, 3])
     
     with preview_col1:
-        rows_to_show = st.slider("Gösterilecek Satır Sayısı", 10, 1000, 100, 10, key="rows_preview")
+        rows_to_show = st.slider("Gösterilecek Satır Sayısı", 10, 1000, 100, 10)
         
-        available_columns = df.columns.tolist()
-        default_columns = []
-        
+        # Öncelikli sütunlar
         priority_columns = ['Molecule', 'Corporation', 'Country', 'Sales_2024', 'Growth_23_24']
+        available_columns = df.columns.tolist()
+        
+        # Mevcut sütunları kontrol et
+        default_columns = []
         for col in priority_columns:
             if col in available_columns:
                 default_columns.append(col)
-            if len(default_columns) >= 5:
-                break
-        
-        if len(default_columns) < 5:
-            default_columns.extend([col for col in available_columns[:5] if col not in default_columns])
         
         show_columns = st.multiselect(
             "Gösterilecek Sütunlar",
             options=available_columns,
-            default=default_columns[:min(5, len(default_columns))],
-            key="columns_preview"
+            default=default_columns[:min(5, len(default_columns))]
         )
     
     with preview_col2:
@@ -2622,457 +2074,282 @@ def show_overview_tab(df, metrics, insights):
                 use_container_width=True,
                 height=400
             )
-    
-    st.markdown('<h3 class="subsection-title">📊 Veri Kalitesi Analizi</h3>', unsafe_allow_html=True)
-    
-    quality_cols = st.columns(4)
-    
-    with quality_cols[0]:
-        missing_pct = metrics.get('Missing_Percentage', 0)
-        status_color = "normal"
-        if missing_pct < 5:
-            status_color = "normal"
-        elif missing_pct < 20:
-            status_color = "off"
-        else:
-            status_color = "inverse"
-        st.metric("Eksik Veri Oranı", f"{missing_pct:.1f}%", delta=None, delta_color=status_color)
-    
-    with quality_cols[1]:
-        duplicate_rows = df.duplicated().sum()
-        duplicate_pct = (duplicate_rows / len(df)) * 100 if len(df) > 0 else 0
-        st.metric("Kopya Satırlar", f"{duplicate_pct:.1f}%")
-    
-    with quality_cols[2]:
-        numeric_cols = len(df.select_dtypes(include=[np.number]).columns)
-        total_cols = len(df.columns)
-        st.metric("Sayısal Sütunlar", f"{numeric_cols}/{total_cols}")
-    
-    with quality_cols[3]:
-        date_cols = len([col for col in df.columns if 'date' in col.lower()])
-        st.metric("Tarih Sütunları", date_cols)
 
 def show_market_analysis_tab(df):
     """Pazar Analizi tab'ını göster"""
     st.markdown('<h2 class="section-title">Pazar Analizi ve Trendler</h2>', unsafe_allow_html=True)
     
-    viz = ProfessionalVisualization()
-    
+    # Satış trendleri
     st.markdown('<h3 class="subsection-title">📈 Satış Trendleri</h3>', unsafe_allow_html=True)
-    trend_fig = viz.create_sales_trend_chart(df)
-    if trend_fig:
-        st.plotly_chart(trend_fig, use_container_width=True, config={'displayModeBar': True})
+    
+    sales_cols = [col for col in df.columns if 'Sales_' in col]
+    if len(sales_cols) >= 2:
+        # Yıllık satışları topla
+        yearly_sales = {}
+        for col in sorted(sales_cols):
+            year = col.split('_')[-1]
+            yearly_sales[year] = df[col].sum()
+        
+        # Çubuk grafik
+        fig = px.bar(
+            x=list(yearly_sales.keys()),
+            y=list(yearly_sales.values()),
+            title='Yıllık Toplam Satış Trendi',
+            labels={'x': 'Yıl', 'y': 'Satış (USD)'},
+            color=list(yearly_sales.values()),
+            color_continuous_scale='Viridis'
+        )
+        fig.update_layout(
+            height=500,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font_color='#f1f5f9'
+        )
+        st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Satış trend analizi için yeterli yıllık veri bulunamadı.")
     
+    # Coğrafi dağılım
     st.markdown('<h3 class="subsection-title">🌍 Coğrafi Dağılım</h3>', unsafe_allow_html=True)
-    geo_fig = viz.create_geographic_distribution(df)
-    if geo_fig:
-        st.plotly_chart(geo_fig, use_container_width=True, config={'displayModeBar': True})
-    else:
-        st.info("Coğrafi analiz için yeterli veri bulunamadı.")
     
-    st.markdown('<h3 class="subsection-title">🧪 Molekül Bazlı Analiz</h3>', unsafe_allow_html=True)
-    
-    if 'Molecule' in df.columns:
-        sales_cols = [col for col in df.columns if 'Sales_' in col]
-        if sales_cols:
-            latest_sales_col = sales_cols[-1]
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                top_molecules = df.groupby('Molecule')[latest_sales_col].sum().nlargest(15)
-                fig = px.bar(
-                    top_molecules,
-                    orientation='h',
-                    title=f'Top 15 Molekül - Satış Performansı',
-                    color=top_molecules.values,
-                    color_continuous_scale='Viridis'
-                )
-                fig.update_layout(
-                    height=500,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color='#f1f5f9',
-                    xaxis_title='Satış (USD)',
-                    yaxis_title='Molekül'
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                growth_cols = [col for col in df.columns if 'Growth_' in col]
-                if growth_cols:
-                    latest_growth_col = growth_cols[-1]
-                    molecule_growth = df.groupby('Molecule')[latest_growth_col].mean().nlargest(15)
-                    fig = px.bar(
-                        molecule_growth,
-                        orientation='h',
-                        title='Top 15 Molekül - Büyüme Oranları',
-                        color=molecule_growth.values,
-                        color_continuous_scale='RdYlGn'
-                    )
-                    fig.update_layout(
-                        height=500,
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        font_color='#f1f5f9',
-                        xaxis_title='Büyüme Oranı (%)',
-                        yaxis_title='Molekül'
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+    if 'Country' in df.columns and sales_cols:
+        latest_sales_col = sales_cols[-1]
+        country_sales = df.groupby('Country')[latest_sales_col].sum().reset_index()
+        country_sales = country_sales.sort_values(latest_sales_col, ascending=False)
+        
+        # Top 10 ülke
+        top_countries = country_sales.head(10)
+        
+        fig = px.bar(
+            top_countries,
+            x='Country',
+            y=latest_sales_col,
+            title='Top 10 Ülke - Satış Performansı',
+            color=latest_sales_col,
+            color_continuous_scale='Blues'
+        )
+        fig.update_layout(
+            height=500,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font_color='#f1f5f9',
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("Molekül analizi için gerekli sütun bulunamadı.")
+        st.info("Coğrafi analiz için gerekli veri bulunamadı.")
 
 def show_price_analysis_tab(df):
     """Fiyat Analizi tab'ını göster"""
     st.markdown('<h2 class="section-title">Fiyat Analizi ve Optimizasyon</h2>', unsafe_allow_html=True)
     
-    viz = ProfessionalVisualization()
-    
-    st.markdown('<h3 class="subsection-title">💰 Fiyat-Hacim İlişkisi</h3>', unsafe_allow_html=True)
-    price_fig = viz.create_price_volume_analysis(df)
-    if price_fig:
-        st.plotly_chart(price_fig, use_container_width=True, config={'displayModeBar': True})
-    else:
-        st.info("Fiyat-hacim analizi için yeterli veri bulunamadı.")
-    
-    st.markdown('<h3 class="subsection-title">🎯 Fiyat Segmentasyonu</h3>', unsafe_allow_html=True)
-    
+    # Fiyat dağılımı
     price_cols = [col for col in df.columns if 'Avg_Price' in col]
     if price_cols:
         latest_price_col = price_cols[-1]
         
-        col1, col2 = st.columns(2)
+        st.markdown('<h3 class="subsection-title">💰 Fiyat Dağılımı</h3>', unsafe_allow_html=True)
+        
+        # Histogram
+        fig = px.histogram(
+            df,
+            x=latest_price_col,
+            nbins=50,
+            title='Fiyat Dağılımı',
+            labels={latest_price_col: 'Fiyat (USD)', 'count': 'Ürün Sayısı'}
+        )
+        fig.update_layout(
+            height=500,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font_color='#f1f5f9'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Fiyat istatistikleri
+        st.markdown('<h3 class="subsection-title">📊 Fiyat İstatistikleri</h3>', unsafe_allow_html=True)
+        
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            price_data = df[latest_price_col].dropna()
-            if len(price_data) > 0:
-                price_segments = pd.cut(
-                    price_data,
-                    bins=[0, 10, 50, 100, 500, float('inf')],
-                    labels=['Economy (<$10)', 'Standard ($10-$50)', 'Premium ($50-$100)', 
-                           'Super Premium ($100-$500)', 'Luxury (>$500)']
-                )
-                
-                segment_counts = price_segments.value_counts()
-                fig = px.pie(
-                    values=segment_counts.values,
-                    names=segment_counts.index,
-                    title='Fiyat Segmentleri Dağılımı',
-                    color_discrete_sequence=px.colors.qualitative.Set3
-                )
-                fig.update_layout(
-                    height=400,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color='#f1f5f9'
-                )
-                st.plotly_chart(fig, use_container_width=True)
+            avg_price = df[latest_price_col].mean()
+            st.metric("Ortalama Fiyat", f"${avg_price:.2f}")
         
         with col2:
-            growth_cols = [col for col in df.columns if 'Growth_' in col]
-            if growth_cols and len(price_data) > 0:
-                latest_growth_col = growth_cols[-1]
-                df_temp = df.copy()
-                df_temp['Price_Segment'] = pd.cut(
-                    df_temp[latest_price_col],
-                    bins=[0, 10, 50, 100, 500, float('inf')],
-                    labels=['Economy', 'Standard', 'Premium', 'Super Premium', 'Luxury']
-                )
-                
-                segment_growth = df_temp.groupby('Price_Segment')[latest_growth_col].mean().dropna()
-                
-                if len(segment_growth) > 0:
-                    fig = px.bar(
-                        segment_growth,
-                        orientation='v',
-                        title='Fiyat Segmenti Bazlı Büyüme',
-                        color=segment_growth.values,
-                        color_continuous_scale='RdYlGn'
-                    )
-                    fig.update_layout(
-                        height=400,
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        font_color='#f1f5f9',
-                        xaxis_title='Fiyat Segmenti',
-                        yaxis_title='Ortalama Büyüme (%)',
-                        xaxis_tickangle=-45
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-    
-    st.markdown('<h3 class="subsection-title">📉 Fiyat Esnekliği Analizi</h3>', unsafe_allow_html=True)
-    
-    price_cols = [col for col in df.columns if 'Avg_Price' in col]
-    units_cols = [col for col in df.columns if 'Units_' in col]
-    
-    if price_cols and units_cols:
-        latest_price_col = price_cols[-1]
-        latest_units_col = units_cols[-1]
+            median_price = df[latest_price_col].median()
+            st.metric("Medyan Fiyat", f"${median_price:.2f}")
         
-        correlation_df = df[[latest_price_col, latest_units_col]].dropna()
-        if len(correlation_df) > 10:
-            correlation = correlation_df.corr().iloc[0, 1]
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric("Fiyat-Hacim Korelasyonu", f"{correlation:.3f}")
-            
-            with col2:
-                if correlation < -0.3:
-                    elasticity_status = "Yüksek Esneklik"
-                elif correlation > 0.3:
-                    elasticity_status = "Düşük Esneklik"
-                else:
-                    elasticity_status = "Nötr"
-                st.metric("Esneklik Durumu", elasticity_status)
-            
-            with col3:
-                if correlation < -0.3:
-                    recommendation = "Fiyat Artışı Riskli"
-                elif correlation > 0.3:
-                    recommendation = "Fiyat Artışı Mümkün"
-                else:
-                    recommendation = "Limitli Fiyat Artışı"
-                st.metric("Öneri", recommendation)
+        with col3:
+            min_price = df[latest_price_col].min()
+            st.metric("Minimum Fiyat", f"${min_price:.2f}")
+        
+        with col4:
+            max_price = df[latest_price_col].max()
+            st.metric("Maximum Fiyat", f"${max_price:.2f}")
+    else:
+        st.info("Fiyat analizi için gerekli veri bulunamadı.")
 
 def show_competition_analysis_tab(df, metrics):
     """Rekabet Analizi tab'ını göster"""
     st.markdown('<h2 class="section-title">Rekabet Analizi ve Pazar Yapısı</h2>', unsafe_allow_html=True)
     
-    viz = ProfessionalVisualization()
-    
-    st.markdown('<h3 class="subsection-title">🏆 Pazar Payı Analizi</h3>', unsafe_allow_html=True)
-    share_fig = viz.create_market_share_analysis(df)
-    if share_fig:
-        st.plotly_chart(share_fig, use_container_width=True, config={'displayModeBar': True})
-    else:
-        st.info("Pazar payı analizi için gerekli veri bulunamadı.")
-    
-    st.markdown('<h3 class="subsection-title">📊 Rekabet Yoğunluğu Metrikleri</h3>', unsafe_allow_html=True)
-    
-    comp_cols = st.columns(4)
-    
-    with comp_cols[0]:
-        hhi = metrics.get('HHI_Index', 0)
-        if hhi > 2500:
-            hhi_status = "Monopolistik"
-        elif hhi > 1800:
-            hhi_status = "Oligopol"
-        else:
-            hhi_status = "Rekabetçi"
-        st.metric("HHI İndeksi", f"{hhi:.0f}", hhi_status)
-    
-    with comp_cols[1]:
-        top3_share = metrics.get('Top_3_Share', 0)
-        if top3_share > 50:
-            concentration = "Yüksek"
-        elif top3_share > 30:
-            concentration = "Orta"
-        else:
-            concentration = "Düşük"
-        st.metric("Top 3 Payı", f"{top3_share:.1f}%", concentration)
-    
-    with comp_cols[2]:
-        cr4 = metrics.get('CR4_Ratio', 0)
-        st.metric("CR4 Oranı", f"{cr4:.1f}%")
-    
-    with comp_cols[3]:
-        top10_molecule = metrics.get('Top_10_Molecule_Share', 0)
-        st.metric("Top 10 Molekül Payı", f"{top10_molecule:.1f}%")
-    
-    st.markdown('<h3 class="subsection-title">📈 Şirket Performans Analizi</h3>', unsafe_allow_html=True)
-    
+    # Pazar payı analizi
     if 'Corporation' in df.columns:
         sales_cols = [col for col in df.columns if 'Sales_' in col]
         if sales_cols:
             latest_sales_col = sales_cols[-1]
             
-            company_metrics = df.groupby('Corporation').agg({
-                latest_sales_col: ['sum', 'mean', 'count']
-            }).round(2)
+            st.markdown('<h3 class="subsection-title">🏆 Pazar Payı Dağılımı</h3>', unsafe_allow_html=True)
             
-            company_metrics.columns = ['_'.join(col).strip() for col in company_metrics.columns.values]
-            company_metrics = company_metrics.sort_values(f'{latest_sales_col}_sum', ascending=False)
+            # Şirket bazlı satışlar
+            company_sales = df.groupby('Corporation')[latest_sales_col].sum().sort_values(ascending=False)
+            top_companies = company_sales.head(15)
             
-            top_companies = company_metrics.head(20)
-            
-            if len(top_companies) > 0:
-                try:
-                    fig = px.imshow(
-                        top_companies.T,
-                        text_auto=True,
-                        aspect="auto",
-                        color_continuous_scale='Viridis',
-                        title='Top 20 Şirket Performans Matrisi'
-                    )
-                    fig.update_layout(
-                        height=600,
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        font_color='#f1f5f9'
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                except:
-                    st.info("Heatmap oluşturulamadı. Verileri tablo olarak gösteriliyor.")
-                
-                with st.expander("📋 Detaylı Şirket Performans Tablosu"):
-                    st.dataframe(
-                        company_metrics.head(50),
-                        use_container_width=True,
-                        height=400
-                    )
+            # Pasta grafik
+            fig = px.pie(
+                values=top_companies.values,
+                names=top_companies.index,
+                title='Top 15 Şirket - Pazar Payı',
+                hole=0.4
+            )
+            fig.update_layout(
+                height=500,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#f1f5f9'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Rekabet metrikleri
+    st.markdown('<h3 class="subsection-title">📊 Rekabet Yoğunluğu</h3>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        hhi = metrics.get('HHI_Index', 0)
+        if hhi > 2500:
+            status = "Monopolistik"
+        elif hhi > 1800:
+            status = "Oligopol"
+        else:
+            status = "Rekabetçi"
+        st.metric("HHI İndeksi", f"{hhi:.0f}", status)
+    
+    with col2:
+        top3_share = metrics.get('Top_3_Share', 0)
+        st.metric("Top 3 Payı", f"{top3_share:.1f}%")
+    
+    with col3:
+        unique_corps = df['Corporation'].nunique() if 'Corporation' in df.columns else 0
+        st.metric("Şirket Sayısı", unique_corps)
 
 def show_international_product_tab(df, analysis_df, metrics):
-    """YENİ TAB: International Product Analizi"""
+    """International Product Analizi tab'ını göster"""
     st.markdown('<h2 class="section-title">🌍 International Product Analizi</h2>', unsafe_allow_html=True)
     
     if analysis_df is None:
         st.warning("International Product analizi için gerekli veri bulunamadı.")
         return
     
-    viz = ProfessionalVisualization()
-    
-    # Genel bakış metrikleri
+    # Genel metrikler
     st.markdown('<h3 class="subsection-title">📊 International Product Genel Bakış</h3>', unsafe_allow_html=True)
     
-    intl_cols = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
     
-    with intl_cols[0]:
+    with col1:
         intl_count = metrics.get('International_Product_Count', 0)
         total_molecules = metrics.get('Unique_Molecules', 0)
-        intl_percentage = (intl_count / total_molecules * 100) if total_molecules > 0 else 0
-        st.metric("International Product Sayısı", f"{intl_count}", f"%{intl_percentage:.1f}")
+        if total_molecules > 0:
+            intl_percentage = (intl_count / total_molecules * 100)
+            st.metric("International Product", f"{intl_count}", f"%{intl_percentage:.1f}")
+        else:
+            st.metric("International Product", intl_count)
     
-    with intl_cols[1]:
+    with col2:
         intl_share = metrics.get('International_Product_Share', 0)
         st.metric("Pazar Payı", f"%{intl_share:.1f}")
     
-    with intl_cols[2]:
+    with col3:
         avg_countries = metrics.get('Avg_International_Countries', 0)
-        st.metric("Ort. Ülke Sayısı", f"{avg_countries:.1f}")
+        st.metric("Ort. Ülke", f"{avg_countries:.1f}")
     
-    with intl_cols[3]:
+    with col4:
         intl_growth = metrics.get('International_Avg_Growth', 0)
-        local_growth = metrics.get('Local_Avg_Growth', 0)
-        growth_diff = intl_growth - local_growth if intl_growth and local_growth else 0
-        st.metric("Büyüme Farkı", f"%{growth_diff:.1f}")
+        if intl_growth is not None:
+            st.metric("Ort. Büyüme", f"%{intl_growth:.1f}")
     
-    # Grafik analizi
-    st.markdown('<h3 class="subsection-title">📈 International Product Analiz Grafikleri</h3>', unsafe_allow_html=True)
-    
+    # Grafikler
+    viz = ProfessionalVisualization()
     intl_fig = viz.create_international_product_analysis(df, analysis_df)
-    if intl_fig:
-        st.plotly_chart(intl_fig, use_container_width=True, config={'displayModeBar': True})
     
-    # Detaylı tablo - HATA DÜZELTİLMİŞ VERSİYON
+    if intl_fig:
+        st.markdown('<h3 class="subsection-title">📈 International Product Analiz Grafikleri</h3>', unsafe_allow_html=True)
+        st.plotly_chart(intl_fig, use_container_width=True)
+    
+    # Detaylı tablo - DÜZELTİLMİŞ VERSİYON
     st.markdown('<h3 class="subsection-title">📋 International Product Detaylı Listesi</h3>', unsafe_allow_html=True)
     
-    tab1, tab2, tab3 = st.tabs(["Tüm International Product'lar", "Top Performanslılar", "Segment Bazlı"])
+    # Sadece International Product'ları göster
+    intl_df = analysis_df[analysis_df['is_international']].copy()
     
-    with tab1:
-        # International Product'ların detaylı listesi
-        if len(analysis_df) > 0:
-            display_columns = [
-                'Molecule', 'is_international', 'total_sales', 'corporation_count',
-                'country_count', 'avg_price', 'avg_growth', 'international_segment'
-            ]
-            
-            display_columns = [col for col in display_columns if col in analysis_df.columns]
-            
-            intl_df_display = analysis_df[display_columns].copy()
-            
-            # HATA DÜZELTME: apply metodunu düzgün kullan
-            if 'total_sales' in intl_df_display.columns:
-                intl_df_display['total_sales'] = intl_df_display['total_sales'].apply(
-                    lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
-                )
-            
-            if 'avg_growth' in intl_df_display.columns:
-                intl_df_display['avg_growth'] = intl_df_display['avg_growth'].apply(
-                    lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
-                )
-            
-            if 'avg_price' in intl_df_display.columns:
-                intl_df_display['avg_price'] = intl_df_display['avg_price'].apply(
-                    lambda x: f"${float(x):.2f}" if x is not None and not pd.isna(x) else "N/A"
-                )
-            
-            st.dataframe(
-                intl_df_display,
-                use_container_width=True,
-                height=400
-            )
+    if len(intl_df) > 0:
+        # Formatlama fonksiyonu - DÜZELTİLDİ
+        def format_value(x, format_type='currency'):
+            if pd.isna(x):
+                return "N/A"
+            try:
+                if format_type == 'currency':
+                    return f"${float(x)/1e6:.2f}M"
+                elif format_type == 'percent':
+                    return f"{float(x):.1f}%"
+                elif format_type == 'number':
+                    return f"{float(x):.1f}"
+                elif format_type == 'price':
+                    return f"${float(x):.2f}"
+                else:
+                    return str(x)
+            except:
+                return str(x)
+        
+        # Gösterilecek sütunları seç
+        display_columns = []
+        possible_columns = [
+            'Molecule', 'total_sales', 'corporation_count', 'country_count',
+            'avg_price', 'avg_growth', 'international_segment'
+        ]
+        
+        for col in possible_columns:
+            if col in intl_df.columns:
+                display_columns.append(col)
+        
+        # DataFrame'i kopyala ve formatla
+        display_df = intl_df[display_columns].copy()
+        
+        # Her sütunu uygun şekilde formatla
+        for col in display_df.columns:
+            if col == 'total_sales':
+                display_df[col] = display_df[col].apply(lambda x: format_value(x, 'currency'))
+            elif col == 'avg_growth':
+                display_df[col] = display_df[col].apply(lambda x: format_value(x, 'percent'))
+            elif col == 'avg_price':
+                display_df[col] = display_df[col].apply(lambda x: format_value(x, 'price'))
+            elif col in ['corporation_count', 'country_count']:
+                display_df[col] = display_df[col].apply(lambda x: format_value(x, 'number'))
+        
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            height=400
+        )
+    else:
+        st.info("International Product bulunamadı.")
     
-    with tab2:
-        # Top International Products
-        if len(analysis_df) > 0:
-            top_intl = analysis_df[analysis_df['is_international']].nlargest(20, 'total_sales')
-            
-            if len(top_intl) > 0:
-                top_display_columns = [
-                    'Molecule', 'total_sales', 'corporation_count', 'country_count',
-                    'avg_growth', 'top_corporation', 'top_country'
-                ]
-                
-                top_display_columns = [col for col in top_display_columns if col in top_intl.columns]
-                
-                top_intl_display = top_intl[top_display_columns].copy()
-                
-                # HATA DÜZELTME: apply metodunu düzgün kullan
-                if 'total_sales' in top_intl_display.columns:
-                    top_intl_display['total_sales'] = top_intl_display['total_sales'].apply(
-                        lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
-                    )
-                
-                if 'avg_growth' in top_intl_display.columns:
-                    top_intl_display['avg_growth'] = top_intl_display['avg_growth'].apply(
-                        lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
-                    )
-                
-                st.dataframe(
-                    top_intl_display,
-                    use_container_width=True,
-                    height=400
-                )
-    
-    with tab3:
-        # Segment bazlı analiz
-        if 'international_segment' in analysis_df.columns:
-            segment_analysis = analysis_df.groupby('international_segment').agg({
-                'Molecule': 'count',
-                'total_sales': 'sum',
-                'avg_growth': 'mean',
-                'corporation_count': 'mean',
-                'country_count': 'mean'
-            }).round(2)
-            
-            segment_analysis.columns = ['Molecule Count', 'Total Sales', 'Avg Growth %', 'Avg Corps', 'Avg Countries']
-            
-            # HATA DÜZELTME: apply metodunu düzgün kullan
-            if 'Total Sales' in segment_analysis.columns:
-                segment_analysis['Total Sales'] = segment_analysis['Total Sales'].apply(
-                    lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
-                )
-            
-            if 'Avg Growth %' in segment_analysis.columns:
-                segment_analysis['Avg Growth %'] = segment_analysis['Avg Growth %'].apply(
-                    lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
-                )
-            
-            st.dataframe(
-                segment_analysis,
-                use_container_width=True
-            )
-    
-    # International Product içgörüleri
-    st.markdown('<h3 class="subsection-title">💡 International Product İçgörüleri</h3>', unsafe_allow_html=True)
-    
+    # İçgörüler
     insights = AdvancedPharmaAnalytics.get_international_product_insights(df)
     
     if insights:
+        st.markdown('<h3 class="subsection-title">💡 International Product İçgörüleri</h3>', unsafe_allow_html=True)
+        
         for insight in insights:
             icon = "🌍"
             if insight['type'] == 'warning':
@@ -3089,143 +2366,28 @@ def show_international_product_tab(df, analysis_df, metrics):
                 <div class="insight-content">{insight['description']}</div>
             </div>
             """, unsafe_allow_html=True)
-            
-            if insight.get('data') is not None and not insight['data'].empty:
-                with st.expander("📋 Detaylı Liste"):
-                    display_columns = []
-                    for col in ['Molecule', 'total_sales', 'corporation_count', 'country_count', 'avg_growth']:
-                        if col in insight['data'].columns:
-                            display_columns.append(col)
-                    
-                    if display_columns:
-                        # Veriyi formatlamadan önce kopyala
-                        data_display = insight['data'][display_columns].copy()
-                        if 'total_sales' in data_display.columns:
-                            data_display['total_sales'] = data_display['total_sales'].apply(
-                                lambda x: f"${float(x)/1e6:.2f}M" if x is not None and not pd.isna(x) else "N/A"
-                            )
-                        if 'avg_growth' in data_display.columns:
-                            data_display['avg_growth'] = data_display['avg_growth'].apply(
-                                lambda x: f"{float(x):.1f}%" if x is not None and not pd.isna(x) else "N/A"
-                            )
-                        
-                        st.dataframe(
-                            data_display,
-                            use_container_width=True
-                        )
-    
-    # International Product strateji önerileri
-    st.markdown('<h3 class="subsection-title">🎯 Strateji Önerileri</h3>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("""
-        <div class="insight-card info">
-            <div class="insight-title">🚀 International Product Büyüme Stratejisi</div>
-            <div class="insight-content">
-            1. Yüksek büyüme gösteren International Product'ları belirleyin<br>
-            2. Bu ürünlerin diğer ülkelere yayılma potansiyelini değerlendirin<br>
-            3. Yerel pazarlarda lider olan ürünleri International Product'a dönüştürün
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="insight-card success">
-            <div class="insight-title">💰 International Product Fiyatlandırma</div>
-            <div class="insight-content">
-            1. Ülke bazında fiyatlandırma stratejileri geliştirin<br>
-            2. Premium segmentteki International Product'ların fiyatını optimize edin<br>
-            3. Fiyat esnekliği düşük ürünlere odaklanın
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
 def show_strategic_analysis_tab(df, insights):
     """Stratejik Analiz tab'ını göster"""
     st.markdown('<h2 class="section-title">Stratejik Analiz ve Öngörüler</h2>', unsafe_allow_html=True)
     
-    st.markdown('<h3 class="subsection-title">🎯 Pazar Segmentasyonu</h3>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        n_clusters = st.slider("Segment Sayısı", 2, 8, 4, key="n_clusters")
-        method = st.selectbox("Segmentasyon Metodu", ['kmeans', 'dbscan'], key="seg_method")
-        
-        if st.button("🔍 Segmentasyon Analizi Yap", type="primary", width='stretch', key="run_segmentation"):
-            with st.spinner("Pazar segmentasyonu analiz ediliyor..."):
-                analytics = AdvancedPharmaAnalytics()
-                segmentation_results = analytics.perform_advanced_segmentation(df, n_clusters, method)
-                
-                if segmentation_results:
-                    st.session_state.segmentation_results = segmentation_results
-                    st.success(f"{segmentation_results['metrics']['n_clusters']} segment tespit edildi!")
-                    st.rerun()
-    
-    with col2:
-        if 'segmentation_results' in st.session_state:
-            results = st.session_state.segmentation_results
-            
-            if 'Segment_Name' in results['data'].columns:
-                segment_counts = results['data']['Segment_Name'].value_counts()
-                
-                fig = px.pie(
-                    values=segment_counts.values,
-                    names=segment_counts.index,
-                    title='Pazar Segmentleri Dağılımı',
-                    hole=0.3
-                )
-                fig.update_layout(
-                    height=400,
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color='#f1f5f9'
-                )
-                st.plotly_chart(fig, use_container_width=True)
-                
-                col_a, col_b, col_c = st.columns(3)
-                with col_a:
-                    if results['metrics']['inertia']:
-                        st.metric("Inertia", f"{results['metrics']['inertia']:,.0f}")
-                with col_b:
-                    if results['metrics']['silhouette_score']:
-                        st.metric("Silhouette Skoru", f"{results['metrics']['silhouette_score']:.3f}")
-                with col_c:
-                    if results['metrics']['calinski_score']:
-                        st.metric("Calinski Skoru", f"{results['metrics']['calinski_score']:,.0f}")
-    
+    # Büyüme fırsatları
     st.markdown('<h3 class="subsection-title">🚀 Büyüme Fırsatları</h3>', unsafe_allow_html=True)
     
-    if insights:
-        opportunity_insights = [i for i in insights if i['type'] in ['success', 'info']]
-        
-        if opportunity_insights:
-            for insight in opportunity_insights[:3]:
-                st.markdown(f"""
-                <div class="insight-card {insight['type']}">
-                    <div class="insight-title">{insight['title']}</div>
-                    <div class="insight-content">{insight['description']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if insight.get('data') is not None and not insight['data'].empty:
-                    with st.expander("🚀 Bu Fırsattaki Ürünler"):
-                        display_columns = []
-                        for col in ['Molecule', 'Corporation', 'Country', 'Sales_2024', 'Growth_23_24']:
-                            if col in insight['data'].columns:
-                                display_columns.append(col)
-                        
-                        if display_columns:
-                            st.dataframe(
-                                insight['data'][display_columns],
-                                use_container_width=True
-                            )
-        else:
-            st.info("Henüz büyüme fırsatı tespit edilmedi.")
+    growth_insights = [i for i in insights if i['type'] in ['success', 'info']]
     
+    if growth_insights:
+        for insight in growth_insights[:3]:
+            st.markdown(f"""
+            <div class="insight-card {insight['type']}">
+                <div class="insight-title">{insight['title']}</div>
+                <div class="insight-content">{insight['description']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("Henüz büyüme fırsatı tespit edilmedi.")
+    
+    # Risk analizi
     st.markdown('<h3 class="subsection-title">⚠️ Risk Analizi</h3>', unsafe_allow_html=True)
     
     risk_insights = [i for i in insights if i['type'] in ['warning', 'danger']]
@@ -3245,84 +2407,55 @@ def show_reporting_tab(df, metrics, insights, analysis_df):
     """Raporlama tab'ını göster"""
     st.markdown('<h2 class="section-title">Raporlama ve İndirme</h2>', unsafe_allow_html=True)
     
-    st.markdown('<h3 class="subsection-title">📊 Rapor Türleri</h3>', unsafe_allow_html=True)
+    # Rapor oluşturma
+    st.markdown('<h3 class="subsection-title">📊 Rapor Oluşturma</h3>', unsafe_allow_html=True)
     
-    report_type = st.radio(
-        "Rapor Türü Seçin",
-        ['Excel Detaylı Rapor', 'PDF Özet Rapor', 'JSON Veri Paketi', 'CSV Ham Veri'],
-        horizontal=True,
-        key="report_type"
-    )
-    
-    st.markdown('<h3 class="subsection-title">🛠️ Rapor Oluşturma</h3>', unsafe_allow_html=True)
-    
-    report_cols = st.columns(3)
-    
-    with report_cols[0]:
-        if st.button("📈 Excel Raporu Oluştur", width='stretch', key="excel_report"):
-            with st.spinner("Excel raporu oluşturuluyor..."):
-                reporting = ProfessionalReporting()
-                excel_report = reporting.generate_excel_report(df, metrics, insights, analysis_df)
-                
-                if excel_report:
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    st.download_button(
-                        label="⬇️ Excel İndir",
-                        data=excel_report,
-                        file_name=f"pharma_report_{timestamp}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        width='stretch',
-                        key="download_excel"
-                    )
-                else:
-                    st.error("Excel raporu oluşturulamadı.")
-    
-    with report_cols[1]:
-        if st.button("🔄 Analizi Sıfırla", width='stretch', key="reset_analysis"):
-            st.session_state.df = None
-            st.session_state.filtered_df = None
-            st.session_state.metrics = None
-            st.session_state.insights = []
-            st.session_state.current_filters = {}
-            if 'segmentation_results' in st.session_state:
-                del st.session_state.segmentation_results
-            if 'international_analysis' in st.session_state:
-                del st.session_state.international_analysis
-            st.rerun()
-    
-    with report_cols[2]:
-        if st.button("💾 International Product CSV", width='stretch', key="intl_csv"):
-            if analysis_df is not None:
-                csv = analysis_df.to_csv(index=False)
+    if st.button("📈 Excel Raporu Oluştur", use_container_width=True):
+        with st.spinner("Excel raporu oluşturuluyor..."):
+            reporting = ProfessionalReporting()
+            excel_report = reporting.generate_excel_report(df, metrics, insights, analysis_df)
+            
+            if excel_report:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 st.download_button(
-                    label="⬇️ CSV İndir",
-                    data=csv,
-                    file_name=f"international_products_{timestamp}.csv",
-                    mime="text/csv",
-                    width='stretch',
-                    key="download_intl_csv"
+                    label="⬇️ Excel Raporunu İndir",
+                    data=excel_report,
+                    file_name=f"pharma_report_{timestamp}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
                 )
             else:
-                st.warning("International Product analizi bulunamadı.")
+                st.error("Excel raporu oluşturulamadı.")
     
+    # International Product CSV
+    if analysis_df is not None:
+        st.markdown('<h3 class="subsection-title">🌍 International Product Verisi</h3>', unsafe_allow_html=True)
+        
+        if st.button("📊 International Product CSV", use_container_width=True):
+            csv = analysis_df.to_csv(index=False)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            st.download_button(
+                label="⬇️ CSV İndir",
+                data=csv,
+                file_name=f"international_products_{timestamp}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    
+    # İstatistikler
     st.markdown('<h3 class="subsection-title">📈 Hızlı İstatistikler</h3>', unsafe_allow_html=True)
     
-    stat_cols = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     
-    with stat_cols[0]:
+    with col1:
         st.metric("Toplam Satır", f"{len(df):,}")
     
-    with stat_cols[1]:
+    with col2:
         st.metric("Toplam Sütun", len(df.columns))
     
-    with stat_cols[2]:
+    with col3:
         mem_usage = df.memory_usage(deep=True).sum()/1024**2
         st.metric("Bellek Kullanımı", f"{mem_usage:.1f} MB")
-    
-    with stat_cols[3]:
-        intl_count = metrics.get('International_Product_Count', 0)
-        st.metric("International Product", intl_count)
 
 # ================================================
 # 8. UYGULAMA BAŞLATMA
@@ -3330,12 +2463,8 @@ def show_reporting_tab(df, metrics, insights, analysis_df):
 
 if __name__ == "__main__":
     try:
-        gc.enable()
         main()
     except Exception as e:
         st.error(f"Uygulama hatası: {str(e)}")
-        st.error("Detaylı hata bilgisi:")
-        st.code(traceback.format_exc())
-        
-        if st.button("🔄 Sayfayı Yenile", width='stretch'):
+        if st.button("🔄 Sayfayı Yenile", use_container_width=True):
             st.rerun()
