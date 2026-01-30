@@ -43,7 +43,6 @@ st.set_page_config(
 )
 
 # PROFESYONEL DARK THEME CSS STYLES
-# PROFESYONEL DARK THEME CSS STYLES - GÜNCELLENMİŞ VERSİYON
 PROFESSIONAL_CSS = """
 <style>
     /* === ROOT VARIABLES === */
@@ -530,17 +529,10 @@ PROFESSIONAL_CSS = """
         font-size: 0.95rem;
         line-height: 1.6;
     }
-    
-    /* === ANIMATIONS === */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .animate-fade-in {
-        animation: fadeIn 0.8s ease-out;
-    }
 </style>
+"""
+
+st.markdown(PROFESSIONAL_CSS, unsafe_allow_html=True)
 
 # ================================================
 # 2. OPTİMİZE VERİ İŞLEME SİSTEMİ
@@ -3419,4 +3411,3 @@ if __name__ == "__main__":
         
         if st.button("🔄 Sayfayı Yenile", width='stretch'):
             st.rerun()
-
