@@ -1847,7 +1847,7 @@ class EnhancedAnalyticsEngine:
             st.error(f"Anomaly detection error: {str(e)}")
             return None
     
-    def generate_strategic_insights(self, df, analysis_results):
+        def generate_strategic_insights(self, df, analysis_results):
         """Generate strategic insights from analysis"""
         try:
             insights = []
@@ -1899,9 +1899,13 @@ class EnhancedAnalyticsEngine:
                     # Find the smallest cluster (potential niche market)
                     smallest_cluster = min(cluster_stats, key=lambda x: x['size'])
                     
+                    # Fix: Avoid backslash in f-string
+                    cluster_num = smallest_cluster["cluster"]
+                    cluster_name = segmentation["cluster_names"].get(cluster_num, f"Cluster {cluster_num}")
+                    
                     insights.append({
                         'type': 'segmentation',
-                        'title': f'Niche Market Opportunity: {segmentation["cluster_names"].get(smallest_cluster["cluster"], f"Cluster {smallest_cluster[\"cluster\"]}")}',
+                        'title': f'Niche Market Opportunity: {cluster_name}',
                         'description': f'Cluster with {smallest_cluster["size"]} products ({smallest_cluster["percentage"]:.1f}% of market)',
                         'action': 'Consider specialized marketing strategies for this segment',
                         'data': smallest_cluster
@@ -3478,3 +3482,4 @@ def main():
 # Run the application
 if __name__ == "__main__":
     main()
+
