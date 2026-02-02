@@ -77,8 +77,12 @@ if REDIS_AVAILABLE:
     pass
 else:
     # alternatif cache mekanizması veya bypass
-    passimport joblib
-
+try:
+    # bir şeyler
+    pass
+    import joblib
+except:
+    # hata işleme
 # ================================================
 # 1. ENTERPRISE KONFİGÜRASYON VE STİL AYARLARI
 # ================================================
@@ -5241,5 +5245,6 @@ if __name__ == "__main__":
         # Yenileme butonu
         if st.button("🔄 **SAYFAYI YENİLE**", type="primary", use_container_width=True):
             st.rerun()
+
 
 
