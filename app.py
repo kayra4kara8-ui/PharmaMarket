@@ -72,17 +72,27 @@ except ImportError:
     st.warning("Redis paketi kurulu değil. Cache özellikleri devre dışı.")
 
 # Kod içinde redis kullanımını kontrol edin:
+# Redis import kontrolü
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
+
 if REDIS_AVAILABLE:
-    # redis işlemleri
+    # redis işlemleri yap
     pass
 else:
-    # alternatif cache mekanizması veya bypass
-try:
-    # bir şeyler
+    # alternatif cache mekanizması kullan
     pass
+
+# Joblib import kontrolü
+try:
     import joblib
-except:
-    # hata işleme
+except ImportError:
+    joblib = None
+    print("Joblib kurulu değil")
 # ================================================
 # 1. ENTERPRISE KONFİGÜRASYON VE STİL AYARLARI
 # ================================================
@@ -5245,6 +5255,7 @@ if __name__ == "__main__":
         # Yenileme butonu
         if st.button("🔄 **SAYFAYI YENİLE**", type="primary", use_container_width=True):
             st.rerun()
+
 
 
 
