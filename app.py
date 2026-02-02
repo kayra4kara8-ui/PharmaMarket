@@ -1847,9 +1847,9 @@ class EnhancedAnalyticsEngine:
             st.error(f"Anomaly detection error: {str(e)}")
             return None
     
-           def generate_strategic_insights(self, df, analysis_results):
+        def generate_strategic_insights(self, df, analysis_results):
         """Generate strategic insights from analysis"""
-        try:
+            try:
             insights = []
             
             # Insight 1: Market opportunity
@@ -3482,5 +3482,6 @@ def main():
 # Run the application
 if __name__ == "__main__":
     main()
+
 
 
