@@ -2872,3 +2872,4 @@ if __name__ == "__main__":
         
         if st.button("🔄 Sayfayı Yenile", use_container_width=True):
             st.rerun()
+
