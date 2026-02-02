@@ -22,7 +22,12 @@ from scipy import stats, signal
 import scipy.cluster.hierarchy as sch
 
 # Time series analysis
-from prophet import Prophet
+# app.py'de Prophet import'unu try-except içine alın:
+try:
+    from prophet import Prophet
+except ImportError:
+    st.warning("Prophet paketi kurulu değil. Lütfen requirements.txt dosyanıza 'prophet>=1.1.0' ekleyin.")
+    Prophet = None  # veya alternatif bir sınıf
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
@@ -5222,3 +5227,4 @@ if __name__ == "__main__":
         # Yenileme butonu
         if st.button("🔄 **SAYFAYI YENİLE**", type="primary", use_container_width=True):
             st.rerun()
+
