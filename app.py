@@ -62,8 +62,22 @@ from matplotlib.colors import LinearSegmentedColormap
 # Database and caching
 import sqlite3
 from sqlite3 import Error
-import redis
-import joblib
+# app.py'de:
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
+    st.warning("Redis paketi kurulu değil. Cache özellikleri devre dışı.")
+
+# Kod içinde redis kullanımını kontrol edin:
+if REDIS_AVAILABLE:
+    # redis işlemleri
+    pass
+else:
+    # alternatif cache mekanizması veya bypass
+    passimport joblib
 
 # ================================================
 # 1. ENTERPRISE KONFİGÜRASYON VE STİL AYARLARI
@@ -5227,4 +5241,5 @@ if __name__ == "__main__":
         # Yenileme butonu
         if st.button("🔄 **SAYFAYI YENİLE**", type="primary", use_container_width=True):
             st.rerun()
+
 
