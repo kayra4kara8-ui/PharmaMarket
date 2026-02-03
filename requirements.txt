@@ -1,34 +1,22 @@
-# Production Core
-streamlit==1.29.0
+# Core Dependencies
+streamlit==1.28.0
 pandas==2.1.4
 numpy==1.24.3
 plotly==5.18.0
 
-# ML & Analytics
+# Data Processing & Analytics
+openpyxl==3.1.2
 scikit-learn==1.3.2
 scipy==1.11.4
 statsmodels==0.14.0
-lightgbm==4.1.0
-
-# Data Processing
-openpyxl==3.1.2
-pyarrow==14.0.1
-orjson==3.9.10
 
 # Visualization
 matplotlib==3.8.2
-seaborn==0.13.0
 
-# Caching & Performance
-diskcache==5.6.3
-joblib==1.3.2
+# Network Analysis (optional - comment out if causing issues)
+# networkx==3.2.1
 
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
 pillow==10.1.0
-requests==2.31.0
-
-# Security
-bcrypt==4.1.2
-python-dotenv==1.0.0
