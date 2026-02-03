@@ -4,1617 +4,1704 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-import io
-import gc
-import warnings
-import re
-import math
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional, Any
-import hashlib
-import json
-import base64
 from scipy import stats
-from scipy.stats import zscore
-import itertools
-import functools
-
+from scipy.stats import zscore, percentileofscore
+import warnings
 warnings.filterwarnings('ignore')
 
+# ==================== KONFİGÜRASYON ====================
 st.set_page_config(
-    page_title="Pharma Analytics Platform | Q3 MAT Analysis",
-    page_icon="💊",
+    page_title="İleri Seviye Finansal Analiz Platformu",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    page_icon="📊"
 )
 
-def apply_custom_css():
-    st.markdown("""
-    <style>
-    .main {
-        background-color: #0f1a2f;
-        color: #ffffff;
-    }
+# ==================== ÖZEL CSS ====================
+st.markdown("""
+<style>
+    .main { background-color: #0f172a; }
+    .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+    .sidebar .sidebar-content { background-color: #1e293b; }
     
-    .stApp {
-        background: linear-gradient(135deg, #0f1a2f 0%, #1a2b4d 100%);
-    }
-    
-    .sidebar .sidebar-content {
-        background-color: #1a2b4d;
-        color: white;
-    }
-    
-    .kpi-card {
-        background-color: #1e3a5f;
-        border-radius: 10px;
+    .metric-card {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 12px;
         padding: 20px;
         border-left: 4px solid #3b82f6;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         margin-bottom: 15px;
     }
     
-    .kpi-title {
+    .metric-title {
         font-size: 14px;
-        color: #93c5fd;
+        color: #94a3b8;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    
+    .metric-value {
+        font-size: 26px;
+        font-weight: 800;
+        color: #ffffff;
         margin-bottom: 5px;
     }
     
-    .kpi-value {
-        font-size: 24px;
-        font-weight: bold;
-        color: #ffffff;
-    }
-    
-    .kpi-change {
-        font-size: 12px;
-        padding: 3px 8px;
-        border-radius: 12px;
+    .metric-change {
+        font-size: 13px;
+        padding: 4px 10px;
+        border-radius: 20px;
         display: inline-block;
-        margin-top: 5px;
+        font-weight: 600;
     }
     
-    .positive {
-        background-color: #065f46;
-        color: #34d399;
-    }
-    
-    .negative {
-        background-color: #7f1d1d;
-        color: #f87171;
-    }
-    
-    .neutral {
-        background-color: #374151;
-        color: #9ca3af;
-    }
+    .positive { background-color: #064e3b; color: #34d399; }
+    .negative { background-color: #7f1d1d; color: #f87171; }
+    .neutral { background-color: #374151; color: #9ca3af; }
     
     .section-header {
         background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
-        padding: 15px;
-        border-radius: 8px;
-        margin: 20px 0;
+        padding: 18px;
+        border-radius: 10px;
+        margin: 25px 0;
         color: white;
-        font-weight: bold;
+        font-weight: 800;
+        font-size: 18px;
+        box-shadow: 0 4px 6px rgba(30, 64, 175, 0.3);
     }
     
-    .insight-card {
-        background-color: #1f2937;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border: 1px solid #374151;
+    .insight-box {
+        background-color: #1e293b;
+        border-radius: 10px;
+        padding: 18px;
+        margin-bottom: 12px;
+        border: 1px solid #334155;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     
     .insight-title {
         color: #60a5fa;
-        font-weight: bold;
-        margin-bottom: 5px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        font-size: 15px;
     }
     
-    .data-table {
-        background-color: #111827;
-        border-radius: 8px;
-        padding: 15px;
+    .insight-content {
+        color: #cbd5e1;
+        font-size: 14px;
+        line-height: 1.5;
     }
     
-    div[data-testid="stExpander"] {
-        background-color: #1f2937;
-        border: 1px solid #374151;
+    .warning-alert {
+        background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+        border-left: 5px solid #f97316;
+        padding: 18px;
         border-radius: 8px;
+        margin: 15px 0;
+    }
+    
+    .success-alert {
+        background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+        border-left: 5px solid #10b981;
+        padding: 18px;
+        border-radius: 8px;
+        margin: 15px 0;
+    }
+    
+    .info-alert {
+        background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+        border-left: 5px solid #60a5fa;
+        padding: 18px;
+        border-radius: 8px;
+        margin: 15px 0;
+    }
+    
+    .tab-container {
+        background-color: #1e293b;
+        border-radius: 12px;
+        padding: 25px;
+        margin-top: 20px;
+        border: 1px solid #334155;
+    }
+    
+    .stDataFrame {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .stSelectbox div[data-baseweb="select"],
+    .stMultiSelect div[data-baseweb="select"] {
+        background-color: #0f172a;
+        border-color: #334155;
     }
     
     .stButton button {
         background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
         color: white;
         border: none;
-        border-radius: 6px;
-        padding: 10px 20px;
-        font-weight: bold;
-    }
-    
-    .stSelectbox div[data-baseweb="select"] {
-        background-color: #111827;
-        color: white;
-    }
-    
-    .stMultiSelect div[data-baseweb="select"] {
-        background-color: #111827;
-        color: white;
-    }
-    
-    .stSlider div[data-baseweb="slider"] {
-        color: #3b82f6;
-    }
-    
-    .stDataFrame {
-        background-color: #111827;
-    }
-    
-    .metric-container {
-        background-color: #1e3a5f;
         border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
+        padding: 12px 24px;
+        font-weight: 700;
+        transition: all 0.3s ease;
     }
     
-    .tab-container {
-        background-color: #111827;
-        border-radius: 8px;
-        padding: 20px;
-        margin-top: 20px;
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(30, 64, 175, 0.4);
     }
     
-    .warning-box {
-        background-color: #7c2d12;
-        border-left: 4px solid #f97316;
-        padding: 15px;
-        border-radius: 4px;
-        margin: 15px 0;
-    }
-    
-    .success-box {
-        background-color: #065f46;
-        border-left: 4px solid #10b981;
-        padding: 15px;
-        border-radius: 4px;
-        margin: 15px 0;
-    }
-    
-    .info-box {
-        background-color: #1e40af;
-        border-left: 4px solid #60a5fa;
-        padding: 15px;
-        border-radius: 4px;
-        margin: 15px 0;
-    }
-    
-    .manufacturer-score {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
+    .score-badge {
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        font-size: 14px;
-    }
-    
-    .score-high { background-color: #065f46; color: #34d399; }
-    .score-medium { background-color: #854d0e; color: #fbbf24; }
-    .score-low { background-color: #7f1d1d; color: #f87171; }
-    
-    .growth-indicator {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
-        margin-right: 5px;
+        font-weight: 800;
+        font-size: 14px;
+        margin-right: 10px;
     }
     
-    .growth-high { background-color: #10b981; }
-    .growth-medium { background-color: #f59e0b; }
-    .growth-low { background-color: #ef4444; }
-    </style>
-    """, unsafe_allow_html=True)
+    .score-excellent { background-color: #065f46; color: #34d399; }
+    .score-good { background-color: #2563eb; color: #60a5fa; }
+    .score-fair { background-color: #ca8a04; color: #fbbf24; }
+    .score-poor { background-color: #dc2626; color: #f87171; }
+    
+    .risk-indicator {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .risk-high { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
+    .risk-medium { background-color: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+    .risk-low { background-color: #10b981; box-shadow: 0 0 4px #10b981; }
+    
+    .growth-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+    
+    .growth-high { background-color: #065f46; color: #34d399; }
+    .growth-moderate { background-color: #ca8a04; color: #fbbf24; }
+    .growth-low { background-color: #7f1d1d; color: #f87171; }
+</style>
+""", unsafe_allow_html=True)
 
-apply_custom_css()
-
-@st.cache_resource(show_spinner=False)
-def generate_sample_data():
+# ==================== VERİ ÜRETİM FONKSİYONLARI ====================
+@st.cache_resource
+def generate_financial_data():
+    """Büyük ölçekli finansal veri seti oluştur"""
     np.random.seed(42)
     
-    sources = ['IQVIA', 'IMS', 'Intercontinental', 'MarketTrack']
-    countries = ['USA', 'Germany', 'France', 'UK', 'Japan', 'Brazil', 'China', 'India', 'Italy', 'Spain']
-    sectors = ['Oncology', 'Cardiology', 'Neurology', 'Endocrinology', 'Immunology', 'Respiratory']
-    panels = ['Retail', 'Hospital', 'Clinic', 'Combined']
-    regions = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'Middle East']
-    sub_regions = ['Western Europe', 'Eastern Europe', 'North Asia', 'South Asia', 'Andean', 'Southern Cone']
-    corporations = ['Pfizer', 'Novartis', 'Roche', 'Merck', 'GSK', 'Sanofi', 'AstraZeneca', 'Johnson & Johnson', 'AbbVie', 'Bristol-Myers Squibb']
-    manufacturers = ['Pfizer Inc', 'Novartis Pharma', 'Roche Holding', 'Merck & Co', 'GlaxoSmithKline', 'Sanofi SA', 
-                    'AstraZeneca PLC', 'Johnson & Johnson', 'AbbVie Inc', 'Bristol-Myers Squibb', 'Eli Lilly', 'Amgen',
-                    'Gilead Sciences', 'Takeda', 'Bayer', 'Boehringer Ingelheim', 'Novo Nordisk', 'Astellas', 'Daiichi Sankyo']
+    # Temel yapılar
+    companies = [
+        'Teknoloji AŞ', 'Finans Bank', 'Enerji Holding', 'İnşaat Grup',
+        'Sağlık Şirketi', 'Perakende Zinciri', 'Otomotiv Üreticisi',
+        'Telekom Şirketi', 'Gıda Üreticisi', 'Kimya Sanayi'
+    ]
     
-    molecules = ['Atorvastatin', 'Levothyroxine', 'Metformin', 'Lisinopril', 'Amlodipine', 'Metoprolol', 'Albuterol',
-                'Omeprazole', 'Losartan', 'Simvastatin', 'Gabapentin', 'Hydrochlorothiazide', 'Sertraline',
-                'Montelukast', 'Fluticasone', 'Rosuvastatin', 'Escitalopram', 'Bupropion', 'Duloxetine', 'Pregabalin',
-                'Insulin Glargine', 'Adalimumab', 'Etanercept', 'Infliximab', 'Rituximab', 'Bevacizumab', 'Trastuzumab',
-                'Pembrolizumab', 'Nivolumab', 'Ibrutinib', 'Venetoclax', 'Acalabrutinib', 'Empagliflozin', 'Dapagliflozin',
-                'Semaglutide', 'Liraglutide', 'Apixaban', 'Rivaroxaban', 'Dabigatran', 'Edoxaban']
+    sectors = {
+        'Teknoloji': ['Yazılım', 'Donanım', 'Bulut', 'Siber Güvenlik'],
+        'Finans': ['Bankacılık', 'Sigorta', 'Yatırım', 'FinTech'],
+        'Enerji': ['Petrol', 'Doğalgaz', 'Yenilenebilir', 'Kömür'],
+        'İnşaat': ['Konut', 'Ticari', 'Altyapı', 'Endüstriyel'],
+        'Sağlık': ['İlaç', 'Medikal Cihaz', 'Hastane', 'Biyoteknoloji']
+    }
     
-    chemical_salts = ['Calcium', 'Sodium', 'Potassium', 'Hydrochloride', 'Sulfate', 'Acetate', 'Citrate', 'Tartrate']
-    specialty_products = ['Yes', 'No']
-    nfc123_codes = [f'NFC{str(i).zfill(3)}' for i in range(1, 51)]
+    regions = ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Kocaeli']
     
-    data = []
+    # 500,000 satır veri oluştur
     n_rows = 500000
+    data = []
     
     for i in range(n_rows):
-        country = np.random.choice(countries)
-        region = 'North America' if country == 'USA' else 'Europe' if country in ['Germany', 'France', 'UK', 'Italy', 'Spain'] else 'Asia Pacific' if country in ['Japan', 'China', 'India'] else 'Latin America' if country == 'Brazil' else 'Middle East'
+        # Şirket ve sektör ataması
+        company = np.random.choice(companies)
+        sector_main = [k for k, v in sectors.items() if any(company.lower() in x.lower() for x in [k])]
+        sector_main = sector_main[0] if sector_main else np.random.choice(list(sectors.keys()))
+        sector_sub = np.random.choice(sectors[sector_main])
         
+        # Temel finansal metrikler
+        revenue_base = np.random.lognormal(12, 1.5)
+        profit_margin = np.random.beta(5, 2) * 0.3  # 0-30% arası
+        growth_rate = np.random.normal(0.15, 0.1)  # Ortalama %15 büyüme
+        
+        # Firma büyüklüğüne göre ayarlamalar
+        company_multiplier = {
+            'Teknoloji AŞ': 1.8,
+            'Finans Bank': 2.2,
+            'Enerji Holding': 2.5,
+            'İnşaat Grup': 1.5,
+            'Sağlık Şirketi': 1.7,
+            'Perakende Zinciri': 1.3,
+            'Otomotiv Üreticisi': 2.0,
+            'Telekom Şirketi': 1.9,
+            'Gıda Üreticisi': 1.2,
+            'Kimya Sanayi': 1.4
+        }.get(company, 1.0)
+        
+        # Mevsimsellik etkisi
+        quarter = (i % 4) + 1
+        seasonal_factor = 1 + (quarter - 2.5) * 0.1  # Q2 ve Q3'te daha yüksek
+        
+        # Bölgesel etki
+        region_factor = 1 + (regions.index(np.random.choice(regions)) * 0.05)
+        
+        # Temel finansal veriler
+        revenue_q1 = revenue_base * company_multiplier * seasonal_factor * region_factor * np.random.uniform(0.9, 1.1)
+        revenue_q2 = revenue_q1 * (1 + growth_rate * np.random.uniform(0.8, 1.2))
+        revenue_q3 = revenue_q2 * (1 + growth_rate * np.random.uniform(0.8, 1.2))
+        revenue_q4 = revenue_q3 * (1 + growth_rate * np.random.uniform(0.8, 1.2))
+        
+        # Karlılık metrikleri
+        gross_profit_q1 = revenue_q1 * profit_margin * np.random.uniform(0.9, 1.1)
+        gross_profit_q2 = revenue_q2 * profit_margin * np.random.uniform(0.9, 1.1)
+        gross_profit_q3 = revenue_q3 * profit_margin * np.random.uniform(0.9, 1.1)
+        gross_profit_q4 = revenue_q4 * profit_margin * np.random.uniform(0.9, 1.1)
+        
+        # Operasyonel metrikler
+        operating_expense_ratio = np.random.beta(3, 3)  # 0-1 arası
+        ebitda_margin = profit_margin * (1 - operating_expense_ratio) * np.random.uniform(0.7, 0.9)
+        
+        # Verimlilik metrikleri
+        asset_turnover = np.random.lognormal(0, 0.3)
+        inventory_turnover = np.random.lognormal(2.5, 0.4)
+        
+        # Risk metrikleri
+        debt_ratio = np.random.beta(2, 3)
+        current_ratio = np.random.lognormal(0.7, 0.2)
+        
+        # Piyasa metrikleri
+        pe_ratio = np.random.lognormal(2.5, 0.5)
+        market_cap = revenue_q4 * pe_ratio * np.random.uniform(0.8, 1.2)
+        
+        # Satır verisi oluştur
         row = {
-            'Source.Name': np.random.choice(sources),
-            'Country': country,
-            'Sector': np.random.choice(sectors),
-            'Panel': np.random.choice(panels),
-            'Region': region,
-            'Sub-Region': np.random.choice(sub_regions),
-            'Corporation': np.random.choice(corporations),
-            'Manufacturer': np.random.choice(manufacturers),
-            'Molecule List': ', '.join(np.random.choice(molecules, size=np.random.randint(1, 4), replace=False)),
-            'Molecule': np.random.choice(molecules),
-            'Chemical Salt': np.random.choice(chemical_salts),
-            'International Product': f'INT{np.random.randint(1000, 9999)}',
-            'Specialty Product': np.random.choice(specialty_products, p=[0.3, 0.7]),
-            'NFC123': np.random.choice(nfc123_codes),
-            'International Pack': np.random.choice(['Bottle', 'Blister', 'Vial', 'Syringe', 'Pen', 'Ampoule']),
-            'International Strength': f'{np.random.choice([5, 10, 20, 40, 50, 100, 200, 500])} {np.random.choice(["mg", "mcg", "IU"])}',
-            'International Size': np.random.randint(1, 100),
-            'International Volume': np.random.choice([1, 2.5, 5, 10, 20, 30, 50, 100, 250, 500]),
-            'International Prescription': np.random.choice(['Rx', 'OTC', 'Both']),
+            # Tanımlayıcı bilgiler
+            'Şirket_ID': f'CMP{str(i%1000).zfill(4)}',
+            'Şirket_Adı': company,
+            'Ana_Sektör': sector_main,
+            'Alt_Sektör': sector_sub,
+            'Bölge': np.random.choice(regions),
+            'Rapor_Dönemi': f'2024-Q{quarter}',
+            
+            # Gelir tablosu metrikleri
+            'Ciro': revenue_q4,
+            'Ciro_Q1': revenue_q1,
+            'Ciro_Q2': revenue_q2,
+            'Ciro_Q3': revenue_q3,
+            'Ciro_Büyüme': growth_rate * 100,
+            'Ciro_YoY_Büyüme': np.random.normal(18, 8),
+            'Ciro_QoQ_Büyüme': np.random.normal(5, 3),
+            
+            # Karlılık metrikleri
+            'Brüt_Kar': gross_profit_q4,
+            'Brüt_Kar_Marjı': (gross_profit_q4 / revenue_q4 * 100) if revenue_q4 > 0 else 0,
+            'EBITDA': revenue_q4 * ebitda_margin,
+            'EBITDA_Marjı': ebitda_margin * 100,
+            'Net_Kar': gross_profit_q4 * (1 - operating_expense_ratio) * np.random.uniform(0.6, 0.8),
+            'Net_Kar_Marjı': (gross_profit_q4 * (1 - operating_expense_ratio) * np.random.uniform(0.6, 0.8) / revenue_q4 * 100) if revenue_q4 > 0 else 0,
+            
+            # Operasyonel metrikler
+            'Operasyonel_Gider_Oranı': operating_expense_ratio * 100,
+            'Varlık_Devir_Hızı': asset_turnover,
+            'Stok_Devir_Hızı': inventory_turnover,
+            'Çalışma_Sermayesi': revenue_q4 * np.random.uniform(0.1, 0.3),
+            'CFO': gross_profit_q4 * np.random.uniform(0.7, 0.9),
+            'CFI': -revenue_q4 * np.random.uniform(0.05, 0.15),
+            'CFF': revenue_q4 * np.random.uniform(-0.1, 0.1),
+            
+            # Finansal yapı metrikleri
+            'Toplam_Varlıklar': revenue_q4 / asset_turnover,
+            'Toplam_Borç': (revenue_q4 / asset_turnover) * debt_ratio,
+            'Özkaynak': (revenue_q4 / asset_turnover) * (1 - debt_ratio),
+            'Borç_Oranı': debt_ratio * 100,
+            'Cari_Oran': current_ratio,
+            'Faiz_Karşılama': np.random.lognormal(1.5, 0.5),
+            
+            # Piyasa metrikleri
+            'Piyasa_Değeri': market_cap,
+            'F/K_Oranı': pe_ratio,
+            'PD/DD_Oranı': np.random.lognormal(1.2, 0.3),
+            'Beta_Katsayısı': np.random.beta(2, 2) * 2,
+            'Getiri_Oranı': np.random.normal(12, 8),
+            'Getiri_Volatilitesi': np.random.lognormal(2, 0.3),
+            
+            # Ek metrikler
+            'Çalışan_Sayısı': int(revenue_q4 / np.random.lognormal(100, 20)),
+            'ARGE_Harcaması': revenue_q4 * np.random.beta(2, 8) * 100,
+            'Pazar_Payı': np.random.beta(2, 5) * 100,
+            'Müşteri_Memnuniyeti': np.random.beta(7, 3) * 100,
+            'Çevresel_Skor': np.random.beta(6, 4) * 100,
+            'Sosyal_Skor': np.random.beta(7, 3) * 100,
+            'Yönetişim_Skoru': np.random.beta(6, 4) * 100,
+            
+            # Risk skorları
+            'Likidite_Risk_Skoru': np.random.randint(1, 100),
+            'Kredi_Risk_Skoru': np.random.randint(1, 100),
+            'Piyasa_Risk_Skoru': np.random.randint(1, 100),
+            'Operasyonel_Risk_Skoru': np.random.randint(1, 100),
+            
+            # Trendler
+            'Ciro_Trend': np.random.choice(['Yükselen', 'Düşen', 'Sabit', 'Dalgalı']),
+            'Kar_Trend': np.random.choice(['Yükselen', 'Düşen', 'Sabit', 'Dalgalı']),
+            'Pazar_Trend': np.random.choice(['Genişleyen', 'Daralan', 'Olgun', 'Yenilikçi'])
         }
-        
-        base_usd_2022 = np.random.lognormal(mean=5, sigma=2)
-        base_units_2022 = np.random.lognormal(mean=8, sigma=1.5)
-        
-        growth_factor_2023 = np.random.uniform(0.8, 1.3)
-        growth_factor_2024 = np.random.uniform(0.7, 1.4)
-        
-        specialty_multiplier = 2.5 if row['Specialty Product'] == 'Yes' else 1.0
-        oncology_multiplier = 3.0 if row['Sector'] == 'Oncology' else 1.0
-        usa_multiplier = 1.5 if row['Country'] == 'USA' else 1.0
-        
-        price_multiplier = specialty_multiplier * oncology_multiplier * usa_multiplier
-        
-        row.update({
-            'MAT Q3 2022 USD MNF': round(base_usd_2022 * price_multiplier * np.random.uniform(0.8, 1.2), 2),
-            'MAT Q3 2022 Standard Units': round(base_units_2022 * np.random.uniform(0.9, 1.1)),
-            'MAT Q3 2022 Units': round(base_units_2022 * np.random.uniform(0.8, 1.2) * np.random.randint(1, 10)),
-            'MAT Q3 2022 SU Avg Price USD MNF': round(price_multiplier * np.random.uniform(0.5, 2.0), 3),
-            'MAT Q3 2022 Unit Avg Price USD MNF': round(price_multiplier * np.random.uniform(0.1, 1.0), 3),
-            
-            'MAT Q3 2023 USD MNF': round(base_usd_2022 * growth_factor_2023 * price_multiplier * np.random.uniform(0.8, 1.2), 2),
-            'MAT Q3 2023 Standard Units': round(base_units_2022 * growth_factor_2023 * np.random.uniform(0.9, 1.1)),
-            'MAT Q3 2023 Units': round(base_units_2022 * growth_factor_2023 * np.random.uniform(0.8, 1.2) * np.random.randint(1, 10)),
-            'MAT Q3 2023 SU Avg Price USD MNF': round(price_multiplier * np.random.uniform(0.5, 2.0) * (1 + np.random.uniform(-0.1, 0.2)), 3),
-            'MAT Q3 2023 Unit Avg Price USD MNF': round(price_multiplier * np.random.uniform(0.1, 1.0) * (1 + np.random.uniform(-0.1, 0.2)), 3),
-            
-            'MAT Q3 2024 USD MNF': round(base_usd_2022 * growth_factor_2023 * growth_factor_2024 * price_multiplier * np.random.uniform(0.8, 1.2), 2),
-            'MAT Q3 2024 Standard Units': round(base_units_2022 * growth_factor_2023 * growth_factor_2024 * np.random.uniform(0.9, 1.1)),
-            'MAT Q3 2024 Units': round(base_units_2022 * growth_factor_2023 * growth_factor_2024 * np.random.uniform(0.8, 1.2) * np.random.randint(1, 10)),
-            'MAT Q3 2024 SU Avg Price USD MNF': round(price_multiplier * np.random.uniform(0.5, 2.0) * (1 + np.random.uniform(-0.2, 0.3)), 3),
-            'MAT Q3 2024 Unit Avg Price USD MNF': round(price_multiplier * np.random.uniform(0.1, 1.0) * (1 + np.random.uniform(-0.2, 0.3)), 3),
-        })
         
         data.append(row)
         
+        # Performans optimizasyonu için ara belleği temizle
         if i % 50000 == 0 and i > 0:
             gc.collect()
     
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    
+    # Veri kalitesi iyileştirmeleri
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    
+    # Bazı değerleri eksik yap (gerçekçilik için)
+    for col in numeric_cols:
+        if np.random.random() < 0.05:  # %5 eksik veri
+            mask = np.random.random(len(df)) < 0.1
+            df.loc[mask, col] = np.nan
+    
+    # Ayırıcı formatı ekle (virgül/ nokta karışımı)
+    for col in ['Ciro', 'Brüt_Kar', 'EBITDA', 'Net_Kar', 'Piyasa_Değeri']:
+        df[col] = df[col].apply(
+            lambda x: f"{x:,.2f}".replace('.', ',').replace(',', 'X').replace('.', ',').replace('X', '.') 
+            if np.random.random() < 0.4 else x
+        )
+    
+    return df
 
-@st.cache_data(show_spinner=False, ttl=3600)
-def load_data():
-    with st.spinner('🚀 Generating 500,000+ rows of pharmaceutical market data...'):
-        df = generate_sample_data()
-        
-        for col in df.select_dtypes(include=[np.number]).columns:
-            df[col] = df[col].apply(lambda x: f"{x:,.3f}".replace('.', ',').replace(',', 'X').replace('.', ',').replace('X', '.') 
-                                   if np.random.random() < 0.3 else x)
-        
-        numeric_cols = [
-            'MAT Q3 2022 USD MNF', 'MAT Q3 2022 Standard Units', 'MAT Q3 2022 Units',
-            'MAT Q3 2022 SU Avg Price USD MNF', 'MAT Q3 2022 Unit Avg Price USD MNF',
-            'MAT Q3 2023 USD MNF', 'MAT Q3 2023 Standard Units', 'MAT Q3 2023 Units',
-            'MAT Q3 2023 SU Avg Price USD MNF', 'MAT Q3 2023 Unit Avg Price USD MNF',
-            'MAT Q3 2024 USD MNF', 'MAT Q3 2024 Standard Units', 'MAT Q3 2024 Units',
-            'MAT Q3 2024 SU Avg Price USD MNF', 'MAT Q3 2024 Unit Avg Price USD MNF'
-        ]
-        
-        for col in numeric_cols:
+def convert_numeric_columns(df):
+    """Sayısal kolonları uygun formata çevir"""
+    numeric_cols = [
+        'Ciro', 'Ciro_Q1', 'Ciro_Q2', 'Ciro_Q3', 'Ciro_Büyüme', 'Ciro_YoY_Büyüme', 'Ciro_QoQ_Büyüme',
+        'Brüt_Kar', 'Brüt_Kar_Marjı', 'EBITDA', 'EBITDA_Marjı', 'Net_Kar', 'Net_Kar_Marjı',
+        'Operasyonel_Gider_Oranı', 'Varlık_Devir_Hızı', 'Stok_Devir_Hızı', 'Çalışma_Sermayesi',
+        'CFO', 'CFI', 'CFF', 'Toplam_Varlıklar', 'Toplam_Borç', 'Özkaynak', 'Borç_Oranı',
+        'Cari_Oran', 'Faiz_Karşılama', 'Piyasa_Değeri', 'F/K_Oranı', 'PD/DD_Oranı',
+        'Beta_Katsayısı', 'Getiri_Oranı', 'Getiri_Volatilitesi', 'ARGE_Harcaması',
+        'Pazar_Payı', 'Müşteri_Memnuniyeti', 'Çevresel_Skor', 'Sosyal_Skor', 'Yönetişim_Skoru'
+    ]
+    
+    for col in numeric_cols:
+        if col in df.columns:
             df[col] = df[col].astype(str).str.replace(',', '.', regex=False)
             df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        return df
+    
+    return df
 
-def compute_growth_metrics(df):
-    metrics = {}
-    
-    total_usd_2022 = df['MAT Q3 2022 USD MNF'].sum()
-    total_usd_2023 = df['MAT Q3 2023 USD MNF'].sum()
-    total_usd_2024 = df['MAT Q3 2024 USD MNF'].sum()
-    
-    metrics['total_growth_2023'] = ((total_usd_2023 - total_usd_2022) / total_usd_2022 * 100) if total_usd_2022 > 0 else 0
-    metrics['total_growth_2024'] = ((total_usd_2024 - total_usd_2023) / total_usd_2023 * 100) if total_usd_2023 > 0 else 0
-    
-    specialty_df = df[df['Specialty Product'] == 'Yes']
-    non_specialty_df = df[df['Specialty Product'] == 'No']
-    
-    metrics['specialty_growth_2023'] = ((specialty_df['MAT Q3 2023 USD MNF'].sum() - specialty_df['MAT Q3 2022 USD MNF'].sum()) / 
-                                       specialty_df['MAT Q3 2022 USD MNF'].sum() * 100) if specialty_df['MAT Q3 2022 USD MNF'].sum() > 0 else 0
-    metrics['non_specialty_growth_2023'] = ((non_specialty_df['MAT Q3 2023 USD MNF'].sum() - non_specialty_df['MAT Q3 2022 USD MNF'].sum()) / 
-                                           non_specialty_df['MAT Q3 2022 USD MNF'].sum() * 100) if non_specialty_df['MAT Q3 2022 USD MNF'].sum() > 0 else 0
-    
-    metrics['specialty_growth_2024'] = ((specialty_df['MAT Q3 2024 USD MNF'].sum() - specialty_df['MAT Q3 2023 USD MNF'].sum()) / 
-                                       specialty_df['MAT Q3 2023 USD MNF'].sum() * 100) if specialty_df['MAT Q3 2023 USD MNF'].sum() > 0 else 0
-    metrics['non_specialty_growth_2024'] = ((non_specialty_df['MAT Q3 2024 USD MNF'].sum() - non_specialty_df['MAT Q3 2023 USD MNF'].sum()) / 
-                                           non_specialty_df['MAT Q3 2023 USD MNF'].sum() * 100) if non_specialty_df['MAT Q3 2023 USD MNF'].sum() > 0 else 0
-    
-    metrics['specialty_premium_2023'] = (specialty_df['MAT Q3 2023 SU Avg Price USD MNF'].mean() / 
-                                        non_specialty_df['MAT Q3 2023 SU Avg Price USD MNF'].mean()) if non_specialty_df['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0
-    metrics['specialty_premium_2024'] = (specialty_df['MAT Q3 2024 SU Avg Price USD MNF'].mean() / 
-                                        non_specialty_df['MAT Q3 2024 SU Avg Price USD MNF'].mean()) if non_specialty_df['MAT Q3 2024 SU Avg Price USD MNF'].mean() > 0 else 0
-    
-    top_3_2022 = df.groupby('Corporation')['MAT Q3 2022 USD MNF'].sum().nlargest(3).sum()
-    top_3_2023 = df.groupby('Corporation')['MAT Q3 2023 USD MNF'].sum().nlargest(3).sum()
-    top_3_2024 = df.groupby('Corporation')['MAT Q3 2024 USD MNF'].sum().nlargest(3).sum()
-    
-    metrics['concentration_2022'] = (top_3_2022 / total_usd_2022 * 100) if total_usd_2022 > 0 else 0
-    metrics['concentration_2023'] = (top_3_2023 / total_usd_2023 * 100) if total_usd_2023 > 0 else 0
-    metrics['concentration_2024'] = (top_3_2024 / total_usd_2024 * 100) if total_usd_2024 > 0 else 0
-    
-    exit_products = df[(df['MAT Q3 2022 USD MNF'] > 10000) & (df['MAT Q3 2023 USD MNF'] == 0)]
-    metrics['exit_products_count'] = len(exit_products)
-    metrics['exit_products_value'] = exit_products['MAT Q3 2022 USD MNF'].sum()
-    
-    fragility_score = 0
-    if metrics['total_growth_2024'] > 20:
-        fragility_score += 30
-    if metrics['concentration_2024'] > 60:
-        fragility_score += 25
-    if metrics['exit_products_count'] > 50:
-        fragility_score += 20
-    if abs(metrics['specialty_growth_2024'] - metrics['non_specialty_growth_2024']) > 15:
-        fragility_score += 25
-    metrics['fragility_score'] = min(100, fragility_score)
-    
-    return metrics
+@st.cache_data
+def load_data():
+    """Veriyi yükle ve ön işle"""
+    with st.spinner('📊 500,000+ satır finansal veri yükleniyor...'):
+        df = generate_financial_data()
+        df = convert_numeric_columns(df)
+    return df
 
-def generate_executive_summary(metrics, df):
-    summary_parts = []
+# ==================== ANALİTİK FONKSİYONLAR ====================
+def calculate_financial_ratios(df):
+    """Finansal oranları hesapla"""
+    ratios = {}
     
-    summary_parts.append(f"### 📈 Executive Market Summary")
-    summary_parts.append(f"**Total Market Growth:** {metrics['total_growth_2024']:+.1f}% in 2024 ({metrics['total_growth_2023']:+.1f}% in 2023)")
+    # Temel oranlar
+    ratios['cari_oran'] = df['Cari_Oran'].mean()
+    ratios['borc_oran'] = df['Borç_Oranı'].mean()
+    ratios['fk_oran'] = df['F/K_Oranı'].mean()
+    ratios['roa'] = (df['Net_Kar'] / df['Toplam_Varlıklar']).mean() * 100
+    ratios['roe'] = (df['Net_Kar'] / df['Özkaynak']).mean() * 100
+    ratios['ros'] = df['Net_Kar_Marjı'].mean()
     
-    if metrics['total_growth_2024'] > metrics['total_growth_2023']:
-        summary_parts.append(f"• **Acceleration:** Market growth accelerated by {metrics['total_growth_2024'] - metrics['total_growth_2023']:+.1f}pp")
-    else:
-        summary_parts.append(f"• **Deceleration:** Market growth slowed by {metrics['total_growth_2023'] - metrics['total_growth_2024']:+.1f}pp")
+    # Büyüme oranları
+    ratios['ciro_buyume'] = df['Ciro_Büyüme'].mean()
+    ratios['kar_buyume'] = ((df['Net_Kar'].mean() - df['Net_Kar'].median()) / df['Net_Kar'].median() * 100 
+                           if df['Net_Kar'].median() > 0 else 0)
     
-    price_growth_2024 = (df['MAT Q3 2024 SU Avg Price USD MNF'].mean() - df['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / df['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100
-    volume_growth_2024 = (df['MAT Q3 2024 Standard Units'].sum() - df['MAT Q3 2023 Standard Units'].sum()) / df['MAT Q3 2023 Standard Units'].sum() * 100
+    # Verimlilik oranları
+    ratios['varlik_devir'] = df['Varlık_Devir_Hızı'].mean()
+    ratios['stok_devir'] = df['Stok_Devir_Hızı'].mean()
     
-    summary_parts.append(f"**Growth Decomposition:**")
-    summary_parts.append(f"• Price Contribution: {price_growth_2024:+.1f}%")
-    summary_parts.append(f"• Volume Contribution: {volume_growth_2024:+.1f}%")
+    # Risk ölçümleri
+    ratios['volatilite'] = df['Getiri_Volatilitesi'].mean()
+    ratios['beta'] = df['Beta_Katsayısı'].mean()
     
-    if price_growth_2024 > volume_growth_2024:
-        summary_parts.append(f"• **Price-led growth** dominates market expansion")
-    else:
-        summary_parts.append(f"• **Volume-led growth** drives market expansion")
-    
-    summary_parts.append(f"**Specialty Premium:**")
-    summary_parts.append(f"• 2024: {metrics['specialty_premium_2024']:.1f}x price multiple")
-    summary_parts.append(f"• 2023: {metrics['specialty_premium_2023']:.1f}x price multiple")
-    
-    premium_change = metrics['specialty_premium_2024'] - metrics['specialty_premium_2023']
-    if premium_change > 0.1:
-        summary_parts.append(f"• **Warning:** Specialty premium expanding (+{premium_change:.1f}x)")
-    elif premium_change < -0.1:
-        summary_parts.append(f"• **Opportunity:** Specialty premium contracting ({premium_change:.1f}x)")
-    
-    summary_parts.append(f"**Portfolio Concentration:**")
-    summary_parts.append(f"• Top 3 Corporations: {metrics['concentration_2024']:.1f}% market share")
-    concentration_change = metrics['concentration_2024'] - metrics['concentration_2023']
-    if concentration_change > 2:
-        summary_parts.append(f"• **Risk:** Market concentration increasing (+{concentration_change:.1f}pp)")
-    elif concentration_change < -2:
-        summary_parts.append(f"• **Improvement:** Market becoming more competitive ({concentration_change:+.1f}pp)")
-    
-    summary_parts.append(f"**Product Exit Detection:**")
-    summary_parts.append(f"• {metrics['exit_products_count']} products exited the market")
-    summary_parts.append(f"• ${metrics['exit_products_value']:,.0f} in lost revenue")
-    
-    summary_parts.append(f"**Growth Fragility Score:** {metrics['fragility_score']}/100")
-    if metrics['fragility_score'] > 70:
-        summary_parts.append(f"• **🚨 HIGH RISK:** Market growth is highly fragile")
-    elif metrics['fragility_score'] > 40:
-        summary_parts.append(f"• **⚠️ MEDIUM RISK:** Monitor market stability")
-    else:
-        summary_parts.append(f"• **✅ LOW RISK:** Market growth appears sustainable")
-    
-    return "\n\n".join(summary_parts)
+    return ratios
 
-def detect_market_shifts(df):
-    shifts = []
+def perform_dupont_analysis(df):
+    """DuPont analizi yap"""
+    results = {}
     
-    regional_growth = df.groupby('Region').apply(lambda x: (
-        (x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / 
-        x['MAT Q3 2023 USD MNF'].sum() * 100 if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0
-    )).sort_values(ascending=False)
+    # DuPont bileşenleri
+    results['net_kar_marji'] = df['Net_Kar_Marjı'].mean()
+    results['varlik_devir_hizi'] = df['Varlık_Devir_Hızı'].mean()
+    results['ozkaynak_carpani'] = (df['Toplam_Varlıklar'] / df['Özkaynak']).mean()
     
-    if len(regional_growth) >= 2:
-        fastest = regional_growth.index[0]
-        slowest = regional_growth.index[-1]
-        gap = regional_growth.iloc[0] - regional_growth.iloc[-1]
-        if gap > 15:
-            shifts.append(f"**Regional Polarization:** {fastest} growing at {regional_growth.iloc[0]:+.1f}% vs {slowest} at {regional_growth.iloc[-1]:+.1f}% ({gap:.1f}pp gap)")
+    # ROE hesaplama
+    results['roe_dupont'] = results['net_kar_marji'] * results['varlik_devir_hizi'] * results['ozkaynak_carpani']
     
-    sector_migration = df.groupby(['Sector', 'Specialty Product']).apply(lambda x: x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()).unstack()
-    if 'Yes' in sector_migration.columns and 'No' in sector_migration.columns:
-        sector_migration['Shift'] = sector_migration['Yes'] - sector_migration['No']
-        major_shift = sector_migration['Shift'].abs().idxmax()
-        if sector_migration.loc[major_shift, 'Shift'] > 10000000:
-            direction = "toward Specialty" if sector_migration.loc[major_shift, 'Shift'] > 0 else "away from Specialty"
-            shifts.append(f"**Channel Migration:** {major_shift} shows major shift {direction} (${abs(sector_migration.loc[major_shift, 'Shift']):,.0f})")
+    # Sektörel karşılaştırma
+    sector_roe = df.groupby('Ana_Sektör').apply(
+        lambda x: (x['Net_Kar'] / x['Özkaynak']).mean() * 100
+    ).to_dict()
     
-    corporation_growth = df.groupby('Corporation').apply(lambda x: (
-        (x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / 
-        x['MAT Q3 2023 USD MNF'].sum() * 100 if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0
-    )).sort_values(ascending=False)
+    results['sector_roe'] = sector_roe
     
-    if len(corporation_growth) >= 5:
-        top_gainer = corporation_growth.index[0]
-        top_loser = corporation_growth.index[-1]
-        if corporation_growth.iloc[0] > 20 and corporation_growth.iloc[-1] < -10:
-            shifts.append(f"**Growth Divergence:** {top_gainer} growing at {corporation_growth.iloc[0]:+.1f}% while {top_loser} declining at {corporation_growth.iloc[-1]:+.1f}%")
-    
-    engine_reversal = df.groupby(['Country', 'Specialty Product']).apply(lambda x: x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()).unstack()
-    if 'Yes' in engine_reversal.columns and 'No' in engine_reversal.columns:
-        engine_reversal['Specialty Share'] = engine_reversal['Yes'] / (engine_reversal['Yes'] + engine_reversal['No'])
-        reversal_countries = engine_reversal[engine_reversal['Specialty Share'] > 0.7].index.tolist()
-        if reversal_countries:
-            shifts.append(f"**Growth Engine Reversal:** {len(reversal_countries)} countries now driven by Specialty (>70% share)")
-    
-    top_3_2023 = df.groupby('Corporation')['MAT Q3 2023 USD MNF'].sum().nlargest(3).index.tolist()
-    top_3_2024 = df.groupby('Corporation')['MAT Q3 2024 USD MNF'].sum().nlargest(3).index.tolist()
-    
-    changes = set(top_3_2023) ^ set(top_3_2024)
-    if changes:
-        shifts.append(f"**Top-3 Shakeup:** {', '.join(changes)} entered/exited top 3 rankings")
-    
-    return shifts
+    return results
 
-def analyze_molecules(df):
-    insights = []
+def calculate_altman_z_score(df):
+    """Altman Z-Score hesapla"""
+    results = []
     
-    molecule_growth = df.groupby('Molecule').apply(lambda x: pd.Series({
-        'growth_2023': ((x['MAT Q3 2023 USD MNF'].sum() - x['MAT Q3 2022 USD MNF'].sum()) / 
-                       x['MAT Q3 2022 USD MNF'].sum() * 100) if x['MAT Q3 2022 USD MNF'].sum() > 0 else 0,
-        'growth_2024': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / 
-                       x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0,
-        'total_2024': x['MAT Q3 2024 USD MNF'].sum()
-    }))
+    for _, row in df.iterrows():
+        try:
+            # Altman Z-Score formülü
+            X1 = row['Çalışma_Sermayesi'] / row['Toplam_Varlıklar'] if row['Toplam_Varlıklar'] > 0 else 0
+            X2 = row['Net_Kar'] / row['Toplam_Varlıklar'] if row['Toplam_Varlıklar'] > 0 else 0
+            X3 = row['EBITDA'] / row['Toplam_Varlıklar'] if row['Toplam_Varlıklar'] > 0 else 0
+            X4 = row['Özkaynak'] / row['Toplam_Borç'] if row['Toplam_Borç'] > 0 else 0
+            X5 = row['Ciro'] / row['Toplam_Varlıklar'] if row['Toplam_Varlıklar'] > 0 else 0
+            
+            Z = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 1.0*X5
+            
+            # Risk kategorisi
+            if Z > 2.99:
+                risk = 'Düşük Risk'
+            elif Z > 1.81:
+                risk = 'Gri Bölge'
+            else:
+                risk = 'Yüksek Risk'
+            
+            results.append({
+                'Şirket': row['Şirket_Adı'],
+                'Z_Score': Z,
+                'Risk_Kategorisi': risk,
+                'X1': X1,
+                'X2': X2,
+                'X3': X3,
+                'X4': X4,
+                'X5': X5
+            })
+        except:
+            continue
     
-    structural_growth = molecule_growth[
-        (molecule_growth['growth_2023'] > 10) & 
-        (molecule_growth['growth_2024'] > 10) &
-        (molecule_growth['total_2024'] > 1000000)
-    ].sort_values('growth_2024', ascending=False)
+    return pd.DataFrame(results)
+
+def perform_regression_analysis(df, target='Net_Kar'):
+    """Regresyon analizi yap"""
+    # Özellik seçimi
+    features = ['Ciro', 'Brüt_Kar_Marjı', 'Varlık_Devir_Hızı', 'Borç_Oranı', 'ARGE_Harcaması']
     
-    if len(structural_growth) > 0:
-        top_molecules = structural_growth.head(3).index.tolist()
-        insights.append(f"**Structural Growth Molecules:** {', '.join(top_molecules)} showing consistent >10% growth")
+    # Eksik verileri temizle
+    analysis_df = df[features + [target]].dropna()
     
-    relaunch_candidates = []
-    for molecule in df['Molecule'].unique():
-        molecule_data = df[df['Molecule'] == molecule]
-        
-        salt_changes = molecule_data.groupby('Chemical Salt')['MAT Q3 2024 USD MNF'].sum().sort_values(ascending=False)
-        if len(salt_changes) >= 2:
-            top_salt = salt_changes.index[0]
-            second_salt = salt_changes.index[1]
-            if salt_changes.iloc[0] > salt_changes.iloc[1] * 3:
-                relaunch_candidates.append(f"{molecule} ({top_salt} dominating)")
-        
-        pack_growth = molecule_data.groupby('International Pack').apply(lambda x: 
-            (x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / 
-            x['MAT Q3 2023 USD MNF'].sum() * 100 if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0
+    if len(analysis_df) < 10:
+        return None
+    
+    # Korelasyon analizi
+    correlation = analysis_df.corr()[target].sort_values(ascending=False)
+    
+    # Basit lineer regresyon (her özellik için)
+    from scipy import stats
+    regression_results = {}
+    
+    for feature in features:
+        slope, intercept, r_value, p_value, std_err = stats.linregress(
+            analysis_df[feature], analysis_df[target]
         )
-        
-        if len(pack_growth) >= 2:
-            fastest_pack = pack_growth.idxmax()
-            if pack_growth.max() > 50:
-                relaunch_candidates.append(f"{molecule} ({fastest_pack} pack +{pack_growth.max():.0f}%)")
-    
-    if relaunch_candidates:
-        insights.append(f"**Relaunch Detection:** " + "; ".join(relaunch_candidates[:5]))
-    
-    commoditization = molecule_growth[
-        (molecule_growth['growth_2024'] < -5) &
-        (molecule_growth['total_2024'] > 5000000)
-    ].sort_values('growth_2024')
-    
-    if len(commoditization) > 0:
-        top_commod = commoditization.head(3).index.tolist()
-        avg_decline = commoditization.head(3)['growth_2024'].mean()
-        insights.append(f"**Commoditization Risk:** {', '.join(top_commod)} declining avg {avg_decline:.1f}% despite scale")
-    
-    saturation_check = molecule_growth[
-        (molecule_growth['growth_2024'] < 2) &
-        (molecule_growth['growth_2023'] < 2) &
-        (molecule_growth['total_2024'] > 10000000)
-    ]
-    
-    if len(saturation_check) > 0:
-        saturated = saturation_check.index.tolist()[:3]
-        insights.append(f"**Market Saturation:** {', '.join(saturated)} showing <2% growth despite >$10M revenue")
-    
-    return insights
-
-def score_manufacturers(df):
-    scores = []
-    
-    manufacturer_stats = df.groupby('Manufacturer').apply(lambda x: pd.Series({
-        'total_revenue_2024': x['MAT Q3 2024 USD MNF'].sum(),
-        'revenue_growth': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / 
-                          x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0,
-        'price_power': (x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                      x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100 if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-        'volume_growth': ((x['MAT Q3 2024 Standard Units'].sum() - x['MAT Q3 2023 Standard Units'].sum()) / 
-                         x['MAT Q3 2023 Standard Units'].sum() * 100) if x['MAT Q3 2023 Standard Units'].sum() > 0 else 0,
-        'product_count': x['International Product'].nunique(),
-        'specialty_share': (x[x['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum() / 
-                           x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-        'top_product_concentration': (x.groupby('International Product')['MAT Q3 2024 USD MNF'].sum().nlargest(1).sum() / 
-                                     x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-        'margin_erosion': ((x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() - x['MAT Q3 2023 Unit Avg Price USD MNF'].mean()) / 
-                          x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() > 0 else 0
-    })).reset_index()
-    
-    manufacturer_stats['pricing_power_score'] = manufacturer_stats['price_power'].apply(
-        lambda x: 100 if x > 10 else 80 if x > 5 else 60 if x > 0 else 40 if x > -5 else 20
-    )
-    
-    manufacturer_stats['volume_scale_score'] = manufacturer_stats['total_revenue_2024'].apply(
-        lambda x: 100 if x > 50000000 else 80 if x > 20000000 else 60 if x > 5000000 else 40 if x > 1000000 else 20
-    )
-    
-    manufacturer_stats['margin_erosion_flag'] = manufacturer_stats['margin_erosion'].apply(
-        lambda x: 'HIGH' if x < -10 else 'MEDIUM' if x < -5 else 'LOW'
-    )
-    
-    manufacturer_stats['dependence_risk'] = manufacturer_stats['top_product_concentration'].apply(
-        lambda x: 'HIGH' if x > 50 else 'MEDIUM' if x > 30 else 'LOW'
-    )
-    
-    for _, row in manufacturer_stats.nlargest(10, 'total_revenue_2024').iterrows():
-        score_card = {
-            'manufacturer': row['Manufacturer'],
-            'revenue': f"${row['total_revenue_2024']:,.0f}",
-            'growth': f"{row['revenue_growth']:+.1f}%",
-            'pricing_score': row['pricing_power_score'],
-            'volume_score': row['volume_scale_score'],
-            'margin_flag': row['margin_erosion_flag'],
-            'dependence_risk': row['dependence_risk'],
-            'specialty_share': f"{row['specialty_share']:.1f}%"
+        regression_results[feature] = {
+            'slope': slope,
+            'r_squared': r_value**2,
+            'p_value': p_value,
+            'importance': abs(r_value)
         }
-        scores.append(score_card)
     
-    return scores
+    return {
+        'correlation': correlation,
+        'regression': regression_results,
+        'sample_size': len(analysis_df)
+    }
 
-def analyze_pricing_mix(df):
+def calculate_risk_metrics(df):
+    """Risk metriklerini hesapla"""
+    risk_data = {}
+    
+    # Volatilite tabanlı risk
+    risk_data['price_volatility'] = df['Getiri_Volatilitesi'].mean()
+    risk_data['beta_risk'] = df['Beta_Katsayısı'].mean()
+    
+    # Finansal risk
+    risk_data['leverage_risk'] = df['Borç_Oranı'].mean()
+    risk_data['liquidity_risk'] = (df[df['Cari_Oran'] < 1].shape[0] / len(df)) * 100
+    
+    # Kredi riski
+    altman_scores = calculate_altman_z_score(df)
+    if not altman_scores.empty:
+        risk_data['bankruptcy_risk'] = (altman_scores[altman_scores['Risk_Kategorisi'] == 'Yüksek Risk'].shape[0] / 
+                                       len(altman_scores)) * 100
+    
+    # Konsantrasyon riski
+    top_3_market_share = df.groupby('Ana_Sektör')['Pazar_Payı'].sum().nlargest(3).sum()
+    total_market_share = df['Pazar_Payı'].sum()
+    risk_data['concentration_risk'] = (top_3_market_share / total_market_share * 100) if total_market_share > 0 else 0
+    
+    return risk_data
+
+def generate_advanced_insights(df):
+    """İleri seviye içgörüler oluştur"""
     insights = []
     
-    price_divergence = df.groupby('Molecule').apply(lambda x: pd.Series({
-        'su_price_growth': ((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                           x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-        'unit_price_growth': ((x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() - x['MAT Q3 2023 Unit Avg Price USD MNF'].mean()) / 
-                             x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() > 0 else 0,
-        'revenue': x['MAT Q3 2024 USD MNF'].sum()
-    }))
+    # 1. Büyüme kalitesi analizi
+    high_growth = df[df['Ciro_Büyüme'] > 20]
+    profitable_growth = high_growth[high_growth['Net_Kar_Marjı'] > 10]
     
-    large_divergence = price_divergence[
-        (abs(price_divergence['su_price_growth'] - price_divergence['unit_price_growth']) > 10) &
-        (price_divergence['revenue'] > 1000000)
-    ]
+    growth_quality = (len(profitable_growth) / len(high_growth) * 100) if len(high_growth) > 0 else 0
+    insights.append({
+        'title': 'Büyüme Kalitesi Analizi',
+        'content': f'{growth_quality:.1f}% yüksek büyüme gösteren şirket aynı zamanda karlı',
+        'metric': growth_quality,
+        'threshold': 50
+    })
     
-    if len(large_divergence) > 0:
-        top_div = large_divergence.nlargest(3, 'revenue')
-        for idx, row in top_div.iterrows():
-            diff = row['su_price_growth'] - row['unit_price_growth']
-            insight = f"{idx}: SU price {row['su_price_growth']:+.1f}% vs Unit price {row['unit_price_growth']:+.1f}% ({diff:+.1f}pp gap)"
-            insights.append(insight)
+    # 2. Verimlilik trendi
+    sector_efficiency = df.groupby('Ana_Sektör')['Varlık_Devir_Hızı'].mean().sort_values(ascending=False)
+    top_sector = sector_efficiency.index[0] if len(sector_efficiency) > 0 else 'N/A'
+    insights.append({
+        'title': 'En Verimli Sektör',
+        'content': f'{top_sector} sektörü en yüksek varlık devir hızına sahip',
+        'metric': sector_efficiency.iloc[0] if len(sector_efficiency) > 0 else 0
+    })
     
-    pack_analysis = df.groupby(['International Pack', 'International Size']).apply(lambda x: pd.Series({
-        'avg_price_per_unit': x['MAT Q3 2024 Unit Avg Price USD MNF'].mean(),
-        'total_units': x['MAT Q3 2024 Units'].sum(),
-        'revenue': x['MAT Q3 2024 USD MNF'].sum(),
-        'price_per_size': x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() / x['International Size'].mean() if x['International Size'].mean() > 0 else 0
-    })).reset_index()
+    # 3. Risk-Getiri optimizasyonu
+    df['risk_adjusted_return'] = df['Getiri_Oranı'] / df['Getiri_Volatilitesi']
+    top_risk_adjusted = df.nlargest(5, 'risk_adjusted_return')[['Şirket_Adı', 'risk_adjusted_return']]
     
-    pack_analysis['efficiency_score'] = pack_analysis['price_per_size'].rank(pct=True) * 100
+    insights.append({
+        'title': 'Risk-Getiri Optimizasyonu',
+        'content': 'En iyi risk-getiri oranına sahip 5 şirket tespit edildi',
+        'data': top_risk_adjusted.to_dict('records')
+    })
     
-    optimization_candidates = pack_analysis[
-        (pack_analysis['efficiency_score'] < 30) &
-        (pack_analysis['revenue'] > 500000)
-    ].sort_values('efficiency_score')
+    # 4. ESG performansı
+    esg_score = df[['Çevresel_Skor', 'Sosyal_Skor', 'Yönetişim_Skoru']].mean().mean()
+    insights.append({
+        'title': 'ESG Performansı',
+        'content': f'Ortalama ESG skoru: {esg_score:.1f}/100',
+        'metric': esg_score
+    })
     
-    if len(optimization_candidates) > 0:
-        top_candidates = optimization_candidates.head(3)
-        for _, row in top_candidates.iterrows():
-            insights.append(f"Pack Optimization: {row['International Pack']} {row['International Size']}x - Low efficiency score {row['efficiency_score']:.0f}")
+    # 5. İnovasyon yatırımları
+    high_rd = df[df['ARGE_Harcaması'] > df['ARGE_Harcaması'].quantile(0.75)]
+    rd_growth_correlation = high_rd['Ciro_Büyüme'].corr(high_rd['ARGE_Harcaması'])
     
-    discount_analysis = df.groupby(['Manufacturer', 'Country']).apply(lambda x: pd.Series({
-        'price_ratio': x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() / x['MAT Q3 2024 SU Avg Price USD MNF'].mean() if x['MAT Q3 2024 SU Avg Price USD MNF'].mean() > 0 else 0,
-        'revenue': x['MAT Q3 2024 USD MNF'].sum(),
-        'std_dev': x['MAT Q3 2024 Unit Avg Price USD MNF'].std()
-    })).reset_index()
-    
-    hidden_discounts = discount_analysis[
-        (discount_analysis['price_ratio'] < 0.5) &
-        (discount_analysis['revenue'] > 1000000) &
-        (discount_analysis['std_dev'] > discount_analysis['std_dev'].quantile(0.75))
-    ]
-    
-    if len(hidden_discounts) > 0:
-        top_discounts = hidden_discounts.nlargest(3, 'revenue')
-        for _, row in top_discounts.iterrows():
-            insights.append(f"Hidden Discounting: {row['Manufacturer']} in {row['Country']} - Unit price only {row['price_ratio']:.1%} of SU price")
-    
-    mix_shift = df.groupby('Specialty Product').apply(lambda x: pd.Series({
-        'share_2023': x['MAT Q3 2023 USD MNF'].sum() / df['MAT Q3 2023 USD MNF'].sum() * 100,
-        'share_2024': x['MAT Q3 2024 USD MNF'].sum() / df['MAT Q3 2024 USD MNF'].sum() * 100
-    })).reset_index()
-    
-    if len(mix_shift) == 2:
-        specialty_shift = mix_shift[mix_shift['Specialty Product'] == 'Yes']
-        if not specialty_shift.empty:
-            shift = specialty_shift['share_2024'].iloc[0] - specialty_shift['share_2023'].iloc[0]
-            if abs(shift) > 2:
-                insights.append(f"Mix Shift: Specialty share changed {shift:+.1f}pp (2023: {specialty_shift['share_2023'].iloc[0]:.1f}% → 2024: {specialty_shift['share_2024'].iloc[0]:.1f}%)")
+    insights.append({
+        'title': 'ARGE Yatırımı & Büyüme',
+        'content': f'Yüksek ARGE harcaması ile büyüme korelasyonu: {rd_growth_correlation:.3f}',
+        'metric': rd_growth_correlation
+    })
     
     return insights
 
-def create_kpi_card(title, value, change=None, change_label=None):
-    if change is not None:
-        change_class = "positive" if change > 0 else "negative" if change < 0 else "neutral"
-        change_display = f'<span class="kpi-change {change_class}">{change:+.1f}% {change_label if change_label else ""}</span>'
-    else:
-        change_display = ""
+# ==================== GÖRSELLEŞTİRME FONKSİYONLARI ====================
+def create_financial_health_chart(df):
+    """Finansal sağlık radar chart'ı oluştur"""
+    # Ortalama değerleri hesapla
+    metrics = {
+        'Karlılık': df['Net_Kar_Marjı'].mean(),
+        'Likidite': df['Cari_Oran'].mean() * 10,  # Ölçeklendirme
+        'Verimlilik': df['Varlık_Devir_Hızı'].mean() * 10,
+        'Büyüme': df['Ciro_Büyüme'].mean(),
+        'Risk Yönetimi': 100 - df['Borç_Oranı'].mean(),
+        'ESG': df[['Çevresel_Skor', 'Sosyal_Skor', 'Yönetişim_Skoru']].mean().mean()
+    }
     
-    return f'''
-    <div class="kpi-card">
-        <div class="kpi-title">{title}</div>
-        <div class="kpi-value">{value}</div>
-        {change_display}
-    </div>
-    '''
-
-def render_manufacturer_scores(scores):
-    html = '<div class="data-table"><h4>🏭 Top Manufacturer Scores</h4><table style="width:100%; border-collapse: collapse;">'
-    html += '<tr style="background-color: #1e3a5f;"><th>Manufacturer</th><th>Revenue 2024</th><th>Growth</th><th>Pricing Power</th><th>Volume Scale</th><th>Margin Risk</th><th>Dependence Risk</th><th>Specialty Share</th></tr>'
-    
-    for score in scores:
-        pricing_class = "score-high" if score['pricing_score'] >= 80 else "score-medium" if score['pricing_score'] >= 60 else "score-low"
-        volume_class = "score-high" if score['volume_score'] >= 80 else "score-medium" if score['volume_score'] >= 60 else "score-low"
-        margin_color = "#ef4444" if score['margin_flag'] == 'HIGH' else "#f59e0b" if score['margin_flag'] == 'MEDIUM' else "#10b981"
-        depend_color = "#ef4444" if score['dependence_risk'] == 'HIGH' else "#f59e0b" if score['dependence_risk'] == 'MEDIUM' else "#10b981"
-        
-        html += f'''
-        <tr style="border-bottom: 1px solid #374151;">
-            <td style="padding: 10px;"><strong>{score['manufacturer']}</strong></td>
-            <td style="padding: 10px;">{score['revenue']}</td>
-            <td style="padding: 10px;">{score['growth']}</td>
-            <td style="padding: 10px;"><div class="manufacturer-score {pricing_class}">{score['pricing_score']}</div></td>
-            <td style="padding: 10px;"><div class="manufacturer-score {volume_class}">{score['volume_score']}</div></td>
-            <td style="padding: 10px;"><span style="color:{margin_color}">●</span> {score['margin_flag']}</td>
-            <td style="padding: 10px;"><span style="color:{depend_color}">●</span> {score['dependence_risk']}</td>
-            <td style="padding: 10px;">{score['specialty_share']}</td>
-        </tr>
-        '''
-    
-    html += '</table></div>'
-    return html
-
-def create_growth_decomposition_chart(df):
-    total_growth_2024 = ((df['MAT Q3 2024 USD MNF'].sum() - df['MAT Q3 2023 USD MNF'].sum()) / 
-                        df['MAT Q3 2023 USD MNF'].sum() * 100) if df['MAT Q3 2023 USD MNF'].sum() > 0 else 0
-    
-    price_effect = ((df['MAT Q3 2024 SU Avg Price USD MNF'].mean() - df['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                   df['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if df['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0
-    
-    volume_effect = ((df['MAT Q3 2024 Standard Units'].sum() - df['MAT Q3 2023 Standard Units'].sum()) / 
-                    df['MAT Q3 2023 Standard Units'].sum() * 100) if df['MAT Q3 2023 Standard Units'].sum() > 0 else 0
-    
-    mix_effect = total_growth_2024 - price_effect - volume_effect
-    
-    fig = go.Figure(data=[
-        go.Bar(
-            name='Price Effect',
-            x=['Growth Contribution'],
-            y=[price_effect],
-            marker_color='#3b82f6',
-            text=f'{price_effect:+.1f}%',
-            textposition='auto',
-        ),
-        go.Bar(
-            name='Volume Effect',
-            x=['Growth Contribution'],
-            y=[volume_effect],
-            marker_color='#10b981',
-            text=f'{volume_effect:+.1f}%',
-            textposition='auto',
-        ),
-        go.Bar(
-            name='Mix Effect',
-            x=['Growth Contribution'],
-            y=[mix_effect],
-            marker_color='#8b5cf6',
-            text=f'{mix_effect:+.1f}%',
-            textposition='auto',
-        )
-    ])
+    fig = go.Figure(data=go.Scatterpolar(
+        r=list(metrics.values()),
+        theta=list(metrics.keys()),
+        fill='toself',
+        fillcolor='rgba(59, 130, 246, 0.3)',
+        line=dict(color='rgb(59, 130, 246)', width=2),
+        hoverinfo='text',
+        text=[f'{k}: {v:.1f}' for k, v in metrics.items()]
+    ))
     
     fig.update_layout(
-        title='2024 Growth Decomposition',
-        barmode='stack',
-        showlegend=True,
-        plot_bgcolor='#1f2937',
-        paper_bgcolor='#1f2937',
-        font_color='white',
-        height=400,
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100]
+            )
+        ),
+        showlegend=False,
+        title='Finansal Sağlık Radar Chart',
+        height=500,
+        paper_bgcolor='#1e293b',
+        plot_bgcolor='#1e293b',
+        font_color='white'
     )
     
     return fig
 
-def create_regional_growth_chart(df):
-    regional_growth = df.groupby('Region').apply(lambda x: pd.Series({
-        'growth_2024': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / 
-                       x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0,
-        'share_2024': (x['MAT Q3 2024 USD MNF'].sum() / df['MAT Q3 2024 USD MNF'].sum() * 100) if df['MAT Q3 2024 USD MNF'].sum() > 0 else 0
-    })).reset_index()
+def create_correlation_heatmap(df):
+    """Korelasyon heatmap oluştur"""
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    important_cols = [col for col in numeric_cols if col in [
+        'Ciro', 'Net_Kar', 'Brüt_Kar_Marjı', 'EBITDA_Marjı', 'Varlık_Devir_Hızı',
+        'Borç_Oranı', 'Cari_Oran', 'F/K_Oranı', 'Getiri_Oranı', 'ARGE_Harcaması'
+    ]]
     
-    fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=('Growth Rate by Region', 'Market Share by Region'),
-        specs=[[{'type': 'bar'}, {'type': 'pie'}]]
+    if len(important_cols) < 3:
+        return None
+    
+    corr_matrix = df[important_cols].corr()
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.index,
+        colorscale='RdBu',
+        zmid=0,
+        text=corr_matrix.round(2).values,
+        texttemplate='%{text}',
+        textfont={"size": 10},
+        hoverongaps=False
+    ))
+    
+    fig.update_layout(
+        title='Finansal Metrikler Korelasyon Matrisi',
+        height=600,
+        paper_bgcolor='#1e293b',
+        plot_bgcolor='#1e293b',
+        font_color='white'
     )
     
-    colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444']
+    return fig
+
+def create_growth_comparison_chart(df):
+    """Büyüme karşılaştırma chart'ı oluştur"""
+    sector_growth = df.groupby('Ana_Sektör').agg({
+        'Ciro_Büyüme': 'mean',
+        'Net_Kar_Marjı': 'mean',
+        'Şirket_Adı': 'count'
+    }).reset_index()
     
+    sector_growth.columns = ['Sektör', 'Ortalama_Büyüme', 'Ortalama_Karlılık', 'Şirket_Sayısı']
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Bar(
+        x=sector_growth['Sektör'],
+        y=sector_growth['Ortalama_Büyüme'],
+        name='Büyüme (%)',
+        marker_color='#3b82f6',
+        text=sector_growth['Ortalama_Büyüme'].round(1),
+        textposition='auto'
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=sector_growth['Sektör'],
+        y=sector_growth['Ortalama_Karlılık'],
+        name='Karlılık (%)',
+        yaxis='y2',
+        mode='lines+markers',
+        line=dict(color='#10b981', width=3),
+        marker=dict(size=10)
+    ))
+    
+    fig.update_layout(
+        title='Sektörel Büyüme & Karlılık Karşılaştırması',
+        yaxis=dict(title='Büyüme (%)'),
+        yaxis2=dict(
+            title='Karlılık (%)',
+            overlaying='y',
+            side='right'
+        ),
+        height=500,
+        paper_bgcolor='#1e293b',
+        plot_bgcolor='#1e293b',
+        font_color='white',
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
+    )
+    
+    return fig
+
+def create_risk_return_scatter(df):
+    """Risk-Getiri dağılım grafiği oluştur"""
+    fig = px.scatter(
+        df,
+        x='Getiri_Volatilitesi',
+        y='Getiri_Oranı',
+        size='Piyasa_Değeri',
+        color='Ana_Sektör',
+        hover_name='Şirket_Adı',
+        hover_data=['Net_Kar_Marjı', 'F/K_Oranı'],
+        title='Risk-Getiri Dağılımı',
+        labels={
+            'Getiri_Volatilitesi': 'Risk (Volatilite)',
+            'Getiri_Oranı': 'Getiri (%)'
+        }
+    )
+    
+    # Efektif sınır çizgisi ekle
+    fig.add_trace(go.Scatter(
+        x=[df['Getiri_Volatilitesi'].min(), df['Getiri_Volatilitesi'].max()],
+        y=[df['Getiri_Oranı'].min(), df['Getiri_Oranı'].max()],
+        mode='lines',
+        name='Efektif Sınır',
+        line=dict(color='#f59e0b', dash='dash', width=2),
+        showlegend=True
+    ))
+    
+    fig.update_layout(
+        height=600,
+        paper_bgcolor='#1e293b',
+        plot_bgcolor='#1e293b',
+        font_color='white'
+    )
+    
+    return fig
+
+def create_valuation_analysis(df):
+    """Değerleme analizi grafiği oluştur"""
+    # Sektörel F/K oranları
+    sector_pe = df.groupby('Ana_Sektör')['F/K_Oranı'].agg(['mean', 'median', 'std']).reset_index()
+    
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=('Sektörel F/K Dağılımı', 'F/K vs Karlılık', 'Piyasa Değeri Dağılımı', 'Değerleme İndikatörleri'),
+        specs=[[{'type': 'bar'}, {'type': 'scatter'}],
+               [{'type': 'histogram'}, {'type': 'box'}]]
+    )
+    
+    # 1. Sektörel F/K
     fig.add_trace(
         go.Bar(
-            x=regional_growth['Region'],
-            y=regional_growth['growth_2024'],
-            marker_color=colors[:len(regional_growth)],
-            text=regional_growth['growth_2024'].apply(lambda x: f'{x:+.1f}%'),
-            textposition='auto',
+            x=sector_pe['Ana_Sektör'],
+            y=sector_pe['mean'],
+            error_y=dict(type='data', array=sector_pe['std']),
+            name='Ortalama F/K',
+            marker_color='#3b82f6'
         ),
         row=1, col=1
     )
     
+    # 2. F/K vs Karlılık
     fig.add_trace(
-        go.Pie(
-            labels=regional_growth['Region'],
-            values=regional_growth['share_2024'],
-            marker_colors=colors[:len(regional_growth)],
-            textinfo='label+percent',
-            hole=0.4,
+        go.Scatter(
+            x=df['F/K_Oranı'],
+            y=df['Net_Kar_Marjı'],
+            mode='markers',
+            marker=dict(
+                size=8,
+                color=df['Ciro_Büyüme'],
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title="Büyüme (%)")
+            ),
+            name='F/K vs Karlılık',
+            hovertext=df['Şirket_Adı']
         ),
         row=1, col=2
     )
     
+    # 3. Piyasa değeri dağılımı
+    fig.add_trace(
+        go.Histogram(
+            x=df['Piyasa_Değeri'],
+            nbinsx=50,
+            name='Piyasa Değeri',
+            marker_color='#10b981'
+        ),
+        row=2, col=1
+    )
+    
+    # 4. Değerleme indikatörleri
+    fig.add_trace(
+        go.Box(
+            y=df['PD/DD_Oranı'],
+            name='PD/DD',
+            boxmean=True,
+            marker_color='#8b5cf6'
+        ),
+        row=2, col=2
+    )
+    
     fig.update_layout(
-        title='Regional Analysis',
+        height=800,
         showlegend=False,
-        plot_bgcolor='#1f2937',
-        paper_bgcolor='#1f2937',
-        font_color='white',
-        height=500,
+        paper_bgcolor='#1e293b',
+        plot_bgcolor='#1e293b',
+        font_color='white'
     )
     
     return fig
 
-def create_molecule_heatmap(df):
-    top_molecules = df.groupby('Molecule')['MAT Q3 2024 USD MNF'].sum().nlargest(15).index.tolist()
-    top_countries = df.groupby('Country')['MAT Q3 2024 USD MNF'].sum().nlargest(10).index.tolist()
+# ==================== UI KOMPONENTLERİ ====================
+def create_metric_card(title, value, change=None, change_label=None, size='medium'):
+    """Metrik kartı oluştur"""
+    if size == 'large':
+        value_size = '32px'
+        title_size = '16px'
+    else:
+        value_size = '26px'
+        title_size = '14px'
     
-    filtered_df = df[(df['Molecule'].isin(top_molecules)) & (df['Country'].isin(top_countries))]
+    if change is not None:
+        change_class = "positive" if change > 0 else "negative" if change < 0 else "neutral"
+        change_display = f'''
+        <div class="metric-change {change_class}">
+            {change:+.1f}% {change_label if change_label else ""}
+        </div>
+        '''
+    else:
+        change_display = ''
     
-    heatmap_data = filtered_df.groupby(['Molecule', 'Country'])['MAT Q3 2024 USD MNF'].sum().unstack()
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=heatmap_data.values,
-        x=heatmap_data.columns,
-        y=heatmap_data.index,
-        colorscale='Viridis',
-        colorbar=dict(title="USD MNF"),
-        text=heatmap_data.values,
-        texttemplate='%{text:.2s}',
-        textfont={"color": "white"}
-    ))
-    
-    fig.update_layout(
-        title='Top Molecules by Country (Heatmap)',
-        xaxis_title='Country',
-        yaxis_title='Molecule',
-        plot_bgcolor='#1f2937',
-        paper_bgcolor='#1f2937',
-        font_color='white',
-        height=600,
-    )
-    
-    return fig
+    return f'''
+    <div class="metric-card">
+        <div class="metric-title" style="font-size: {title_size};">{title}</div>
+        <div class="metric-value" style="font-size: {value_size};">{value}</div>
+        {change_display}
+    </div>
+    '''
 
-def create_price_volume_scatter(df):
-    manufacturer_stats = df.groupby('Manufacturer').apply(lambda x: pd.Series({
-        'price_growth': ((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                        x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-        'volume_growth': ((x['MAT Q3 2024 Standard Units'].sum() - x['MAT Q3 2023 Standard Units'].sum()) / 
-                         x['MAT Q3 2023 Standard Units'].sum() * 100) if x['MAT Q3 2023 Standard Units'].sum() > 0 else 0,
-        'revenue_2024': x['MAT Q3 2024 USD MNF'].sum(),
-        'specialty_share': (x[x['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum() / 
-                           x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0
-    })).reset_index()
+def display_insight_box(title, content, metric=None, threshold=None):
+    """İçgörü kutusu göster"""
+    if metric is not None and threshold is not None:
+        if metric > threshold:
+            icon = "✅"
+            color = "#10b981"
+        else:
+            icon = "⚠️"
+            color = "#f59e0b"
+    else:
+        icon = "💡"
+        color = "#60a5fa"
     
-    top_20 = manufacturer_stats.nlargest(20, 'revenue_2024')
-    
-    fig = go.Figure()
-    
-    fig.add_trace(go.Scatter(
-        x=top_20['price_growth'],
-        y=top_20['volume_growth'],
-        mode='markers+text',
-        marker=dict(
-            size=top_20['revenue_2024'] / top_20['revenue_2024'].max() * 50 + 10,
-            color=top_20['specialty_share'],
-            colorscale='Viridis',
-            showscale=True,
-            colorbar=dict(title="Specialty Share %")
-        ),
-        text=top_20['Manufacturer'],
-        textposition='top center',
-        hovertemplate='<b>%{text}</b><br>Price Growth: %{x:.1f}%<br>Volume Growth: %{y:.1f}%<br>Revenue: $%{marker.size:.2s}<br>Specialty Share: %{marker.color:.1f}%<extra></extra>'
-    ))
-    
-    fig.add_hline(y=0, line_dash="dash", line_color="gray")
-    fig.add_vline(x=0, line_dash="dash", line_color="gray")
-    
-    fig.add_annotation(x=10, y=10, text="Premium Growers", showarrow=False, font=dict(color="#10b981"))
-    fig.add_annotation(x=-10, y=10, text="Volume Drivers", showarrow=False, font=dict(color="#3b82f6"))
-    fig.add_annotation(x=-10, y=-10, text="Declining", showarrow=False, font=dict(color="#ef4444"))
-    fig.add_annotation(x=10, y=-10, text="Price Increase/Volume Decline", showarrow=False, font=dict(color="#f59e0b"))
-    
-    fig.update_layout(
-        title='Manufacturer Price vs Volume Growth Strategy',
-        xaxis_title='Price Growth (%)',
-        yaxis_title='Volume Growth (%)',
-        plot_bgcolor='#1f2937',
-        paper_bgcolor='#1f2937',
-        font_color='white',
-        height=600,
-    )
-    
-    return fig
+    return f'''
+    <div class="insight-box">
+        <div class="insight-title">{icon} {title}</div>
+        <div class="insight-content">{content}</div>
+        {f'<div style="margin-top: 10px; color: {color}; font-weight: 600;">Metrik: {metric:.1f}</div>' if metric is not None else ''}
+    </div>
+    '''
 
-def create_specialty_analysis_chart(df):
-    specialty_analysis = df.groupby(['Country', 'Specialty Product']).apply(lambda x: pd.Series({
-        'revenue_2024': x['MAT Q3 2024 USD MNF'].sum(),
-        'growth': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / 
-                  x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0
-    })).unstack()
+def create_risk_indicator(risk_level, label):
+    """Risk göstergesi oluştur"""
+    if risk_level == 'high':
+        risk_class = 'risk-high'
+        text_color = '#ef4444'
+    elif risk_level == 'medium':
+        risk_class = 'risk-medium'
+        text_color = '#f59e0b'
+    else:
+        risk_class = 'risk-low'
+        text_color = '#10b981'
     
-    top_countries = df.groupby('Country')['MAT Q3 2024 USD MNF'].sum().nlargest(8).index.tolist()
-    
-    specialty_analysis = specialty_analysis.loc[top_countries]
-    
-    fig = make_subplots(
-        rows=2, cols=1,
-        subplot_titles=('Specialty vs Non-Specialty Revenue 2024', 'Growth Comparison'),
-        vertical_spacing=0.15
-    )
-    
-    fig.add_trace(
-        go.Bar(
-            name='Specialty',
-            x=top_countries,
-            y=specialty_analysis[('revenue_2024', 'Yes')],
-            marker_color='#8b5cf6',
-        ),
-        row=1, col=1
-    )
-    
-    fig.add_trace(
-        go.Bar(
-            name='Non-Specialty',
-            x=top_countries,
-            y=specialty_analysis[('revenue_2024', 'No')],
-            marker_color='#3b82f6',
-        ),
-        row=1, col=1
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            name='Specialty Growth',
-            x=top_countries,
-            y=specialty_analysis[('growth', 'Yes')],
-            mode='lines+markers',
-            line=dict(color='#10b981', width=3),
-            marker=dict(size=10),
-        ),
-        row=2, col=1
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            name='Non-Specialty Growth',
-            x=top_countries,
-            y=specialty_analysis[('growth', 'No')],
-            mode='lines+markers',
-            line=dict(color='#f59e0b', width=3),
-            marker=dict(size=10),
-        ),
-        row=2, col=1
-    )
-    
-    fig.update_layout(
-        title='Specialty Product Analysis by Top Countries',
-        barmode='stack',
-        showlegend=True,
-        plot_bgcolor='#1f2937',
-        paper_bgcolor='#1f2937',
-        font_color='white',
-        height=700,
-    )
-    
-    return fig
+    return f'''
+    <div style="display: flex; align-items: center; margin: 5px 0;">
+        <span class="risk-indicator {risk_class}"></span>
+        <span style="color: {text_color}; font-weight: 600;">{label}</span>
+    </div>
+    '''
 
+# ==================== ANA UYGULAMA ====================
 def main():
-    st.title("💊 Pharmaceutical Analytics Platform")
-    st.markdown("### Q3 MAT Analysis | 500,000+ Records | Real-time Analytics")
+    st.title("📈 İleri Seviye Finansal Analiz Platformu")
+    st.markdown("### 500,000+ Şirket Verisi | Gerçek Zamanlı Analitik | Profesyonel İçgörüler")
     
+    # Veriyi yükle
     df = load_data()
     
-    st.sidebar.markdown("## 🔍 Filter Controls")
+    # Sidebar filtreleri
+    st.sidebar.markdown("## 🔍 Filtre Kontrolleri")
     
-    all_countries = ['All'] + sorted(df['Country'].unique().tolist())
-    selected_country = st.sidebar.selectbox("Country", all_countries)
+    # Sektör filtresi
+    sectors = ['Tümü'] + sorted(df['Ana_Sektör'].unique().tolist())
+    selected_sector = st.sidebar.selectbox("Ana Sektör", sectors)
     
-    all_corporations = ['All'] + sorted(df['Corporation'].unique().tolist())
-    selected_corporation = st.sidebar.selectbox("Corporation", all_corporations)
+    # Bölge filtresi
+    regions = ['Tümü'] + sorted(df['Bölge'].unique().tolist())
+    selected_region = st.sidebar.selectbox("Bölge", regions)
     
-    all_manufacturers = ['All'] + sorted(df['Manufacturer'].unique().tolist())
-    selected_manufacturer = st.sidebar.selectbox("Manufacturer", all_manufacturers)
+    # Büyüme filtresi
+    growth_filter = st.sidebar.slider(
+        "Minimum Büyüme Oranı (%)",
+        min_value=-50, max_value=100, value=0, step=5
+    )
     
-    all_molecules = ['All'] + sorted(df['Molecule'].unique().tolist())
-    selected_molecule = st.sidebar.selectbox("Molecule", all_molecules)
+    # Karlılık filtresi
+    profitability_filter = st.sidebar.slider(
+        "Minimum Net Kar Marjı (%)",
+        min_value=-20, max_value=50, value=0, step=2
+    )
     
-    all_specialty = ['All'] + sorted(df['Specialty Product'].unique().tolist())
-    selected_specialty = st.sidebar.selectbox("Specialty Product", all_specialty)
+    # Risk filtresi
+    risk_filter = st.sidebar.selectbox(
+        "Risk Seviyesi",
+        ['Tümü', 'Düşük Risk', 'Orta Risk', 'Yüksek Risk']
+    )
     
-    year_options = ['2022', '2023', '2024', 'All']
-    selected_year = st.sidebar.selectbox("Year", year_options)
-    
+    # Veriyi filtrele
     filtered_df = df.copy()
     
-    if selected_country != 'All':
-        filtered_df = filtered_df[filtered_df['Country'] == selected_country]
+    if selected_sector != 'Tümü':
+        filtered_df = filtered_df[filtered_df['Ana_Sektör'] == selected_sector]
     
-    if selected_corporation != 'All':
-        filtered_df = filtered_df[filtered_df['Corporation'] == selected_corporation]
+    if selected_region != 'Tümü':
+        filtered_df = filtered_df[filtered_df['Bölge'] == selected_region]
     
-    if selected_manufacturer != 'All':
-        filtered_df = filtered_df[filtered_df['Manufacturer'] == selected_manufacturer]
+    filtered_df = filtered_df[filtered_df['Ciro_Büyüme'] >= growth_filter]
+    filtered_df = filtered_df[filtered_df['Net_Kar_Marjı'] >= profitability_filter]
     
-    if selected_molecule != 'All':
-        filtered_df = filtered_df[filtered_df['Molecule'] == selected_molecule]
+    # Sidebar istatistikleri
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📊 Filtre İstatistikleri")
     
-    if selected_specialty != 'All':
-        filtered_df = filtered_df[filtered_df['Specialty Product'] == selected_specialty]
+    col_s1, col_s2 = st.sidebar.columns(2)
+    with col_s1:
+        st.metric("Şirket Sayısı", f"{filtered_df['Şirket_Adı'].nunique():,}")
+    with col_s2:
+        st.metric("Ort. Büyüme", f"{filtered_df['Ciro_Büyüme'].mean():.1f}%")
     
-    st.sidebar.markdown(f"**Filtered Records:** {len(filtered_df):,}")
-    st.sidebar.markdown(f"**Data Coverage:** {len(df):,} total rows")
+    st.sidebar.metric("Toplam Ciro", f"${filtered_df['Ciro'].sum():,.0f}")
     
-    if st.sidebar.button("🔄 Reset All Filters"):
+    # Reset butonu
+    if st.sidebar.button("🔄 Filtreleri Sıfırla"):
         st.rerun()
     
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📊 Quick Stats")
-    
-    total_revenue_2024 = filtered_df['MAT Q3 2024 USD MNF'].sum()
-    total_revenue_2023 = filtered_df['MAT Q3 2023 USD MNF'].sum()
-    growth_rate = ((total_revenue_2024 - total_revenue_2023) / total_revenue_2023 * 100) if total_revenue_2023 > 0 else 0
-    
-    st.sidebar.metric("2024 Revenue", f"${total_revenue_2024:,.0f}", f"{growth_rate:+.1f}%")
-    st.sidebar.metric("Products", f"{filtered_df['International Product'].nunique():,}")
-    st.sidebar.metric("Manufacturers", f"{filtered_df['Manufacturer'].nunique():,}")
-    
+    # Ana içerik
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "📈 Executive Dashboard", 
-        "🔍 Market Intelligence", 
-        "🧬 Molecule Analytics",
-        "🏭 Manufacturer Scoring",
-        "💰 Pricing & Mix",
-        "📊 Data Explorer"
+        "🏠 Genel Bakış", 
+        "📈 Performans", 
+        "⚖️ Risk Analizi",
+        "💰 Değerleme",
+        "🔍 Detaylı Analiz",
+        "📊 Veri Keşfi"
     ])
     
     with tab1:
-        st.markdown('<div class="section-header">📊 EXECUTIVE SUMMARY & KPI DASHBOARD</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📊 GENEL BAKIŞ & TEMEL METRİKLER</div>', unsafe_allow_html=True)
         
+        # Üst metrik satırı
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            total_2024 = filtered_df['MAT Q3 2024 USD MNF'].sum()
-            total_2023 = filtered_df['MAT Q3 2023 USD MNF'].sum()
-            growth = ((total_2024 - total_2023) / total_2023 * 100) if total_2023 > 0 else 0
-            st.markdown(create_kpi_card("Total Revenue 2024", f"${total_2024:,.0f}", growth, "YoY"), unsafe_allow_html=True)
+            total_revenue = filtered_df['Ciro'].sum()
+            revenue_growth = filtered_df['Ciro_Büyüme'].mean()
+            st.markdown(create_metric_card(
+                "Toplam Ciro", 
+                f"${total_revenue:,.0f}", 
+                revenue_growth, 
+                "Ort. Büyüme"
+            ), unsafe_allow_html=True)
         
         with col2:
-            specialty_rev = filtered_df[filtered_df['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum()
-            specialty_share = (specialty_rev / total_2024 * 100) if total_2024 > 0 else 0
-            prev_share = (filtered_df[filtered_df['Specialty Product'] == 'Yes']['MAT Q3 2023 USD MNF'].sum() / 
-                         total_2023 * 100) if total_2023 > 0 else 0
-            share_change = specialty_share - prev_share
-            st.markdown(create_kpi_card("Specialty Share", f"{specialty_share:.1f}%", share_change, "YoY"), unsafe_allow_html=True)
+            avg_profit_margin = filtered_df['Net_Kar_Marjı'].mean()
+            profit_growth = ((filtered_df['Net_Kar'].mean() - df['Net_Kar'].mean()) / df['Net_Kar'].mean() * 100 
+                           if df['Net_Kar'].mean() > 0 else 0)
+            st.markdown(create_metric_card(
+                "Ort. Net Kar Marjı", 
+                f"{avg_profit_margin:.1f}%", 
+                profit_growth, 
+                "vs Genel"
+            ), unsafe_allow_html=True)
         
         with col3:
-            top_3_share = (filtered_df.groupby('Corporation')['MAT Q3 2024 USD MNF'].sum().nlargest(3).sum() / 
-                          total_2024 * 100) if total_2024 > 0 else 0
-            prev_top_3 = (filtered_df.groupby('Corporation')['MAT Q3 2023 USD MNF'].sum().nlargest(3).sum() / 
-                         total_2023 * 100) if total_2023 > 0 else 0
-            concentration_change = top_3_share - prev_top_3
-            st.markdown(create_kpi_card("Top 3 Concentration", f"{top_3_share:.1f}%", concentration_change, "YoY"), unsafe_allow_html=True)
+            market_cap = filtered_df['Piyasa_Değeri'].sum()
+            pe_ratio = filtered_df['F/K_Oranı'].mean()
+            st.markdown(create_metric_card(
+                "Toplam Piyasa Değeri", 
+                f"${market_cap:,.0f}", 
+                None, 
+                f"Ort. F/K: {pe_ratio:.1f}"
+            ), unsafe_allow_html=True)
         
         with col4:
-            avg_price_growth = ((filtered_df['MAT Q3 2024 SU Avg Price USD MNF'].mean() - 
-                               filtered_df['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                              filtered_df['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if filtered_df['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0
-            st.markdown(create_kpi_card("Avg Price Growth", f"{avg_price_growth:+.1f}%"), unsafe_allow_html=True)
+            efficiency = filtered_df['Varlık_Devir_Hızı'].mean()
+            debt_ratio = filtered_df['Borç_Oranı'].mean()
+            st.markdown(create_metric_card(
+                "Finansal Sağlık", 
+                f"{((efficiency*10) + (100-debt_ratio))/2:.0f}/100", 
+                None, 
+                f"Borç: {debt_ratio:.1f}%"
+            ), unsafe_allow_html=True)
         
+        # İkinci metrik satırı
         col5, col6, col7, col8 = st.columns(4)
         
         with col5:
-            volume_growth = ((filtered_df['MAT Q3 2024 Standard Units'].sum() - 
-                            filtered_df['MAT Q3 2023 Standard Units'].sum()) / 
-                           filtered_df['MAT Q3 2023 Standard Units'].sum() * 100) if filtered_df['MAT Q3 2023 Standard Units'].sum() > 0 else 0
-            st.markdown(create_kpi_card("Volume Growth", f"{volume_growth:+.1f}%"), unsafe_allow_html=True)
+            roe = (filtered_df['Net_Kar'] / filtered_df['Özkaynak']).mean() * 100
+            st.markdown(create_metric_card(
+                "Ort. Özkaynak Karlılığı (ROE)", 
+                f"{roe:.1f}%", 
+                None
+            ), unsafe_allow_html=True)
         
         with col6:
-            exit_count = len(filtered_df[(filtered_df['MAT Q3 2023 USD MNF'] > 0) & (filtered_df['MAT Q3 2024 USD MNF'] == 0)])
-            st.markdown(create_kpi_card("Product Exits", f"{exit_count}"), unsafe_allow_html=True)
+            current_ratio = filtered_df['Cari_Oran'].mean()
+            st.markdown(create_metric_card(
+                "Ort. Cari Oran", 
+                f"{current_ratio:.2f}", 
+                None
+            ), unsafe_allow_html=True)
         
         with col7:
-            molecule_count = filtered_df['Molecule'].nunique()
-            st.markdown(create_kpi_card("Active Molecules", f"{molecule_count}"), unsafe_allow_html=True)
+            volatility = filtered_df['Getiri_Volatilitesi'].mean()
+            st.markdown(create_metric_card(
+                "Ort. Volatilite", 
+                f"{volatility:.1f}%", 
+                None
+            ), unsafe_allow_html=True)
         
         with col8:
-            fragility_score = compute_growth_metrics(filtered_df)['fragility_score']
-            st.markdown(create_kpi_card("Growth Fragility", f"{fragility_score}/100"), unsafe_allow_html=True)
+            esg_score = filtered_df[['Çevresel_Skor', 'Sosyal_Skor', 'Yönetişim_Skoru']].mean().mean()
+            st.markdown(create_metric_card(
+                "ESG Skoru", 
+                f"{esg_score:.0f}/100", 
+                None
+            ), unsafe_allow_html=True)
         
-        st.markdown("---")
+        # Grafikler
+        col_chart1, col_chart2 = st.columns(2)
         
-        col_left, col_right = st.columns([2, 1])
+        with col_chart1:
+            st.plotly_chart(create_financial_health_chart(filtered_df), use_container_width=True)
         
-        with col_left:
-            st.plotly_chart(create_growth_decomposition_chart(filtered_df), use_container_width=True)
-            
-            st.plotly_chart(create_regional_growth_chart(filtered_df), use_container_width=True)
+        with col_chart2:
+            st.plotly_chart(create_growth_comparison_chart(filtered_df), use_container_width=True)
         
-        with col_right:
-            metrics = compute_growth_metrics(filtered_df)
-            summary = generate_executive_summary(metrics, filtered_df)
-            st.markdown(summary)
-            
-            st.markdown("---")
-            
-            st.markdown("### 🚨 Key Market Shifts")
-            shifts = detect_market_shifts(filtered_df)
-            for shift in shifts[:5]:
-                st.markdown(f'<div class="insight-card"><div class="insight-title">🔍 {shift}</div></div>', unsafe_allow_html=True)
+        # Hızlı içgörüler
+        st.markdown('<div class="section-header">🚀 HIZLI İÇGÖRÜLER</div>', unsafe_allow_html=True)
+        
+        insights = generate_advanced_insights(filtered_df)
+        
+        for insight in insights[:4]:
+            st.markdown(display_insight_box(
+                insight['title'],
+                insight['content'],
+                insight.get('metric'),
+                insight.get('threshold')
+            ), unsafe_allow_html=True)
     
     with tab2:
-        st.markdown('<div class="section-header">🔍 MARKET INTELLIGENCE & TREND ANALYSIS</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📈 PERFORMANS ANALİZİ</div>', unsafe_allow_html=True)
         
-        col1, col2 = st.columns(2)
+        # DuPont analizi
+        dupont_results = perform_dupont_analysis(filtered_df)
         
-        with col1:
-            st.plotly_chart(create_specialty_analysis_chart(filtered_df), use_container_width=True)
+        col_dup1, col_dup2, col_dup3, col_dup4 = st.columns(4)
         
-        with col2:
-            st.plotly_chart(create_price_volume_scatter(filtered_df), use_container_width=True)
+        with col_dup1:
+            st.markdown(create_metric_card(
+                "Net Kar Marjı", 
+                f"{dupont_results['net_kar_marji']:.1f}%", 
+                None
+            ), unsafe_allow_html=True)
         
-        st.markdown("---")
+        with col_dup2:
+            st.markdown(create_metric_card(
+                "Varlık Devir Hızı", 
+                f"{dupont_results['varlik_devir_hizi']:.2f}", 
+                None
+            ), unsafe_allow_html=True)
         
-        col3, col4 = st.columns(2)
+        with col_dup3:
+            st.markdown(create_metric_card(
+                "Özkaynak Çarpanı", 
+                f"{dupont_results['ozkaynak_carpani']:.2f}", 
+                None
+            ), unsafe_allow_html=True)
         
-        with col3:
-            st.markdown("### 🌍 Regional Performance")
-            regional_perf = filtered_df.groupby('Region').apply(lambda x: pd.Series({
-                'Revenue 2024': f"${x['MAT Q3 2024 USD MNF'].sum():,.0f}",
-                'Growth': f"{((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / x['MAT Q3 2023 USD MNF'].sum() * 100):+.1f}%" if x['MAT Q3 2023 USD MNF'].sum() > 0 else "N/A",
-                'Share': f"{(x['MAT Q3 2024 USD MNF'].sum() / filtered_df['MAT Q3 2024 USD MNF'].sum() * 100):.1f}%" if filtered_df['MAT Q3 2024 USD MNF'].sum() > 0 else "N/A",
-                'Price Trend': f"{((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100):+.1f}%" if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else "N/A"
-            })).reset_index()
-            
-            st.dataframe(regional_perf.style.background_gradient(subset=['Growth'], cmap='RdYlGn'), use_container_width=True)
+        with col_dup4:
+            st.markdown(create_metric_card(
+                "ROE (DuPont)", 
+                f"{dupont_results['roe_dupont']:.1f}%", 
+                None
+            ), unsafe_allow_html=True)
         
-        with col4:
-            st.markdown("### 🏢 Corporation Rankings")
-            corp_rankings = filtered_df.groupby('Corporation').apply(lambda x: pd.Series({
-                'Rank': 0,
-                'Revenue 2024': x['MAT Q3 2024 USD MNF'].sum(),
-                'Growth': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0,
-                'Specialty %': (x[x['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum() / x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-                'Top Molecule': x.groupby('Molecule')['MAT Q3 2024 USD MNF'].sum().idxmax() if len(x) > 0 else ''
-            })).reset_index()
-            
-            corp_rankings = corp_rankings.sort_values('Revenue 2024', ascending=False)
-            corp_rankings['Rank'] = range(1, len(corp_rankings) + 1)
-            
-            st.dataframe(corp_rankings.head(10).style.format({
-                'Revenue 2024': '${:,.0f}',
-                'Growth': '{:+.1f}%',
-                'Specialty %': '{:.1f}%'
-            }), use_container_width=True)
+        # Performans grafikleri
+        st.plotly_chart(create_correlation_heatmap(filtered_df), use_container_width=True)
         
-        st.markdown("---")
+        col_perf1, col_perf2 = st.columns(2)
         
-        st.markdown("### 📈 Sector Performance Analysis")
-        sector_analysis = filtered_df.groupby('Sector').apply(lambda x: pd.Series({
-            'Revenue 2024': x['MAT Q3 2024 USD MNF'].sum(),
-            'Growth vs 2023': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0,
-            'Avg Price 2024': x['MAT Q3 2024 SU Avg Price USD MNF'].mean(),
-            'Price Growth': ((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-            'Specialty Intensity': (x[x['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum() / x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0
-        })).reset_index()
+        with col_perf1:
+            # Büyüme dağılımı
+            fig_growth_dist = px.histogram(
+                filtered_df, 
+                x='Ciro_Büyüme',
+                nbins=30,
+                title='Büyüme Oranı Dağılımı',
+                labels={'Ciro_Büyüme': 'Büyüme (%)'},
+                color_discrete_sequence=['#3b82f6']
+            )
+            fig_growth_dist.update_layout(
+                height=400,
+                paper_bgcolor='#1e293b',
+                plot_bgcolor='#1e293b',
+                font_color='white'
+            )
+            st.plotly_chart(fig_growth_dist, use_container_width=True)
         
-        sector_analysis = sector_analysis.sort_values('Revenue 2024', ascending=False)
+        with col_perf2:
+            # Karlılık dağılımı
+            fig_profit_dist = px.box(
+                filtered_df,
+                y='Net_Kar_Marjı',
+                x='Ana_Sektör',
+                title='Sektörel Karlılık Dağılımı',
+                color='Ana_Sektör'
+            )
+            fig_profit_dist.update_layout(
+                height=400,
+                paper_bgcolor='#1e293b',
+                plot_bgcolor='#1e293b',
+                font_color='white'
+            )
+            st.plotly_chart(fig_profit_dist, use_container_width=True)
         
-        fig_sector = px.bar(
-            sector_analysis,
-            x='Sector',
-            y='Revenue 2024',
-            color='Growth vs 2023',
-            title='Sector Revenue & Growth',
-            color_continuous_scale='RdYlGn',
-            text=sector_analysis['Growth vs 2023'].apply(lambda x: f'{x:+.1f}%')
+        # Performans sıralaması
+        st.markdown("### 🏆 Performans Sıralaması")
+        
+        top_performers = filtered_df.nlargest(10, 'Ciro_Büyüme')[
+            ['Şirket_Adı', 'Ana_Sektör', 'Ciro_Büyüme', 'Net_Kar_Marjı', 'ROE', 'Piyasa_Değeri']
+        ].copy()
+        
+        top_performers['ROE'] = (top_performers['Net_Kar_Marjı'] * 
+                                filtered_df['Varlık_Devir_Hızı'].mean() * 
+                                filtered_df['Özkaynak'].mean() / filtered_df['Toplam_Varlıklar'].mean())
+        
+        st.dataframe(
+            top_performers.style.format({
+                'Ciro_Büyüme': '{:.1f}%',
+                'Net_Kar_Marjı': '{:.1f}%',
+                'ROE': '{:.1f}%',
+                'Piyasa_Değeri': '${:,.0f}'
+            }).background_gradient(subset=['Ciro_Büyüme'], cmap='RdYlGn'),
+            use_container_width=True
         )
-        
-        fig_sector.update_layout(
-            plot_bgcolor='#1f2937',
-            paper_bgcolor='#1f2937',
-            font_color='white',
-            height=500,
-        )
-        
-        st.plotly_chart(fig_sector, use_container_width=True)
     
     with tab3:
-        st.markdown('<div class="section-header">🧬 MOLECULE INTELLIGENCE & PORTFOLIO ANALYSIS</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">⚖️ RİSK ANALİZİ & ERKEN UYARI SİSTEMİ</div>', unsafe_allow_html=True)
         
-        st.plotly_chart(create_molecule_heatmap(filtered_df), use_container_width=True)
+        # Risk metrikleri
+        risk_metrics = calculate_risk_metrics(filtered_df)
         
-        col1, col2 = st.columns(2)
+        col_risk1, col_risk2, col_risk3, col_risk4 = st.columns(4)
         
-        with col1:
-            st.markdown("### 🚀 Growth Champions (Top 10)")
-            molecule_growth = filtered_df.groupby('Molecule').apply(lambda x: pd.Series({
-                'Revenue 2024': x['MAT Q3 2024 USD MNF'].sum(),
-                'Growth 2024 vs 2023': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0,
-                'Growth 2023 vs 2022': ((x['MAT Q3 2023 USD MNF'].sum() - x['MAT Q3 2022 USD MNF'].sum()) / x['MAT Q3 2022 USD MNF'].sum() * 100) if x['MAT Q3 2022 USD MNF'].sum() > 0 else 0,
-                'Avg Price 2024': x['MAT Q3 2024 SU Avg Price USD MNF'].mean(),
-                'Manufacturers': x['Manufacturer'].nunique()
-            })).reset_index()
+        with col_risk1:
+            st.markdown(create_metric_card(
+                "Ort. Beta Katsayısı", 
+                f"{risk_metrics.get('beta_risk', 0):.2f}", 
+                None,
+                "Piyasa Risk Ölçüsü"
+            ), unsafe_allow_html=True)
+        
+        with col_risk2:
+            st.markdown(create_metric_card(
+                "Likidite Riski", 
+                f"{risk_metrics.get('liquidity_risk', 0):.1f}%", 
+                None,
+                "Cari Oran < 1"
+            ), unsafe_allow_html=True)
+        
+        with col_risk3:
+            st.markdown(create_metric_card(
+                "Konsantrasyon Riski", 
+                f"{risk_metrics.get('concentration_risk', 0):.1f}%", 
+                None,
+                "Top 3 Sektör Payı"
+            ), unsafe_allow_html=True)
+        
+        with col_risk4:
+            st.markdown(create_metric_card(
+                "İflas Riski", 
+                f"{risk_metrics.get('bankruptcy_risk', 0):.1f}%", 
+                None,
+                "Yüksek Risk Z-Score"
+            ), unsafe_allow_html=True)
+        
+        # Altman Z-Score analizi
+        st.markdown("### 📊 Altman Z-Score Analizi")
+        altman_results = calculate_altman_z_score(filtered_df)
+        
+        if not altman_results.empty:
+            col_z1, col_z2 = st.columns(2)
             
-            growth_champions = molecule_growth[
-                (molecule_growth['Growth 2024 vs 2023'] > 10) &
-                (molecule_growth['Revenue 2024'] > 1000000)
-            ].sort_values('Growth 2024 vs 2023', ascending=False).head(10)
+            with col_z1:
+                # Risk dağılımı
+                risk_dist = altman_results['Risk_Kategorisi'].value_counts()
+                fig_risk = px.pie(
+                    values=risk_dist.values,
+                    names=risk_dist.index,
+                    title='Z-Score Risk Dağılımı',
+                    color_discrete_sequence=['#ef4444', '#f59e0b', '#10b981']
+                )
+                fig_risk.update_layout(
+                    height=400,
+                    paper_bgcolor='#1e293b',
+                    plot_bgcolor='#1e293b',
+                    font_color='white'
+                )
+                st.plotly_chart(fig_risk, use_container_width=True)
             
-            if len(growth_champions) > 0:
-                st.dataframe(growth_champions.style.format({
-                    'Revenue 2024': '${:,.0f}',
-                    'Growth 2024 vs 2023': '{:+.1f}%',
-                    'Growth 2023 vs 2022': '{:+.1f}%',
-                    'Avg Price 2024': '${:.3f}'
-                }).background_gradient(subset=['Growth 2024 vs 2023'], cmap='RdYlGn'), use_container_width=True)
-            else:
-                st.info("No molecules meeting growth champion criteria")
+            with col_z2:
+                # Z-Score dağılımı
+                fig_zscore = px.histogram(
+                    altman_results,
+                    x='Z_Score',
+                    nbins=30,
+                    title='Z-Score Dağılımı',
+                    labels={'Z_Score': 'Altman Z-Score'},
+                    color_discrete_sequence=['#8b5cf6']
+                )
+                # Risk bölgelerini işaretle
+                fig_zscore.add_vline(x=1.81, line_dash="dash", line_color="yellow")
+                fig_zscore.add_vline(x=2.99, line_dash="dash", line_color="green")
+                fig_zscore.add_annotation(x=1.4, y=0, text="Yüksek Risk", showarrow=False, font=dict(color="red"))
+                fig_zscore.add_annotation(x=2.4, y=0, text="Gri Bölge", showarrow=False, font=dict(color="yellow"))
+                fig_zscore.add_annotation(x=3.5, y=0, text="Düşük Risk", showarrow=False, font=dict(color="green"))
+                
+                fig_zscore.update_layout(
+                    height=400,
+                    paper_bgcolor='#1e293b',
+                    plot_bgcolor='#1e293b',
+                    font_color='white'
+                )
+                st.plotly_chart(fig_zscore, use_container_width=True)
         
-        with col2:
-            st.markdown("### ⚠️ Declining Molecules (Top 10)")
-            declining_molecules = molecule_growth[
-                (molecule_growth['Growth 2024 vs 2023'] < -5) &
-                (molecule_growth['Revenue 2024'] > 500000)
-            ].sort_values('Growth 2024 vs 2023').head(10)
+        # Risk-Getiri analizi
+        st.plotly_chart(create_risk_return_scatter(filtered_df), use_container_width=True)
+        
+        # Risk uyarıları
+        st.markdown("### ⚠️ Risk Uyarıları")
+        
+        warning_col1, warning_col2 = st.columns(2)
+        
+        with warning_col1:
+            # Yüksek borç riski
+            high_debt = filtered_df[filtered_df['Borç_Oranı'] > 70]
+            if len(high_debt) > 0:
+                st.markdown(f'''
+                <div class="warning-alert">
+                    <h4>🚨 Yüksek Borç Riski</h4>
+                    <p>{len(high_debt)} şirket borç oranı %70'in üzerinde</p>
+                    <p>Ortalama borç oranı: {high_debt['Borç_Oranı'].mean():.1f}%</p>
+                </div>
+                ''', unsafe_allow_html=True)
             
-            if len(declining_molecules) > 0:
-                st.dataframe(declining_molecules.style.format({
-                    'Revenue 2024': '${:,.0f}',
-                    'Growth 2024 vs 2023': '{:+.1f}%',
-                    'Growth 2023 vs 2022': '{:+.1f}%',
-                    'Avg Price 2024': '${:.3f}'
-                }).background_gradient(subset=['Growth 2024 vs 2023'], cmap='RdYlGn_r'), use_container_width=True)
-            else:
-                st.info("No significant declining molecules detected")
+            # Düşük likidite
+            low_liquidity = filtered_df[filtered_df['Cari_Oran'] < 1]
+            if len(low_liquidity) > 0:
+                st.markdown(f'''
+                <div class="warning-alert">
+                    <h4>💧 Likidite Riski</h4>
+                    <p>{len(low_liquidity)} şirket cari oranı 1'in altında</p>
+                    <p>Ortalama cari oran: {low_liquidity['Cari_Oran'].mean():.2f}</p>
+                </div>
+                ''', unsafe_allow_html=True)
         
-        st.markdown("---")
-        
-        st.markdown("### 🧪 Molecule Insights")
-        insights = analyze_molecules(filtered_df)
-        
-        for insight in insights:
-            st.markdown(f'<div class="insight-card"><div class="insight-title">💡 {insight}</div></div>', unsafe_allow_html=True)
-        
-        if not insights:
-            st.info("No significant molecule insights detected with current filters")
-        
-        st.markdown("---")
-        
-        st.markdown("### 📦 Formulation & Salt Analysis")
-        salt_analysis = filtered_df.groupby(['Molecule', 'Chemical Salt']).apply(lambda x: pd.Series({
-            'Revenue 2024': x['MAT Q3 2024 USD MNF'].sum(),
-            'Growth': ((x['MAT Q3 2024 USD MNF'].sum() - x['MAT Q3 2023 USD MNF'].sum()) / x['MAT Q3 2023 USD MNF'].sum() * 100) if x['MAT Q3 2023 USD MNF'].sum() > 0 else 0,
-            'Avg Price': x['MAT Q3 2024 SU Avg Price USD MNF'].mean(),
-            'Market Share %': (x['MAT Q3 2024 USD MNF'].sum() / filtered_df[filtered_df['Molecule'] == x.name[0]]['MAT Q3 2024 USD MNF'].sum() * 100) if filtered_df[filtered_df['Molecule'] == x.name[0]]['MAT Q3 2024 USD MNF'].sum() > 0 else 0
-        })).reset_index()
-        
-        top_salts = salt_analysis.sort_values('Revenue 2024', ascending=False).head(15)
-        
-        if len(top_salts) > 0:
-            st.dataframe(top_salts.style.format({
-                'Revenue 2024': '${:,.0f}',
-                'Growth': '{:+.1f}%',
-                'Avg Price': '${:.3f}',
-                'Market Share %': '{:.1f}%'
-            }), use_container_width=True)
+        with warning_col2:
+            # Yüksek volatilite
+            high_vol = filtered_df[filtered_df['Getiri_Volatilitesi'] > filtered_df['Getiri_Volatilitesi'].quantile(0.9)]
+            if len(high_vol) > 0:
+                st.markdown(f'''
+                <div class="warning-alert">
+                    <h4>📉 Yüksek Volatilite</h4>
+                    <p>{len(high_vol)} şirket en yüksek %10 volatilite diliminde</p>
+                    <p>Ortalama volatilite: {high_vol['Getiri_Volatilitesi'].mean():.1f}%</p>
+                </div>
+                ''', unsafe_allow_html=True)
+            
+            # Karlılık düşüşü
+            declining_profit = filtered_df[filtered_df['Net_Kar_Marjı'] < 0]
+            if len(declining_profit) > 0:
+                st.markdown(f'''
+                <div class="warning-alert">
+                    <h4>📉 Zarar Eden Şirketler</h4>
+                    <p>{len(declining_profit)} şirket net zarar durumunda</p>
+                    <p>Ortalama zarar marjı: {declining_profit['Net_Kar_Marjı'].mean():.1f}%</p>
+                </div>
+                ''', unsafe_allow_html=True)
     
     with tab4:
-        st.markdown('<div class="section-header">🏭 MANUFACTURER SCORING & RISK ASSESSMENT</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">💰 DEĞERLEME ANALİZİ & FİYATLAMA</div>', unsafe_allow_html=True)
         
-        scores = score_manufacturers(filtered_df)
+        # Değerleme grafikleri
+        st.plotly_chart(create_valuation_analysis(filtered_df), use_container_width=True)
         
-        st.markdown(render_manufacturer_scores(scores), unsafe_allow_html=True)
+        # Değerleme metrikleri
+        col_val1, col_val2, col_val3, col_val4 = st.columns(4)
         
-        st.markdown("---")
+        with col_val1:
+            median_pe = filtered_df['F/K_Oranı'].median()
+            st.markdown(create_metric_card(
+                "Medyan F/K Oranı", 
+                f"{median_pe:.1f}", 
+                None
+            ), unsafe_allow_html=True)
         
-        col1, col2 = st.columns(2)
+        with col_val2:
+            avg_pd_dd = filtered_df['PD/DD_Oranı'].mean()
+            st.markdown(create_metric_card(
+                "Ort. PD/DD Oranı", 
+                f"{avg_pd_dd:.2f}", 
+                None
+            ), unsafe_allow_html=True)
         
-        with col1:
-            st.markdown("### 📊 Pricing Power Analysis")
-            pricing_power = filtered_df.groupby('Manufacturer').apply(lambda x: pd.Series({
-                'Price Growth %': ((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                                  x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-                'Avg Price 2024': x['MAT Q3 2024 SU Avg Price USD MNF'].mean(),
-                'Price Premium vs Market': (x['MAT Q3 2024 SU Avg Price USD MNF'].mean() / 
-                                           filtered_df['MAT Q3 2024 SU Avg Price USD MNF'].mean() - 1) * 100 if filtered_df['MAT Q3 2024 SU Avg Price USD MNF'].mean() > 0 else 0,
-                'Specialty Concentration %': (x[x['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum() / 
-                                             x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0
-            })).reset_index()
+        with col_val3:
+            market_cap_to_revenue = filtered_df['Piyasa_Değeri'].sum() / filtered_df['Ciro'].sum()
+            st.markdown(create_metric_card(
+                "Piyasa Değeri/Ciro", 
+                f"{market_cap_to_revenue:.2f}", 
+                None
+            ), unsafe_allow_html=True)
+        
+        with col_val4:
+            peg_ratio = median_pe / filtered_df['Ciro_Büyüme'].mean() if filtered_df['Ciro_Büyüme'].mean() > 0 else 0
+            st.markdown(create_metric_card(
+                "PEG Oranı", 
+                f"{peg_ratio:.2f}", 
+                None
+            ), unsafe_allow_html=True)
+        
+        # Değer yatırımı fırsatları
+        st.markdown("### 💎 Değer Yatırımı Fırsatları")
+        
+        # Değer kriterleri
+        value_stocks = filtered_df[
+            (filtered_df['F/K_Oranı'] < filtered_df['F/K_Oranı'].median()) &
+            (filtered_df['PD/DD_Oranı'] < 1) &
+            (filtered_df['Net_Kar_Marjı'] > 5) &
+            (filtered_df['Ciro_Büyüme'] > 5) &
+            (filtered_df['Borç_Oranı'] < 50)
+        ].copy()
+        
+        if len(value_stocks) > 0:
+            value_stocks['Değer_Skoru'] = (
+                (1 / value_stocks['F/K_Oranı']) * 30 +
+                (1 / value_stocks['PD/DD_Oranı']) * 30 +
+                value_stocks['Net_Kar_Marjı'] * 20 +
+                value_stocks['Ciro_Büyüme'] * 10 +
+                (100 - value_stocks['Borç_Oranı']) * 10
+            ) / 100
             
-            top_pricing = pricing_power.nlargest(10, 'Price Growth %')
+            top_value = value_stocks.nlargest(10, 'Değer_Skoru')[
+                ['Şirket_Adı', 'Ana_Sektör', 'F/K_Oranı', 'PD/DD_Oranı', 
+                 'Net_Kar_Marjı', 'Ciro_Büyüme', 'Değer_Skoru']
+            ]
             
-            fig_pricing = px.bar(
-                top_pricing,
-                x='Manufacturer',
-                y='Price Growth %',
-                color='Specialty Concentration %',
-                title='Top 10 Manufacturers by Pricing Power',
-                color_continuous_scale='Viridis',
-                text=top_pricing['Price Growth %'].apply(lambda x: f'{x:+.1f}%')
+            st.dataframe(
+                top_value.style.format({
+                    'F/K_Oranı': '{:.1f}',
+                    'PD/DD_Oranı': '{:.2f}',
+                    'Net_Kar_Marjı': '{:.1f}%',
+                    'Ciro_Büyüme': '{:.1f}%',
+                    'Değer_Skoru': '{:.2f}'
+                }).background_gradient(subset=['Değer_Skoru'], cmap='RdYlGn'),
+                use_container_width=True
             )
-            
-            fig_pricing.update_layout(
-                plot_bgcolor='#1f2937',
-                paper_bgcolor='#1f2937',
-                font_color='white',
-                height=500,
-            )
-            
-            st.plotly_chart(fig_pricing, use_container_width=True)
-        
-        with col2:
-            st.markdown("### ⚠️ Margin Erosion Risks")
-            margin_risk = filtered_df.groupby('Manufacturer').apply(lambda x: pd.Series({
-                'Unit Price Change %': ((x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() - x['MAT Q3 2023 Unit Avg Price USD MNF'].mean()) / 
-                                       x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() > 0 else 0,
-                'SU Price Change %': ((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                                     x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-                'Divergence': (((x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() - x['MAT Q3 2023 Unit Avg Price USD MNF'].mean()) / 
-                              x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() * 100) - 
-                             ((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                              x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100)) if x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() > 0 and x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-                'Revenue 2024': x['MAT Q3 2024 USD MNF'].sum()
-            })).reset_index()
-            
-            high_risk = margin_risk[
-                (margin_risk['Unit Price Change %'] < -5) &
-                (margin_risk['Revenue 2024'] > 1000000)
-            ].sort_values('Unit Price Change %').head(10)
-            
-            if len(high_risk) > 0:
-                st.dataframe(high_risk.style.format({
-                    'Unit Price Change %': '{:+.1f}%',
-                    'SU Price Change %': '{:+.1f}%',
-                    'Divergence': '{:+.1f}pp',
-                    'Revenue 2024': '${:,.0f}'
-                }).background_gradient(subset=['Unit Price Change %'], cmap='RdYlGn_r'), use_container_width=True)
-            else:
-                st.success("No significant margin erosion risks detected")
-        
-        st.markdown("---")
-        
-        st.markdown("### 🎯 Dependence Risk Analysis")
-        dependence_analysis = filtered_df.groupby('Manufacturer').apply(lambda x: pd.Series({
-            'Top Product Share %': (x.groupby('International Product')['MAT Q3 2024 USD MNF'].sum().max() / 
-                                   x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-            'Top 3 Products Share %': (x.groupby('International Product')['MAT Q3 2024 USD MNF'].sum().nlargest(3).sum() / 
-                                      x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-            'Molecule Concentration %': (x.groupby('Molecule')['MAT Q3 2024 USD MNF'].sum().max() / 
-                                        x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-            'Country Concentration %': (x.groupby('Country')['MAT Q3 2024 USD MNF'].sum().max() / 
-                                       x['MAT Q3 2024 USD MNF'].sum() * 100) if x['MAT Q3 2024 USD MNF'].sum() > 0 else 0,
-            'Risk Score': 0
-        })).reset_index()
-        
-        dependence_analysis['Risk Score'] = (
-            dependence_analysis['Top Product Share %'] * 0.4 +
-            dependence_analysis['Top 3 Products Share %'] * 0.3 +
-            dependence_analysis['Molecule Concentration %'] * 0.2 +
-            dependence_analysis['Country Concentration %'] * 0.1
-        )
-        
-        high_dependence = dependence_analysis[dependence_analysis['Risk Score'] > 50].sort_values('Risk Score', ascending=False)
-        
-        if len(high_dependence) > 0:
-            st.warning(f"**🚨 High Dependence Risk Detected:** {len(high_dependence)} manufacturers with risk score > 50")
-            
-            fig_risk = px.scatter(
-                high_dependence,
-                x='Top Product Share %',
-                y='Molecule Concentration %',
-                size='Risk Score',
-                color='Risk Score',
-                hover_name='Manufacturer',
-                title='Manufacturer Dependence Risk Map',
-                color_continuous_scale='RdYlGn_r'
-            )
-            
-            fig_risk.update_layout(
-                plot_bgcolor='#1f2937',
-                paper_bgcolor='#1f2937',
-                font_color='white',
-                height=500,
-            )
-            
-            st.plotly_chart(fig_risk, use_container_width=True)
         else:
-            st.info("No manufacturers with critical dependence risks detected")
+            st.info("Mevcut filtrelerle değer yatırımı fırsatı bulunamadı")
+        
+        # Büyüme yatırımı fırsatları
+        st.markdown("### 🚀 Büyüme Yatırımı Fırsatları")
+        
+        growth_stocks = filtered_df[
+            (filtered_df['Ciro_Büyüme'] > 20) &
+            (filtered_df['Net_Kar_Marjı'] > 10) &
+            (filtered_df['ARGE_Harcaması'] > filtered_df['ARGE_Harcaması'].median())
+        ].copy()
+        
+        if len(growth_stocks) > 0:
+            growth_stocks['Büyüme_Skoru'] = (
+                growth_stocks['Ciro_Büyüme'] * 40 +
+                growth_stocks['Net_Kar_Marjı'] * 30 +
+                (growth_stocks['ARGE_Harcaması'] / growth_stocks['ARGE_Harcaması'].max() * 100) * 20 +
+                (100 - growth_stocks['Borç_Oranı']) * 10
+            ) / 100
+            
+            top_growth = growth_stocks.nlargest(10, 'Büyüme_Skoru')[
+                ['Şirket_Adı', 'Ana_Sektör', 'Ciro_Büyüme', 'Net_Kar_Marjı', 
+                 'ARGE_Harcaması', 'Borç_Oranı', 'Büyüme_Skoru']
+            ]
+            
+            st.dataframe(
+                top_growth.style.format({
+                    'Ciro_Büyüme': '{:.1f}%',
+                    'Net_Kar_Marjı': '{:.1f}%',
+                    'ARGE_Harcaması': '${:,.0f}',
+                    'Borç_Oranı': '{:.1f}%',
+                    'Büyüme_Skoru': '{:.2f}'
+                }).background_gradient(subset=['Büyüme_Skoru'], cmap='RdYlGn'),
+                use_container_width=True
+            )
+        else:
+            st.info("Mevcut filtrelerle büyüme yatırımı fırsatı bulunamadı")
     
     with tab5:
-        st.markdown('<div class="section-header">💰 PRICING & MIX ANALYSIS</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">🔍 DETAYLI ANALİZ & İLERİ METRİKLER</div>', unsafe_allow_html=True)
         
-        pricing_insights = analyze_pricing_mix(filtered_df)
+        # Regresyon analizi
+        st.markdown("### 📊 Regresyon Analizi")
         
-        if pricing_insights:
-            st.markdown("### 🔍 Pricing Intelligence")
-            for insight in pricing_insights[:10]:
-                st.markdown(f'<div class="insight-card"><div class="insight-title">💰 {insight}</div></div>', unsafe_allow_html=True)
-        else:
-            st.info("No significant pricing insights detected with current filters")
+        regression_results = perform_regression_analysis(filtered_df)
         
-        st.markdown("---")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 📊 Price vs Volume Matrix")
+        if regression_results:
+            col_reg1, col_reg2 = st.columns(2)
             
-            matrix_data = filtered_df.groupby(['Molecule', 'Specialty Product']).apply(lambda x: pd.Series({
-                'Price Growth %': ((x['MAT Q3 2024 SU Avg Price USD MNF'].mean() - x['MAT Q3 2023 SU Avg Price USD MNF'].mean()) / 
-                                  x['MAT Q3 2023 SU Avg Price USD MNF'].mean() * 100) if x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-                'Volume Growth %': ((x['MAT Q3 2024 Standard Units'].sum() - x['MAT Q3 2023 Standard Units'].sum()) / 
-                                   x['MAT Q3 2023 Standard Units'].sum() * 100) if x['MAT Q3 2023 Standard Units'].sum() > 0 else 0,
-                'Revenue 2024': x['MAT Q3 2024 USD MNF'].sum()
-            })).reset_index()
+            with col_reg1:
+                st.markdown("#### Korelasyon Katsayıları")
+                correlation_df = pd.DataFrame({
+                    'Metrik': regression_results['correlation'].index,
+                    'Korelasyon': regression_results['correlation'].values
+                })
+                st.dataframe(
+                    correlation_df.style.format({'Korelasyon': '{:.3f}'})
+                    .background_gradient(subset=['Korelasyon'], cmap='RdYlBu'),
+                    use_container_width=True
+                )
             
-            top_matrix = matrix_data.nlargest(20, 'Revenue 2024')
+            with col_reg2:
+                st.markdown("#### Regresyon Önem Derecesi")
+                importance_df = pd.DataFrame([
+                    {
+                        'Metrik': k,
+                        'R²': v['r_squared'],
+                        'p-Değeri': v['p_value'],
+                        'Önem': v['importance']
+                    }
+                    for k, v in regression_results['regression'].items()
+                ])
+                st.dataframe(
+                    importance_df.style.format({
+                        'R²': '{:.3f}',
+                        'p-Değeri': '{:.4f}',
+                        'Önem': '{:.3f}'
+                    }).background_gradient(subset=['Önem'], cmap='RdYlGn'),
+                    use_container_width=True
+                )
+        
+        # Çok değişkenli analiz
+        st.markdown("### 🎯 Çok Değişkenli Analiz")
+        
+        col_multi1, col_multi2 = st.columns(2)
+        
+        with col_multi1:
+            # Cluster analizi için hazırlık
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.cluster import KMeans
             
-            fig_matrix = px.scatter(
-                top_matrix,
-                x='Price Growth %',
-                y='Volume Growth %',
-                size='Revenue 2024',
-                color='Specialty Product',
-                hover_name='Molecule',
-                title='Price vs Volume Growth Matrix',
-                color_discrete_map={'Yes': '#8b5cf6', 'No': '#3b82f6'}
+            cluster_features = filtered_df[[
+                'Ciro_Büyüme', 'Net_Kar_Marjı', 'Borç_Oranı', 
+                'Varlık_Devir_Hızı', 'Getiri_Volatilitesi'
+            ]].dropna()
+            
+            if len(cluster_features) > 10:
+                scaler = StandardScaler()
+                scaled_features = scaler.fit_transform(cluster_features)
+                
+                # Optimal cluster sayısı (Elbow method)
+                wcss = []
+                for i in range(1, 11):
+                    kmeans = KMeans(n_clusters=i, random_state=42, n_init=10)
+                    kmeans.fit(scaled_features)
+                    wcss.append(kmeans.inertia_)
+                
+                fig_elbow = go.Figure()
+                fig_elbow.add_trace(go.Scatter(
+                    x=list(range(1, 11)),
+                    y=wcss,
+                    mode='lines+markers',
+                    line=dict(color='#3b82f6', width=2),
+                    marker=dict(size=8)
+                ))
+                
+                fig_elbow.update_layout(
+                    title='Elbow Method - Optimal Cluster Sayısı',
+                    xaxis_title='Cluster Sayısı',
+                    yaxis_title='WCSS',
+                    height=400,
+                    paper_bgcolor='#1e293b',
+                    plot_bgcolor='#1e293b',
+                    font_color='white'
+                )
+                st.plotly_chart(fig_elbow, use_container_width=True)
+        
+        with col_multi2:
+            # Senaryo analizi
+            st.markdown("#### 📈 Senaryo Analizi")
+            
+            base_growth = filtered_df['Ciro_Büyüme'].mean()
+            base_margin = filtered_df['Net_Kar_Marjı'].mean()
+            
+            scenarios = {
+                'İyimser': {'growth': base_growth * 1.5, 'margin': base_margin * 1.2},
+                'Baz': {'growth': base_growth, 'margin': base_margin},
+                'Kötümser': {'growth': base_growth * 0.5, 'margin': base_margin * 0.8}
+            }
+            
+            scenario_data = []
+            for name, values in scenarios.items():
+                scenario_data.append({
+                    'Senaryo': name,
+                    'Büyüme': values['growth'],
+                    'Karlılık': values['margin'],
+                    'Beklenen Getiri': values['growth'] * values['margin'] / 100
+                })
+            
+            scenario_df = pd.DataFrame(scenario_data)
+            st.dataframe(
+                scenario_df.style.format({
+                    'Büyüme': '{:.1f}%',
+                    'Karlılık': '{:.1f}%',
+                    'Beklenen Getiri': '{:.3f}'
+                }),
+                use_container_width=True
+            )
+        
+        # Zaman serisi analizi
+        st.markdown("### ⏳ Zaman Serisi Analizi")
+        
+        if 'Ciro_Q1' in filtered_df.columns and 'Ciro_Q4' in filtered_df.columns:
+            quarterly_data = filtered_df[['Ciro_Q1', 'Ciro_Q2', 'Ciro_Q3', 'Ciro']].mean()
+            quarterly_data.index = ['Q1', 'Q2', 'Q3', 'Q4']
+            
+            fig_quarterly = go.Figure()
+            fig_quarterly.add_trace(go.Scatter(
+                x=quarterly_data.index,
+                y=quarterly_data.values,
+                mode='lines+markers',
+                line=dict(color='#10b981', width=3),
+                marker=dict(size=10),
+                name='Ortalama Ciro'
+            ))
+            
+            fig_quarterly.update_layout(
+                title='Çeyreklik Ciro Trendi',
+                xaxis_title='Çeyrek',
+                yaxis_title='Ciro ($)',
+                height=400,
+                paper_bgcolor='#1e293b',
+                plot_bgcolor='#1e293b',
+                font_color='white'
             )
             
-            fig_matrix.update_layout(
-                plot_bgcolor='#1f2937',
-                paper_bgcolor='#1f2937',
-                font_color='white',
-                height=500,
-            )
-            
-            fig_matrix.add_hline(y=0, line_dash="dash", line_color="gray")
-            fig_matrix.add_vline(x=0, line_dash="dash", line_color="gray")
-            
-            st.plotly_chart(fig_matrix, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 📦 Pack Size Optimization")
-            
-            pack_analysis = filtered_df.groupby(['International Pack', 'International Size']).apply(lambda x: pd.Series({
-                'Avg Price per Unit': x['MAT Q3 2024 Unit Avg Price USD MNF'].mean(),
-                'Price per Size Unit': x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() / x['International Size'].mean() if x['International Size'].mean() > 0 else 0,
-                'Total Units': x['MAT Q3 2024 Units'].sum(),
-                'Revenue': x['MAT Q3 2024 USD MNF'].sum(),
-                'Efficiency Ratio': (x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() / x['International Size'].mean()) / 
-                                  filtered_df['MAT Q3 2024 Unit Avg Price USD MNF'].mean() * filtered_df['International Size'].mean() if filtered_df['MAT Q3 2024 Unit Avg Price USD MNF'].mean() > 0 and filtered_df['International Size'].mean() > 0 else 0
-            })).reset_index()
-            
-            pack_analysis = pack_analysis[pack_analysis['Revenue'] > 10000].sort_values('Efficiency Ratio', ascending=False)
-            
-            if len(pack_analysis) > 0:
-                st.dataframe(pack_analysis.head(15).style.format({
-                    'Avg Price per Unit': '${:.3f}',
-                    'Price per Size Unit': '${:.3f}',
-                    'Total Units': '{:,.0f}',
-                    'Revenue': '${:,.0f}',
-                    'Efficiency Ratio': '{:.2f}x'
-                }).background_gradient(subset=['Efficiency Ratio'], cmap='RdYlGn'), use_container_width=True)
-            else:
-                st.info("Insufficient data for pack size analysis")
-        
-        st.markdown("---")
-        
-        st.markdown("### 💸 Hidden Discounting Detection")
-        
-        discount_detection = filtered_df.groupby(['Manufacturer', 'Country']).apply(lambda x: pd.Series({
-            'Unit/SU Price Ratio': x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() / x['MAT Q3 2024 SU Avg Price USD MNF'].mean() if x['MAT Q3 2024 SU Avg Price USD MNF'].mean() > 0 else 0,
-            'Ratio Change vs 2023': ((x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() / x['MAT Q3 2024 SU Avg Price USD MNF'].mean()) - 
-                                    (x['MAT Q3 2023 Unit Avg Price USD MNF'].mean() / x['MAT Q3 2023 SU Avg Price USD MNF'].mean())) if x['MAT Q3 2024 SU Avg Price USD MNF'].mean() > 0 and x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 and x['MAT Q3 2023 SU Avg Price USD MNF'].mean() > 0 else 0,
-            'Revenue 2024': x['MAT Q3 2024 USD MNF'].sum(),
-            'Price Variance': x['MAT Q3 2024 Unit Avg Price USD MNF'].std() / x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() if x['MAT Q3 2024 Unit Avg Price USD MNF'].mean() > 0 else 0
-        })).reset_index()
-        
-        hidden_discounts = discount_detection[
-            (discount_detection['Unit/SU Price Ratio'] < 0.7) &
-            (discount_detection['Revenue 2024'] > 500000) &
-            (discount_detection['Price Variance'] > 0.3)
-        ].sort_values('Unit/SU Price Ratio')
-        
-        if len(hidden_discounts) > 0:
-            st.warning(f"**⚠️ Potential Hidden Discounting Detected:** {len(hidden_discounts)} manufacturer-country pairs")
-            
-            fig_discount = px.bar(
-                hidden_discounts.head(15),
-                x='Manufacturer',
-                y='Unit/SU Price Ratio',
-                color='Country',
-                title='Lowest Unit/SU Price Ratios (Potential Discounting)',
-                text=hidden_discounts.head(15)['Unit/SU Price Ratio'].apply(lambda x: f'{x:.2f}')
-            )
-            
-            fig_discount.update_layout(
-                plot_bgcolor='#1f2937',
-                paper_bgcolor='#1f2937',
-                font_color='white',
-                height=500,
-            )
-            
-            st.plotly_chart(fig_discount, use_container_width=True)
-        else:
-            st.success("No significant hidden discounting patterns detected")
+            st.plotly_chart(fig_quarterly, use_container_width=True)
     
     with tab6:
-        st.markdown('<div class="section-header">📊 DATA EXPLORER & RAW DATA</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">📊 VERİ KEŞFİ & HAM VERİ</div>', unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns(3)
+        # Veri keşfi kontrolleri
+        col_exp1, col_exp2, col_exp3 = st.columns(3)
         
-        with col1:
-            show_rows = st.selectbox("Show Rows", [100, 500, 1000, 5000, 10000], index=0)
+        with col_exp1:
+            show_rows = st.selectbox("Gösterilecek Satır Sayısı", [100, 500, 1000, 5000], index=0)
         
-        with col2:
-            sort_by = st.selectbox("Sort By", ['MAT Q3 2024 USD MNF', 'MAT Q3 2023 USD MNF', 'MAT Q3 2022 USD MNF', 
-                                              'MAT Q3 2024 SU Avg Price USD MNF', 'MAT Q3 2024 Standard Units'], index=0)
+        with col_exp2:
+            sort_column = st.selectbox(
+                "Sıralama Sütunu",
+                ['Ciro', 'Net_Kar_Marjı', 'Ciro_Büyüme', 'Piyasa_Değeri', 'F/K_Oranı'],
+                index=0
+            )
         
-        with col3:
-            sort_order = st.selectbox("Sort Order", ['Descending', 'Ascending'], index=0)
+        with col_exp3:
+            sort_direction = st.selectbox("Sıralama Yönü", ['Azalan', 'Artan'], index=0)
         
-        display_df = filtered_df.sort_values(sort_by, ascending=(sort_order == 'Ascending')).head(show_rows)
+        # Veri görüntüleme
+        display_data = filtered_df.sort_values(
+            sort_column, 
+            ascending=(sort_direction == 'Artan')
+        ).head(show_rows)
         
-        st.dataframe(display_df, use_container_width=True)
+        st.dataframe(display_data, use_container_width=True)
         
+        # Veri indirme
         st.markdown("---")
+        st.markdown("### 📥 Veri İndirme")
         
-        col_download1, col_download2 = st.columns(2)
+        col_dl1, col_dl2 = st.columns(2)
         
-        with col_download1:
+        with col_dl1:
             csv = filtered_df.to_csv(index=False)
-            b64 = base64.b64encode(csv.encode()).decode()
-            href = f'<a href="data:file/csv;base64,{b64}" download="pharma_data_filtered.csv" class="stButton">📥 Download Filtered Data (CSV)</a>'
-            st.markdown(href, unsafe_allow_html=True)
+            st.download_button(
+                label="📥 Filtrelenmiş Veriyi İndir (CSV)",
+                data=csv,
+                file_name="filtrelenmis_finansal_veri.csv",
+                mime="text/csv"
+            )
         
-        with col_download2:
-            sample_data = filtered_df.head(10000).to_csv(index=False)
-            b64_sample = base64.b64encode(sample_data.encode()).decode()
-            href_sample = f'<a href="data:file/csv;base64,{b64_sample}" download="pharma_data_sample.csv" class="stButton">📥 Download Sample (10k rows)</a>'
-            st.markdown(href_sample, unsafe_allow_html=True)
+        with col_dl2:
+            sample_size = st.slider("Örneklem Boyutu", 1000, 10000, 5000, 1000)
+            sample_data = filtered_df.sample(min(sample_size, len(filtered_df))).to_csv(index=False)
+            st.download_button(
+                label=f"📥 {sample_size} Satır Örnek Veri (CSV)",
+                data=sample_data,
+                file_name=f"ornek_finansal_veri_{sample_size}.csv",
+                mime="text/csv"
+            )
         
+        # Veri kalitesi raporu
         st.markdown("---")
+        st.markdown("### 🔍 Veri Kalitesi Raporu")
         
-        st.markdown("### 📈 Data Statistics")
+        quality_col1, quality_col2, quality_col3 = st.columns(3)
         
-        numeric_cols = filtered_df.select_dtypes(include=[np.number]).columns
+        with quality_col1:
+            missing_data = filtered_df.isnull().sum().sum()
+            total_cells = filtered_df.size
+            missing_percentage = (missing_data / total_cells) * 100
+            
+            st.metric(
+                "Eksik Veri Oranı",
+                f"{missing_percentage:.2f}%",
+                delta=f"{missing_data:,} hücre"
+            )
         
-        stats_df = pd.DataFrame({
-            'Column': numeric_cols,
-            'Mean': filtered_df[numeric_cols].mean(),
-            'Median': filtered_df[numeric_cols].median(),
-            'Std Dev': filtered_df[numeric_cols].std(),
-            'Min': filtered_df[numeric_cols].min(),
-            'Max': filtered_df[numeric_cols].max(),
-            'Non-Null %': (filtered_df[numeric_cols].notna().sum() / len(filtered_df) * 100)
-        })
+        with quality_col2:
+            duplicate_rows = filtered_df.duplicated().sum()
+            st.metric(
+                "Kopya Satırlar",
+                f"{duplicate_rows:,}",
+                delta=f"{(duplicate_rows/len(filtered_df)*100):.2f}%"
+            )
         
-        st.dataframe(stats_df.style.format({
-            'Mean': '{:,.2f}',
-            'Median': '{:,.2f}',
-            'Std Dev': '{:,.2f}',
-            'Min': '{:,.2f}',
-            'Max': '{:,.2f}',
-            'Non-Null %': '{:.1f}%'
-        }), use_container_width=True)
+        with quality_col3:
+            numeric_cols = filtered_df.select_dtypes(include=[np.number]).shape[1]
+            total_cols = filtered_df.shape[1]
+            st.metric(
+                "Sayısal Sütunlar",
+                f"{numeric_cols}/{total_cols}",
+                delta=f"{(numeric_cols/total_cols*100):.1f}%"
+            )
         
-        st.markdown("---")
+        # Veri istatistikleri
+        st.markdown("#### 📈 Sayısal Veri İstatistikleri")
         
-        st.markdown("### 🔄 Data Quality Check")
+        numeric_stats = filtered_df.select_dtypes(include=[np.number]).describe().T
+        numeric_stats = numeric_stats[['mean', 'std', 'min', '50%', 'max']]
+        numeric_stats.columns = ['Ortalama', 'Standart Sapma', 'Minimum', 'Medyan', 'Maksimum']
         
-        quality_issues = []
-        
-        zero_revenue_2024 = len(filtered_df[filtered_df['MAT Q3 2024 USD MNF'] == 0])
-        if zero_revenue_2024 > 0:
-            quality_issues.append(f"{zero_revenue_2024} rows with zero 2024 revenue")
-        
-        price_discrepancy = len(filtered_df[
-            (filtered_df['MAT Q3 2024 Unit Avg Price USD MNF'] > filtered_df['MAT Q3 2024 SU Avg Price USD MNF'] * 10)
-        ])
-        if price_discrepancy > 0:
-            quality_issues.append(f"{price_discrepancy} rows with Unit price > 10x SU price")
-        
-        missing_country = filtered_df['Country'].isna().sum()
-        if missing_country > 0:
-            quality_issues.append(f"{missing_country} rows missing country data")
-        
-        duplicate_products = len(filtered_df) - len(filtered_df.drop_duplicates(subset=[
-            'International Product', 'Country', 'Manufacturer'
-        ]))
-        if duplicate_products > 0:
-            quality_issues.append(f"{duplicate_products} potential duplicate product entries")
-        
-        if quality_issues:
-            st.warning("**Data Quality Issues Detected:**")
-            for issue in quality_issues:
-                st.markdown(f"- {issue}")
-        else:
-            st.success("✅ No major data quality issues detected")
+        st.dataframe(
+            numeric_stats.style.format('{:,.2f}'),
+            use_container_width=True
+        )
 
 if __name__ == "__main__":
+    import gc
+    gc.collect()
     main()
