@@ -1,3 +1,21 @@
+import sys
+import subprocess
+import pkg_resources
+
+# Gerekli paketleri kontrol et
+required = ['streamlit', 'pandas', 'numpy', 'plotly', 'openpyxl', 'scikit-learn', 'scipy', 'statsmodels', 'matplotlib']
+installed = {pkg.key for pkg in pkg_resources.working_set}
+missing = required - installed
+
+if missing:
+    print(f"Missing packages: {missing}")
+    print("Attempting to install missing packages...")
+    # Bu kısmı Streamlit Cloud'da çalıştırmayın
+    # subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+else:
+    print("All required packages are installed")
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -2777,4 +2795,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
