@@ -1915,219 +1915,216 @@ def main():
                         with col2:
                             st.markdown(
                                 create_metric_card(
-                                "Gizli İskonto Sinyali",
-                                f"{len(hidden_discount)}",
-                                prefix="",
-                                suffix=" üretici"
+                                    "Gizli İskonto Sinyali",
+                                    f"{len(hidden_discount)}",
+                                    prefix="",
+                                    suffix=" üretici"
                                 ),
                                 unsafe_allow_html=True
-                                )
-                                
+                            )
+                            
                             st.markdown(
-                            create_insight_box(
-                                "İskonto Analizi",
-                                f"Ortalama gerçekleşme: {hidden_discount['Price_Realization_Rate'].mean():.1f}%<br>"
-                                f"En düşük gerçekleşme: {hidden_discount['Price_Realization_Rate'].min():.1f}%<br><br>"
-                                "%95'in altındaki gerçekleşme oranları gizli iskonto sinyali verir.",
-                                box_type="warning"
-                            ),
-                            unsafe_allow_html=True
+                                create_insight_box(
+                                    "İskonto Analizi",
+                                    f"Ortalama gerçekleşme: {hidden_discount['Price_Realization_Rate'].mean():.1f}%<br>"
+                                    f"En düşük gerçekleşme: {hidden_discount['Price_Realization_Rate'].min():.1f}%<br><br>"
+                                    "%95'in altındaki gerçekleşme oranları gizli iskonto sinyali verir.",
+                                    box_type="warning"
+                                ),
+                                unsafe_allow_html=True
+                            )
+                        
+                        st.dataframe(
+                            hidden_discount.head(15)[
+                                ['Manufacturer', 'Realized_SU_Price', 'Reported_SU_Price', 
+                                 'Price_Realization_Rate', 'MAT Q3 2024 USD MNF']
+                            ],
+                            use_container_width=True
                         )
+                    else:
+                        st.success("Gizli iskonto sinyali tespit edilmedi.")
+                
+                with tabs[5]:
+                    st.markdown('<div class="section-header">📈 Detaylı Grafikler</div>', unsafe_allow_html=True)
                     
-                    st.dataframe(
-                        hidden_discount.head(15)[
-                            ['Manufacturer', 'Realized_SU_Price', 'Reported_SU_Price', 
-                             'Price_Realization_Rate', 'MAT Q3 2024 USD MNF']
-                        ],
-                        use_container_width=True
-                                )
-                            else:
-                                st.success("Gizli iskonto sinyali tespit edilmedi.")
-            
-            with tabs[5]:
-                st.markdown('<div class="section-header">📈 Detaylı Grafikler</div>', unsafe_allow_html=True)
-                
-                st.markdown("### 📊 Yıllara Göre Pazar Performansı")
-                
-                yearly_data = []
-                for year in [2022, 2023, 2024]:
-                    yearly_data.append({
-                        'Yıl': year,
-                        'Toplam Değer': filtered_df[f'MAT Q3 {year} USD MNF'].sum(),
-                        'Toplam Hacim': filtered_df[f'MAT Q3 {year} Standard Units'].sum(),
-                        'Ortalama Fiyat': filtered_df[f'MAT Q3 {year} SU Avg Price USD MNF'].mean()
-                    })
-                
-                df_yearly = pd.DataFrame(yearly_data)
-                
-                fig = make_subplots(
-                    rows=1, cols=3,
-                    subplot_titles=('Toplam Değer', 'Toplam Hacim', 'Ortalama Fiyat')
-                )
-                
-                fig.add_trace(
-                    go.Bar(x=df_yearly['Yıl'], y=df_yearly['Toplam Değer'], name='Değer', marker_color='#1a4d7a'),
-                    row=1, col=1
-                )
-                
-                fig.add_trace(
-                    go.Bar(x=df_yearly['Yıl'], y=df_yearly['Toplam Hacim'], name='Hacim', marker_color='#28a745'),
-                    row=1, col=2
-                )
-                
-                fig.add_trace(
-                    go.Bar(x=df_yearly['Yıl'], y=df_yearly['Ortalama Fiyat'], name='Fiyat', marker_color='#ffc107'),
-                    row=1, col=3
-                )
-                
-                fig.update_layout(height=400, showlegend=False)
-                st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown("---")
-                
-                st.markdown("### 🏢 Şirket Bazında Karşılaştırma")
-                
-                corp_comparison = filtered_df.groupby('Corporation').agg({
-                    'MAT Q3 2024 USD MNF': 'sum',
-                    'MAT Q3 2023 USD MNF': 'sum',
-                    'MAT Q3 2022 USD MNF': 'sum'
-                }).reset_index()
-                
-                corp_comparison['Growth_2324'] = corp_comparison.apply(
-                    lambda x: calculate_growth_rate(x['MAT Q3 2024 USD MNF'], x['MAT Q3 2023 USD MNF']),
-                    axis=1
-                )
-                
-                corp_comparison = corp_comparison.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(10)
-                
-                fig = px.bar(
-                    corp_comparison,
-                    x='Corporation',
-                    y=['MAT Q3 2022 USD MNF', 'MAT Q3 2023 USD MNF', 'MAT Q3 2024 USD MNF'],
-                    title='Top 10 Şirket - Yıllık Performans Karşılaştırması',
-                    barmode='group'
-                )
-                fig.update_layout(height=500, xaxis_tickangle=-45)
-                st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown("---")
-                
-                st.markdown("### ⚗️ Molekül Bazında Trend Analizi")
-                
-                molecule_trend = filtered_df.groupby('Molecule').agg({
-                    'MAT Q3 2024 USD MNF': 'sum',
-                    'MAT Q3 2023 USD MNF': 'sum',
-                    'MAT Q3 2022 USD MNF': 'sum'
-                }).reset_index()
-                
-                molecule_trend = molecule_trend.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(10)
-                
-                fig = go.Figure()
-                
-                for idx, row in molecule_trend.iterrows():
-                    fig.add_trace(go.Scatter(
-                        x=[2022, 2023, 2024],
-                        y=[row['MAT Q3 2022 USD MNF'], row['MAT Q3 2023 USD MNF'], row['MAT Q3 2024 USD MNF']],
-                        mode='lines+markers',
-                        name=row['Molecule'],
-                        line=dict(width=3),
-                        marker=dict(size=10)
-                    ))
-                
-                fig.update_layout(
-                    title='Top 10 Molekül - Trend Analizi',
-                    xaxis_title='Yıl',
-                    yaxis_title='Değer (USD MNF)',
-                    height=500
-                )
-                st.plotly_chart(fig, use_container_width=True)
-                
-                st.markdown("---")
-                
-                st.markdown("### 🌍 Bölgesel Dağılım (2024)")
-                
-                regional_dist = filtered_df.groupby('Region').agg({
-                    'MAT Q3 2024 USD MNF': 'sum'
-                }).reset_index()
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    fig = px.pie(
-                        regional_dist,
-                        values='MAT Q3 2024 USD MNF',
-                        names='Region',
-                        title='Bölgesel Pazar Payı Dağılımı'
+                    st.markdown("### 📊 Yıllara Göre Pazar Performansı")
+                    
+                    yearly_data = []
+                    for year in [2022, 2023, 2024]:
+                        yearly_data.append({
+                            'Yıl': year,
+                            'Toplam Değer': filtered_df[f'MAT Q3 {year} USD MNF'].sum(),
+                            'Toplam Hacim': filtered_df[f'MAT Q3 {year} Standard Units'].sum(),
+                            'Ortalama Fiyat': filtered_df[f'MAT Q3 {year} SU Avg Price USD MNF'].mean()
+                        })
+                    
+                    df_yearly = pd.DataFrame(yearly_data)
+                    
+                    fig = make_subplots(
+                        rows=1, cols=3,
+                        subplot_titles=('Toplam Değer', 'Toplam Hacim', 'Ortalama Fiyat')
                     )
-                    fig.update_layout(height=400)
+                    
+                    fig.add_trace(
+                        go.Bar(x=df_yearly['Yıl'], y=df_yearly['Toplam Değer'], name='Değer', marker_color='#1a4d7a'),
+                        row=1, col=1
+                    )
+                    
+                    fig.add_trace(
+                        go.Bar(x=df_yearly['Yıl'], y=df_yearly['Toplam Hacim'], name='Hacim', marker_color='#28a745'),
+                        row=1, col=2
+                    )
+                    
+                    fig.add_trace(
+                        go.Bar(x=df_yearly['Yıl'], y=df_yearly['Ortalama Fiyat'], name='Fiyat', marker_color='#ffc107'),
+                        row=1, col=3
+                    )
+                    
+                    fig.update_layout(height=400, showlegend=False)
                     st.plotly_chart(fig, use_container_width=True)
-                
-                with col2:
-                    fig = px.treemap(
-                        regional_dist,
-                        path=['Region'],
-                        values='MAT Q3 2024 USD MNF',
-                        title='Bölgesel Değer Haritası'
+                    
+                    st.markdown("---")
+                    
+                    st.markdown("### 🏢 Şirket Bazında Karşılaştırma")
+                    
+                    corp_comparison = filtered_df.groupby('Corporation').agg({
+                        'MAT Q3 2024 USD MNF': 'sum',
+                        'MAT Q3 2023 USD MNF': 'sum',
+                        'MAT Q3 2022 USD MNF': 'sum'
+                    }).reset_index()
+                    
+                    corp_comparison['Growth_2324'] = corp_comparison.apply(
+                        lambda x: calculate_growth_rate(x['MAT Q3 2024 USD MNF'], x['MAT Q3 2023 USD MNF']),
+                        axis=1
                     )
-                    fig.update_layout(height=400)
+                    
+                    corp_comparison = corp_comparison.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(10)
+                    
+                    fig = px.bar(
+                        corp_comparison,
+                        x='Corporation',
+                        y=['MAT Q3 2022 USD MNF', 'MAT Q3 2023 USD MNF', 'MAT Q3 2024 USD MNF'],
+                        title='Top 10 Şirket - Yıllık Performans Karşılaştırması',
+                        barmode='group'
+                    )
+                    fig.update_layout(height=500, xaxis_tickangle=-45)
                     st.plotly_chart(fig, use_container_width=True)
-            
-            with tabs[6]:
-                st.markdown('<div class="section-header">📋 Veri Tablosu</div>', unsafe_allow_html=True)
+                    
+                    st.markdown("---")
+                    
+                    st.markdown("### ⚗️ Molekül Bazında Trend Analizi")
+                    
+                    molecule_trend = filtered_df.groupby('Molecule').agg({
+                        'MAT Q3 2024 USD MNF': 'sum',
+                        'MAT Q3 2023 USD MNF': 'sum',
+                        'MAT Q3 2022 USD MNF': 'sum'
+                    }).reset_index()
+                    
+                    molecule_trend = molecule_trend.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(10)
+                    
+                    fig = go.Figure()
+                    
+                    for idx, row in molecule_trend.iterrows():
+                        fig.add_trace(go.Scatter(
+                            x=[2022, 2023, 2024],
+                            y=[row['MAT Q3 2022 USD MNF'], row['MAT Q3 2023 USD MNF'], row['MAT Q3 2024 USD MNF']],
+                            mode='lines+markers',
+                            name=row['Molecule'],
+                            line=dict(width=3),
+                            marker=dict(size=10)
+                        ))
+                    
+                    fig.update_layout(
+                        title='Top 10 Molekül - Trend Analizi',
+                        xaxis_title='Yıl',
+                        yaxis_title='Değer (USD MNF)',
+                        height=500
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    st.markdown("---")
+                    
+                    st.markdown("### 🌍 Bölgesel Dağılım (2024)")
+                    
+                    regional_dist = filtered_df.groupby('Region').agg({
+                        'MAT Q3 2024 USD MNF': 'sum'
+                    }).reset_index()
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        fig = px.pie(
+                            regional_dist,
+                            values='MAT Q3 2024 USD MNF',
+                            names='Region',
+                            title='Bölgesel Pazar Payı Dağılımı'
+                        )
+                        fig.update_layout(height=400)
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    with col2:
+                        fig = px.treemap(
+                            regional_dist,
+                            path=['Region'],
+                            values='MAT Q3 2024 USD MNF',
+                            title='Bölgesel Değer Haritası'
+                        )
+                        fig.update_layout(height=400)
+                        st.plotly_chart(fig, use_container_width=True)
                 
-                st.markdown("### 🔍 Ham Veri Görünümü")
-                
-                display_columns = st.multiselect(
-                    'Görüntülenecek kolonları seçin:',
-                    options=filtered_df.columns.tolist(),
-                    default=['Molecule', 'Manufacturer', 'Country', 'Specialty Product', 
-                             'MAT Q3 2024 USD MNF', 'MAT Q3 2024 Standard Units']
-                )
-                
-                if display_columns:
-                    st.dataframe(
-                        filtered_df[display_columns].head(100),
-                        use_container_width=True,
-                        height=600
+                with tabs[6]:
+                    st.markdown('<div class="section-header">📋 Veri Tablosu</div>', unsafe_allow_html=True)
+                    
+                    st.markdown("### 🔍 Ham Veri Görünümü")
+                    
+                    display_columns = st.multiselect(
+                        'Görüntülenecek kolonları seçin:',
+                        options=filtered_df.columns.tolist(),
+                        default=['Molecule', 'Manufacturer', 'Country', 'Specialty Product', 
+                                 'MAT Q3 2024 USD MNF', 'MAT Q3 2024 Standard Units']
                     )
                     
-                    st.markdown(f"*Gösterilen: İlk 100 satır / Toplam {len(filtered_df):,} satır*")
-                    
-                    csv = filtered_df[display_columns].to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 CSV İndir",
-                        data=csv,
-                        file_name='pharma_analytics_filtered.csv',
-                        mime='text/csv',
-                    )
-                else:
-                    st.info("Lütfen en az bir kolon seçin.")
-            
-            st.markdown("""
-            <div class="footer">
-                <strong>Pharma Analytics Intelligence Platform</strong><br>
-                Principal Data Engineering & Advanced Market Analytics<br>
-                © 2024 - Tüm hakları saklıdır
+                    if display_columns:
+                        st.dataframe(
+                            filtered_df[display_columns].head(100),
+                            use_container_width=True,
+                            height=600
+                        )
+                        
+                        st.markdown(f"*Gösterilen: İlk 100 satır / Toplam {len(filtered_df):,} satır*")
+                        
+                        csv = filtered_df[display_columns].to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            label="📥 CSV İndir",
+                            data=csv,
+                            file_name='pharma_analytics_filtered.csv',
+                            mime='text/csv',
+                        )
+                    else:
+                        st.info("Lütfen en az bir kolon seçin.")
+                
+                st.markdown("""
+                <div class="footer">
+                    <strong>Pharma Analytics Intelligence Platform</strong><br>
+                    Principal Data Engineering & Advanced Market Analytics<br>
+                    © 2024 - Tüm hakları saklıdır
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="insight-box">
+            <div class="insight-title">👋 Hoş Geldiniz!</div>
+            <div class="insight-text">
+                Lütfen analiz için bir CSV veya Excel dosyası yükleyin.<br><br>
+                <strong>Özellikler:</strong><br>
+                ✅ 500K+ satırlık büyük veri desteği<br>
+                ✅ Virgül ondalık ayraç desteği<br>
+                ✅ Gerçek zamanlı analitik<br>
+                ✅ 20+ ileri düzey içgörü<br>
+                ✅ Production-grade performans
             </div>
-            """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-    <div class="insight-box">
-        <div class="insight-title">👋 Hoş Geldiniz!</div>
-        <div class="insight-text">
-            Lütfen analiz için bir CSV veya Excel dosyası yükleyin.<br><br>
-            <strong>Özellikler:</strong><br>
-            ✅ 500K+ satırlık büyük veri desteği<br>
-            ✅ Virgül ondalık ayraç desteği<br>
-            ✅ Gerçek zamanlı analitik<br>
-            ✅ 20+ ileri düzey içgörü<br>
-            ✅ Production-grade performans
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-if name == "main":
-main()
-
-
-
+if __name__ == "__main__":
+    main()
