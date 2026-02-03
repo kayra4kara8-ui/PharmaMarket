@@ -1940,9 +1940,9 @@ def main():
                              'Price_Realization_Rate', 'MAT Q3 2024 USD MNF']
                         ],
                         use_container_width=True
-                    )
-                else:
-                    st.success("Gizli iskonto sinyali tespit edilmedi.")
+                                )
+                            else:
+                                st.success("Gizli iskonto sinyali tespit edilmedi.")
             
             with tabs[5]:
                 st.markdown('<div class="section-header">📈 Detaylı Grafikler</div>', unsafe_allow_html=True)
@@ -2128,5 +2128,6 @@ else:
 
 if name == "main":
 main()
+
 
 
