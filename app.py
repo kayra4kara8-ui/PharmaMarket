@@ -1,21 +1,3 @@
-import sys
-import subprocess
-import pkg_resources
-
-# Gerekli paketleri kontrol et
-required = ['streamlit', 'pandas', 'numpy', 'plotly', 'openpyxl', 'scikit-learn', 'scipy', 'statsmodels', 'matplotlib']
-installed = {pkg.key for pkg in pkg_resources.working_set}
-missing = required - installed
-
-if missing:
-    print(f"Missing packages: {missing}")
-    print("Attempting to install missing packages...")
-    # Bu kısmı Streamlit Cloud'da çalıştırmayın
-    # subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
-else:
-    print("All required packages are installed")
-
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -36,13 +18,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
 from statsmodels.tsa.seasonal import seasonal_decompose
-# app.py dosyasının başındaki import bölümünü şu şekilde değiştirin:
-try:
-    import networkx as nx
-    NETWORKX_AVAILABLE = True
-except ImportError:
-    NETWORKX_AVAILABLE = False
-    print("Warning: networkx not available. Some features will be disabled.")from scipy.spatial.distance import pdist, squareform
+# Networkx'i kaldırın veya yorum satırı yapın
+# import networkx as nx
+from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 import warnings
 warnings.filterwarnings('ignore')
@@ -2795,5 +2773,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
