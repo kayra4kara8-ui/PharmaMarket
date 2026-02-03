@@ -31,14 +31,23 @@ import math
 # 1. PROFESYONEL KONFİGÜRASYON VE STİL AYARLARI
 # ================================================
 st.set_page_config(
-    page_title="PharmaIntelligence Pro | İlaç Pazarı Analizi",
-    page_icon="💊",
+    page_title="PharmaIntelligence Pro | Enterprise Pharma Analytics",
+    page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'Yardım Al': 'https://pharmaintelligence.com/destek',
-        'Hata Bildir': "https://pharmaintelligence.com/hata",
-        'Hakkında': "### PharmaIntelligence Pro v4.0\nInternational Product Analizi Dahil"
+        'Get help': 'https://pharmaintelligence.com/enterprise-support',
+        'Report a bug': "https://pharmaintelligence.com/enterprise-bug-report",
+        'About': """
+        ### PharmaIntelligence Enterprise v5.0
+        • International Product Analytics
+        • Predictive Modeling
+        • Real-time Market Intelligence
+        • Advanced Segmentation
+        • Automated Reporting
+        • Machine Learning Integration
+        © 2024 PharmaIntelligence Inc. All Rights Reserved
+        """
     }
 )
 
@@ -2529,3 +2538,4 @@ if __name__ == "__main__":
         
         if st.button("🔄 Sayfayı Yenile", width='stretch'):
             st.rerun()
+
