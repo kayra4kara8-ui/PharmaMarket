@@ -1915,15 +1915,15 @@ def main():
                         with col2:
                             st.markdown(
                                 create_metric_card(
-"Gizli İskonto Sinyali",
-f"{len(hidden_discount)}",
-prefix="",
-suffix=" üretici"
-),
-unsafe_allow_html=True
-)
-
-st.markdown(
+                                "Gizli İskonto Sinyali",
+                                f"{len(hidden_discount)}",
+                                prefix="",
+                                suffix=" üretici"
+                                ),
+                                unsafe_allow_html=True
+                                )
+                                
+                            st.markdown(
                             create_insight_box(
                                 "İskonto Analizi",
                                 f"Ortalama gerçekleşme: {hidden_discount['Price_Realization_Rate'].mean():.1f}%<br>"
@@ -2128,4 +2128,5 @@ else:
 
 if name == "main":
 main()
+
 
