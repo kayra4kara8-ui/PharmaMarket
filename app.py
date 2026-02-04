@@ -1,3632 +1,1534 @@
-# ============================================================================
-# PHARMAINTELLIGENCE PRO - ENTERPRISE PHARMACEUTICAL ANALYTICS PLATFORM
-# ============================================================================
-# Version: 7.0 - PROFESSIONAL EDITION
-# Lines: 4000+
-# Author: Enterprise Analytics Team
-# License: Proprietary
-# Copyright: © 2024 PharmaIntelligence Inc.
-# 
-# Features:
-# - Advanced Machine Learning (RF, GBM, XGBoost-style)
-# - Multi-dimensional Clustering & Segmentation
-# - Anomaly Detection with Severity Scoring
-# - Predictive Analytics & Forecasting
-# - Interactive Dashboards & Visualizations
-# - Geographic Market Analysis
-# - Competitive Intelligence
-# - What-If Scenario Analysis
-# - Comprehensive Reporting & Export
-# ============================================================================
-
+# app.py
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import warnings
-warnings.filterwarnings('ignore')
+import numpy as np
+from io import BytesIO
 
-# Machine Learning & Statistics
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
-from sklearn.ensemble import (
-    IsolationForest, 
-    RandomForestRegressor, 
-    GradientBoostingRegressor,
-    RandomForestClassifier,
-    ExtraTreesRegressor
-)
-from sklearn.decomposition import PCA, TruncatedSVD
-from sklearn.manifold import TSNE
-from sklearn.metrics import (
-    silhouette_score, 
-    calinski_harabasz_score,
-    davies_bouldin_score,
-    mean_absolute_error, 
-    mean_squared_error,
-    r2_score,
-    mean_absolute_percentage_error
-)
-from sklearn.model_selection import (
-    train_test_split, 
-    cross_val_score,
-    GridSearchCV,
-    KFold
-)
-from sklearn.linear_model import Ridge, Lasso, ElasticNet, LinearRegression
-from scipy import stats
-from scipy.stats import pearsonr, spearmanr, shapiro, normaltest
-from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
+st.set_page_config(page_title="Pharma Commercial Analytics", layout="wide", initial_sidebar_state="expanded")
 
-# Utilities
-from datetime import datetime, timedelta
-import json
-from io import BytesIO, StringIO
-import time
-import gc
-import traceback
-from typing import Dict, List, Optional, Tuple, Union, Any, Callable
-import math
-import re
-from collections import defaultdict, Counter, OrderedDict
-import hashlib
-import base64
-
-# ============================================================================
-# GLOBAL CONFIGURATION
-# ============================================================================
-
-class Config:
-    """
-    Centralized application configuration management
+@st.cache_data
+def load_data(file):
+    df = pd.read_excel(file)
     
-    This class contains all application-wide settings including:
-    - Display configurations
-    - Performance parameters
-    - ML hyperparameters
-    - UI styling constants
-    """
-    
-    # Application metadata
-    APP_NAME = "PharmaIntelligence Pro"
-    VERSION = "7.0"
-    BUILD_DATE = "2024-02-04"
-    ORGANIZATION = "Enterprise Analytics Team"
-    
-    # Display settings
-    MAX_ROWS_DISPLAY = 1000
-    MAX_ROWS_EXPORT = 100000
-    CHART_HEIGHT_STANDARD = 500
-    CHART_HEIGHT_LARGE = 700
-    CHART_HEIGHT_SMALL = 400
-    CHART_HEIGHT_XLARGE = 900
-    
-    # Performance settings
-    SAMPLE_SIZE_DEFAULT = 5000
-    SAMPLE_SIZE_MIN = 1000
-    SAMPLE_SIZE_MAX = 50000
-    CACHE_TTL = 3600  # 1 hour
-    CHUNK_SIZE = 10000
-    
-    # ML parameters
-    ML_MIN_SAMPLES = 50
-    ML_MIN_SAMPLES_CLUSTERING = 100
-    ML_MIN_SAMPLES_ANOMALY = 30
-    RANDOM_STATE = 42
-    N_JOBS = -1
-    CV_FOLDS = 5
-    
-    # Clustering configuration
-    DEFAULT_N_CLUSTERS = 4
-    MAX_N_CLUSTERS = 15
-    MIN_N_CLUSTERS = 2
-    MIN_SAMPLES_PER_CLUSTER = 10
-    
-    # Anomaly detection
-    DEFAULT_CONTAMINATION = 0.1
-    MIN_CONTAMINATION = 0.01
-    MAX_CONTAMINATION = 0.3
-    
-    # Forecasting
-    MAX_FORECAST_YEARS = 10
-    MIN_FORECAST_YEARS = 1
-    DEFAULT_FORECAST_YEARS = 3
-    
-    # Color schemes - Professional palette
-    COLOR_PRIMARY = '#2d7dd2'
-    COLOR_SECONDARY = '#2acaea'
-    COLOR_SUCCESS = '#2dd4a3'
-    COLOR_WARNING = '#fbbf24'
-    COLOR_DANGER = '#ff4444'
-    COLOR_INFO = '#60a5fa'
-    COLOR_PURPLE = '#a855f7'
-    COLOR_PINK = '#ec4899'
-    COLOR_ORANGE = '#f97316'
-    COLOR_TEAL = '#14b8a6'
-    
-    # Chart color palettes
-    PALETTE_CATEGORICAL = [
-        '#2d7dd2', '#2acaea', '#2dd4a3', '#fbbf24', 
-        '#ff4444', '#a855f7', '#ec4899', '#f97316'
+    numeric_cols = [
+        'MAT Q3 2022 USD MNF', 'MAT Q3 2022 Standard Units', 'MAT Q3 2022 Units',
+        'MAT Q3 2022 SU Avg Price USD MNF', 'MAT Q3 2022 Unit Avg Price USD MNF',
+        'MAT Q3 2023 USD MNF', 'MAT Q3 2023 Standard Units', 'MAT Q3 2023 Units',
+        'MAT Q3 2023 SU Avg Price USD MNF', 'MAT Q3 2023 Unit Avg Price USD MNF',
+        'MAT Q3 2024 USD MNF', 'MAT Q3 2024 Standard Units', 'MAT Q3 2024 Units',
+        'MAT Q3 2024 SU Avg Price USD MNF', 'MAT Q3 2024 Unit Avg Price USD MNF'
     ]
     
-    PALETTE_SEQUENTIAL = [
-        '#0f172a', '#1e293b', '#334155', '#475569',
-        '#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'
-    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype(str).str.replace(',', '.').str.replace(' ', '')
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            else:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
     
-    # Statistical thresholds
-    SIGNIFICANCE_LEVEL = 0.05
-    CONFIDENCE_LEVEL = 0.95
-    OUTLIER_STD_THRESHOLD = 3
+    df.fillna(0, inplace=True)
     
-    # Export settings
-    EXPORT_FORMATS = ['csv', 'json', 'xlsx', 'html']
-    EXPORT_ENCODING = 'utf-8'
-    
-    # Data quality thresholds
-    MIN_DATA_QUALITY_SCORE = 0.7
-    MAX_MISSING_PERCENTAGE = 30
-    
-    # UI Settings
-    SIDEBAR_WIDTH = 300
-    ANIMATION_DURATION = 500
-    TOAST_DURATION = 3000
+    return df
 
-# ============================================================================
-# PROFESSIONAL CSS STYLING
-# ============================================================================
+def apply_filters(df, country_filter, corp_filter, mol_filter, sector_filter, panel_filter, year_filter, specialty_filter):
+    filtered = df.copy()
+    
+    if country_filter and len(country_filter) > 0:
+        filtered = filtered[filtered['Country'].isin(country_filter)]
+    
+    if corp_filter and corp_filter != 'All':
+        filtered = filtered[filtered['Corporation'] == corp_filter]
+    
+    if mol_filter and mol_filter != 'All':
+        filtered = filtered[filtered['Molecule'] == mol_filter]
+    
+    if sector_filter and sector_filter != 'All':
+        filtered = filtered[filtered['Sector'] == sector_filter]
+    
+    if panel_filter and panel_filter != 'All':
+        filtered = filtered[filtered['Panel'] == panel_filter]
+    
+    if specialty_filter and specialty_filter != 'All':
+        filtered = filtered[filtered['Specialty Product'] == specialty_filter]
+    
+    return filtered
 
-PROFESSIONAL_CSS = """
-<style>
-    /* ========== IMPORTS & FONTS ========== */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
-    
-    * {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        letter-spacing: -0.01em;
-    }
-    
-    code, pre {
-        font-family: 'JetBrains Mono', monospace;
-    }
-    
-    /* ========== GLOBAL STYLES ========== */
-    .main {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-        padding: 0;
-    }
-    
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        max-width: 100%;
-    }
-    
-    /* ========== HEADERS ========== */
-    .section-header {
-        background: linear-gradient(135deg, #2d7dd2 0%, #2acaea 100%);
-        padding: 2.5rem;
-        border-radius: 20px;
-        margin-bottom: 2.5rem;
-        box-shadow: 0 20px 40px rgba(42, 202, 234, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .section-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        animation: shimmer 15s infinite;
-    }
-    
-    @keyframes shimmer {
-        0%, 100% { transform: rotate(0deg); }
-        50% { transform: rotate(180deg); }
-    }
-    
-    .section-header h1, .section-header h2 {
-        color: #f8fafc;
-        margin: 0;
-        font-weight: 800;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        position: relative;
-        z-index: 1;
-    }
-    
-    .section-header h1 {
-        font-size: 3rem;
-        background: linear-gradient(to right, #ffffff, #e2e8f0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-    
-    .section-header h2 {
-        font-size: 2rem;
-    }
-    
-    .section-header p {
-        color: #cbd5e1;
-        margin: 0.75rem 0 0 0;
-        font-size: 1.1rem;
-        position: relative;
-        z-index: 1;
-        font-weight: 400;
-    }
-    
-    .section-header .version-badge {
-        display: inline-block;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-top: 1rem;
-        backdrop-filter: blur(10px);
-    }
-    
-    .subsection-header {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2d4a7a 100%);
-        padding: 1.25rem 2rem;
-        border-radius: 16px;
-        margin: 2rem 0 1.5rem 0;
-        border-left: 5px solid #2acaea;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .subsection-header::after {
-        content: '';
-        position: absolute;
-        right: -50px;
-        top: -50px;
-        width: 150px;
-        height: 150px;
-        background: radial-gradient(circle, rgba(42, 202, 234, 0.15) 0%, transparent 70%);
-        border-radius: 50%;
-    }
-    
-    .subsection-header h3 {
-        color: #2acaea;
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 700;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .subsection-header p {
-        color: #94a3b8;
-        margin: 0.5rem 0 0 0;
-        font-size: 0.95rem;
-        position: relative;
-        z-index: 1;
-    }
-    
-    /* ========== KPI CARDS ========== */
-    .kpi-card {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2d4a7a 100%);
-        padding: 2rem;
-        border-radius: 20px;
-        border-left: 6px solid #2acaea;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-        margin-bottom: 2rem;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .kpi-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(42, 202, 234, 0.05) 0%, transparent 100%);
-        opacity: 0;
-        transition: opacity 0.4s;
-    }
-    
-    .kpi-card:hover {
-        transform: translateY(-10px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(42, 202, 234, 0.6);
-        border-left-color: #60a5fa;
-    }
-    
-    .kpi-card:hover::before {
-        opacity: 1;
-    }
-    
-    .kpi-title {
-        color: #94a3b8;
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
-        margin-bottom: 1rem;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .kpi-value {
-        color: #f8fafc;
-        font-size: 3rem;
-        font-weight: 900;
-        margin-bottom: 0.75rem;
-        line-height: 1;
-        position: relative;
-        z-index: 1;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-        background: linear-gradient(to right, #ffffff, #e2e8f0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-    
-    .kpi-subtitle {
-        color: #cbd5e1;
-        font-size: 0.95rem;
-        font-weight: 500;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .kpi-delta {
-        display: inline-block;
-        padding: 0.4rem 1rem;
-        border-radius: 25px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        margin-top: 0.75rem;
-        backdrop-filter: blur(10px);
-    }
-    
-    .kpi-delta.positive {
-        background: linear-gradient(135deg, rgba(45, 212, 163, 0.3), rgba(45, 212, 163, 0.1));
-        color: #2dd4a3;
-        border: 1px solid rgba(45, 212, 163, 0.5);
-    }
-    
-    .kpi-delta.negative {
-        background: linear-gradient(135deg, rgba(255, 68, 68, 0.3), rgba(255, 68, 68, 0.1));
-        color: #ff4444;
-        border: 1px solid rgba(255, 68, 68, 0.5);
-    }
-    
-    .kpi-delta.neutral {
-        background: linear-gradient(135deg, rgba(96, 165, 250, 0.3), rgba(96, 165, 250, 0.1));
-        color: #60a5fa;
-        border: 1px solid rgba(96, 165, 250, 0.5);
-    }
-    
-    /* ========== INSIGHT CARDS ========== */
-    .insight-card {
-        background: linear-gradient(135deg, rgba(45, 125, 210, 0.15) 0%, rgba(45, 125, 210, 0.05) 100%);
-        border-left: 5px solid #2d7dd2;
-        padding: 1.5rem;
-        border-radius: 16px;
-        margin-bottom: 1.25rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-    
-    .insight-card:hover {
-        background: linear-gradient(135deg, rgba(45, 125, 210, 0.25) 0%, rgba(45, 125, 210, 0.1) 100%);
-        transform: translateX(8px);
-        box-shadow: 0 8px 20px rgba(42, 202, 234, 0.3);
-    }
-    
-    .insight-card.success {
-        border-left-color: #2dd4a3;
-        background: linear-gradient(135deg, rgba(45, 212, 163, 0.15) 0%, rgba(45, 212, 163, 0.05) 100%);
-    }
-    
-    .insight-card.warning {
-        border-left-color: #fbbf24;
-        background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.05) 100%);
-    }
-    
-    .insight-card.danger {
-        border-left-color: #ff4444;
-        background: linear-gradient(135deg, rgba(255, 68, 68, 0.15) 0%, rgba(255, 68, 68, 0.05) 100%);
-    }
-    
-    .insight-card.info {
-        border-left-color: #60a5fa;
-        background: linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(96, 165, 250, 0.05) 100%);
-    }
-    
-    .insight-card h4 {
-        color: #2acaea;
-        margin: 0 0 1rem 0;
-        font-size: 1.2rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .insight-card.success h4 { color: #2dd4a3; }
-    .insight-card.warning h4 { color: #fbbf24; }
-    .insight-card.danger h4 { color: #ff4444; }
-    .insight-card.info h4 { color: #60a5fa; }
-    
-    .insight-card p {
-        color: #cbd5e1;
-        margin: 0;
-        font-size: 1rem;
-        line-height: 1.7;
-        font-weight: 400;
-    }
-    
-    /* ========== METRIC BADGES ========== */
-    .metric-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, rgba(42, 202, 234, 0.2), rgba(42, 202, 234, 0.1));
-        color: #2acaea;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin: 0.25rem;
-        border: 1px solid rgba(42, 202, 234, 0.3);
-    }
-    
-    .metric-badge.success {
-        background: linear-gradient(135deg, rgba(45, 212, 163, 0.2), rgba(45, 212, 163, 0.1));
-        color: #2dd4a3;
-        border-color: rgba(45, 212, 163, 0.3);
-    }
-    
-    .metric-badge.warning {
-        background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.1));
-        color: #fbbf24;
-        border-color: rgba(251, 191, 36, 0.3);
-    }
-    
-    .metric-badge.danger {
-        background: linear-gradient(135deg, rgba(255, 68, 68, 0.2), rgba(255, 68, 68, 0.1));
-        color: #ff4444;
-        border-color: rgba(255, 68, 68, 0.3);
-    }
-    
-    /* ========== FILTER BADGE ========== */
-    .filter-badge {
-        background: linear-gradient(135deg, #2d7dd2 0%, #2acaea 100%);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 40px;
-        display: inline-block;
-        margin: 1.5rem 0;
-        font-size: 1rem;
-        font-weight: 700;
-        box-shadow: 0 8px 20px rgba(42, 202, 234, 0.5);
-        animation: pulse-glow 3s infinite;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    @keyframes pulse-glow {
-        0%, 100% {
-            box-shadow: 0 8px 20px rgba(42, 202, 234, 0.5);
-        }
-        50% {
-            box-shadow: 0 8px 30px rgba(42, 202, 234, 0.8);
-        }
-    }
-    
-    /* ========== NOTIFICATION BOXES ========== */
-    .success-box {
-        background: linear-gradient(135deg, rgba(45, 212, 163, 0.2) 0%, rgba(45, 212, 163, 0.05) 100%);
-        border-left: 6px solid #2dd4a3;
-        padding: 1.5rem;
-        border-radius: 16px;
-        color: #cbd5e1;
-        margin: 1.5rem 0;
-        box-shadow: 0 8px 20px rgba(45, 212, 163, 0.3);
-    }
-    
-    .warning-box {
-        background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.05) 100%);
-        border-left: 6px solid #fbbf24;
-        padding: 1.5rem;
-        border-radius: 16px;
-        color: #cbd5e1;
-        margin: 1.5rem 0;
-        box-shadow: 0 8px 20px rgba(251, 191, 36, 0.3);
-    }
-    
-    .info-box {
-        background: linear-gradient(135deg, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0.05) 100%);
-        border-left: 6px solid #60a5fa;
-        padding: 1.5rem;
-        border-radius: 16px;
-        color: #cbd5e1;
-        margin: 1.5rem 0;
-        box-shadow: 0 8px 20px rgba(96, 165, 250, 0.3);
-    }
-    
-    .danger-box {
-        background: linear-gradient(135deg, rgba(255, 68, 68, 0.2) 0%, rgba(255, 68, 68, 0.05) 100%);
-        border-left: 6px solid #ff4444;
-        padding: 1.5rem;
-        border-radius: 16px;
-        color: #cbd5e1;
-        margin: 1.5rem 0;
-        box-shadow: 0 8px 20px rgba(255, 68, 68, 0.3);
-    }
-    
-    /* ========== BUTTONS ========== */
-    .stButton > button {
-        background: linear-gradient(135deg, #2d7dd2 0%, #2acaea 100%);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 0.85rem 2.5rem;
-        font-weight: 700;
-        font-size: 1rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 6px 16px rgba(42, 202, 234, 0.4);
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        border: 2px solid transparent;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 12px 28px rgba(42, 202, 234, 0.6);
-        background: linear-gradient(135deg, #3d8de2 0%, #3adcfa 100%);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-    
-    .stButton > button:active {
-        transform: translateY(-1px) scale(1.02);
-    }
-    
-    /* ========== TABS ========== */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
-        background: linear-gradient(135deg, rgba(30, 58, 95, 0.6), rgba(30, 58, 95, 0.4));
-        padding: 0.75rem;
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background-color: transparent;
-        border-radius: 12px;
-        color: #94a3b8;
-        font-weight: 700;
-        padding: 1rem 2rem;
-        transition: all 0.3s;
-        font-size: 0.95rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    .stTabs [data-baseweb="tab"]:hover {
-        background: linear-gradient(135deg, rgba(42, 202, 234, 0.2), rgba(42, 202, 234, 0.1));
-        color: #2acaea;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #2d7dd2 0%, #2acaea 100%);
-        color: white !important;
-        box-shadow: 0 6px 16px rgba(42, 202, 234, 0.5);
-    }
-    
-    /* ========== METRICS ========== */
-    .stMetric {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2d4a7a 100%);
-        padding: 1.5rem;
-        border-radius: 16px;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(42, 202, 234, 0.2);
-    }
-    
-    .stMetric label {
-        color: #94a3b8 !important;
-        font-weight: 700 !important;
-        font-size: 0.9rem !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    .stMetric [data-testid="stMetricValue"] {
-        color: #f8fafc !important;
-        font-size: 2.5rem !important;
-        font-weight: 900 !important;
-    }
-    
-    .stMetric [data-testid="stMetricDelta"] {
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-    }
-    
-    /* ========== DATAFRAME ========== */
-    .dataframe {
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-    }
-    
-    /* ========== PROGRESS BAR ========== */
-    .stProgress > div > div > div {
-        background: linear-gradient(90deg, #2d7dd2 0%, #2acaea 100%);
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(42, 202, 234, 0.5);
-    }
-    
-    /* ========== SIDEBAR ========== */
-    .css-1d391kg {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-    }
-    
-    /* ========== EXPANDER ========== */
-    .streamlit-expanderHeader {
-        background: linear-gradient(135deg, rgba(45, 125, 210, 0.2), rgba(45, 125, 210, 0.1));
-        border-radius: 12px;
-        font-weight: 700;
-        color: #2acaea;
-        padding: 1rem !important;
-        border: 1px solid rgba(42, 202, 234, 0.3);
-    }
-    
-    .streamlit-expanderHeader:hover {
-        background: linear-gradient(135deg, rgba(45, 125, 210, 0.3), rgba(45, 125, 210, 0.15));
-        border-color: rgba(42, 202, 234, 0.5);
-    }
-    
-    /* ========== SCROLLBAR ========== */
-    ::-webkit-scrollbar {
-        width: 14px;
-        height: 14px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: #1e293b;
-        border-radius: 12px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #2d7dd2 0%, #2acaea 100%);
-        border-radius: 12px;
-        border: 2px solid #1e293b;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #3d8de2 0%, #3adcfa 100%);
-    }
-    
-    /* ========== SELECT BOXES ========== */
-    .stSelectbox > div > div {
-        background: linear-gradient(135deg, rgba(30, 58, 95, 0.6), rgba(30, 58, 95, 0.4));
-        border-radius: 12px;
-        color: #f8fafc;
-        border: 1px solid rgba(42, 202, 234, 0.3);
-    }
-    
-    /* ========== MULTISELECT ========== */
-    .stMultiSelect > div > div {
-        background: linear-gradient(135deg, rgba(30, 58, 95, 0.6), rgba(30, 58, 95, 0.4));
-        border-radius: 12px;
-        border: 1px solid rgba(42, 202, 234, 0.3);
-    }
-    
-    /* ========== TEXT INPUT ========== */
-    .stTextInput > div > div > input {
-        background: linear-gradient(135deg, rgba(30, 58, 95, 0.6), rgba(30, 58, 95, 0.4));
-        border-radius: 12px;
-        color: #f8fafc;
-        border: 2px solid rgba(42, 202, 234, 0.3);
-        padding: 0.75rem 1rem;
-        font-weight: 500;
-    }
-    
-    .stTextInput > div > div > input:focus {
-        border-color: #2acaea;
-        box-shadow: 0 0 0 3px rgba(42, 202, 234, 0.2);
-    }
-    
-    /* ========== SLIDER ========== */
-    .stSlider > div > div > div {
-        background: linear-gradient(90deg, #2d7dd2 0%, #2acaea 100%);
-        border-radius: 12px;
-    }
-    
-    /* ========== STATISTICS TABLE ========== */
-    .stats-table {
-        background: linear-gradient(135deg, rgba(30, 58, 95, 0.4), rgba(30, 58, 95, 0.2));
-        border-radius: 16px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        border: 1px solid rgba(42, 202, 234, 0.2);
-    }
-    
-    .stats-table table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    .stats-table th {
-        color: #2acaea;
-        font-weight: 700;
-        padding: 1rem;
-        text-align: left;
-        border-bottom: 2px solid rgba(42, 202, 234, 0.3);
-    }
-    
-    .stats-table td {
-        color: #cbd5e1;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid rgba(100, 116, 139, 0.2);
-    }
-    
-    /* ========== ANIMATIONS ========== */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes slideInRight {
-        from {
-            opacity: 0;
-            transform: translateX(-40px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-    
-    @keyframes scaleIn {
-        from {
-            opacity: 0;
-            transform: scale(0.9);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-    
-    .fade-in {
-        animation: fadeIn 0.6s ease-out;
-    }
-    
-    .slide-in-right {
-        animation: slideInRight 0.6s ease-out;
-    }
-    
-    .scale-in {
-        animation: scaleIn 0.5s ease-out;
-    }
-    
-    /* ========== LOADING SPINNER ========== */
-    .stSpinner > div {
-        border-top-color: #2acaea !important;
-        border-right-color: #2acaea !important;
-    }
-    
-    /* ========== RESPONSIVE DESIGN ========== */
-    @media (max-width: 768px) {
-        .section-header h1 {
-            font-size: 2rem;
-        }
-        
-        .section-header h2 {
-            font-size: 1.5rem;
-        }
-        
-        .kpi-value {
-            font-size: 2rem;
-        }
-        
-        .stButton > button {
-            padding: 0.75rem 1.5rem;
-            font-size: 0.9rem;
-        }
-    }
-    
-    /* ========== CUSTOM COMPONENTS ========== */
-    .feature-showcase {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin: 2rem 0;
-    }
-    
-    .feature-card {
-        background: linear-gradient(135deg, rgba(30, 58, 95, 0.4), rgba(30, 58, 95, 0.2));
-        padding: 2rem;
-        border-radius: 16px;
-        text-align: center;
-        transition: all 0.3s;
-        border: 1px solid rgba(42, 202, 234, 0.2);
-    }
-    
-    .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 28px rgba(42, 202, 234, 0.3);
-        border-color: rgba(42, 202, 234, 0.5);
-    }
-    
-    .feature-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-    
-    .feature-title {
-        color: #2acaea;
-        font-size: 1.2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    
-    .feature-description {
-        color: #94a3b8;
-        font-size: 0.9rem;
-        line-height: 1.6;
-    }
-</style>
-"""
+def format_number(num):
+    if num >= 1e9:
+        return f"${num/1e9:.2f}B"
+    elif num >= 1e6:
+        return f"${num/1e6:.2f}M"
+    elif num >= 1e3:
+        return f"${num/1e3:.2f}K"
+    else:
+        return f"${num:.2f}"
 
-# Page configuration
-st.set_page_config(
-    page_title=f"{Config.APP_NAME} v{Config.VERSION}",
-    page_icon="💊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://pharmaintelligence.com/support',
-        'Report a bug': 'https://pharmaintelligence.com/bug-report',
-        'About': f"""
-        ### {Config.APP_NAME} v{Config.VERSION}
-        
-        **Enterprise-Grade Pharmaceutical Analytics Platform**
-        
-        **Build Date:** {Config.BUILD_DATE}
-        **Organization:** {Config.ORGANIZATION}
-        
-        **Features:**
-        - 🤖 Advanced Machine Learning & AI
-        - 📊 Predictive Analytics & Forecasting
-        - 🎯 Multi-dimensional Clustering
-        - ⚠️ Intelligent Anomaly Detection
-        - 🌍 Geographic Market Analysis
-        - 🏆 Competitive Intelligence
-        - 📈 What-If Scenario Modeling
-        - 📑 Comprehensive Reporting
-        
-        © 2024 PharmaIntelligence Inc. All rights reserved.
-        """
-    }
-)
+def format_units(num):
+    if num >= 1e9:
+        return f"{num/1e9:.2f}B"
+    elif num >= 1e6:
+        return f"{num/1e6:.2f}M"
+    elif num >= 1e3:
+        return f"{num/1e3:.2f}K"
+    else:
+        return f"{num:.0f}"
 
-# Apply CSS
-st.markdown(PROFESSIONAL_CSS, unsafe_allow_html=True)
+def calculate_growth(old_val, new_val):
+    if old_val == 0:
+        return 0
+    return ((new_val - old_val) / old_val) * 100
 
-# ============================================================================
-# UTILITY CLASSES AND FUNCTIONS
-# ============================================================================
-
-class Logger:
-    """
-    Professional logging utility for application events
-    """
+def get_insights(df, year_filter):
+    insights = []
     
-    @staticmethod
-    def info(message: str) -> None:
-        """Log info message"""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[INFO] [{timestamp}] {message}")
+    if '2022' in year_filter or len(year_filter) == 0:
+        usd_2022 = df['MAT Q3 2022 USD MNF'].sum()
+        units_2022 = df['MAT Q3 2022 Units'].sum()
+        su_2022 = df['MAT Q3 2022 Standard Units'].sum()
+    else:
+        usd_2022 = 0
+        units_2022 = 0
+        su_2022 = 0
     
-    @staticmethod
-    def warning(message: str) -> None:
-        """Log warning message"""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[WARNING] [{timestamp}] {message}")
+    if '2023' in year_filter or len(year_filter) == 0:
+        usd_2023 = df['MAT Q3 2023 USD MNF'].sum()
+        units_2023 = df['MAT Q3 2023 Units'].sum()
+        su_2023 = df['MAT Q3 2023 Standard Units'].sum()
+    else:
+        usd_2023 = 0
+        units_2023 = 0
+        su_2023 = 0
     
-    @staticmethod
-    def error(message: str, exception: Optional[Exception] = None) -> None:
-        """Log error message"""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[ERROR] [{timestamp}] {message}")
-        if exception:
-            print(f"[ERROR] Exception: {str(exception)}")
-            print(f"[ERROR] Traceback: {traceback.format_exc()}")
+    if '2024' in year_filter or len(year_filter) == 0:
+        usd_2024 = df['MAT Q3 2024 USD MNF'].sum()
+        units_2024 = df['MAT Q3 2024 Units'].sum()
+        su_2024 = df['MAT Q3 2024 Standard Units'].sum()
+    else:
+        usd_2024 = 0
+        units_2024 = 0
+        su_2024 = 0
+    
+    if usd_2022 > 0 and usd_2023 > 0:
+        growth_22_23 = calculate_growth(usd_2022, usd_2023)
+        insights.append(f"2022'den 2023'e satışlar %{growth_22_23:.1f} değişim gösterdi.")
+    
+    if usd_2023 > 0 and usd_2024 > 0:
+        growth_23_24 = calculate_growth(usd_2023, usd_2024)
+        insights.append(f"2023'ten 2024'e satışlar %{growth_23_24:.1f} değişim gösterdi.")
+    
+    if usd_2022 > 0 and usd_2024 > 0:
+        cagr = ((usd_2024 / usd_2022) ** (1/2) - 1) * 100
+        insights.append(f"2022-2024 arası bileşik yıllık büyüme oranı %{cagr:.1f}.")
+    
+    top_countries = df.groupby('Country')[['MAT Q3 2024 USD MNF']].sum().sort_values('MAT Q3 2024 USD MNF', ascending=False).head(3)
+    if len(top_countries) > 0:
+        top_country = top_countries.index[0]
+        top_value = top_countries.iloc[0, 0]
+        insights.append(f"En yüksek satış {top_country} ülkesinde: {format_number(top_value)}.")
+    
+    top_molecules = df.groupby('Molecule')[['MAT Q3 2024 USD MNF']].sum().sort_values('MAT Q3 2024 USD MNF', ascending=False).head(3)
+    if len(top_molecules) > 0:
+        top_mol = top_molecules.index[0]
+        top_mol_value = top_molecules.iloc[0, 0]
+        insights.append(f"En yüksek satışlı molekül {top_mol}: {format_number(top_mol_value)}.")
+    
+    top_corps = df.groupby('Corporation')[['MAT Q3 2024 USD MNF']].sum().sort_values('MAT Q3 2024 USD MNF', ascending=False).head(3)
+    if len(top_corps) > 0:
+        top_corp = top_corps.index[0]
+        top_corp_value = top_corps.iloc[0, 0]
+        total_market = df['MAT Q3 2024 USD MNF'].sum()
+        if total_market > 0:
+            market_share = (top_corp_value / total_market) * 100
+            insights.append(f"{top_corp} şirketinin pazar payı %{market_share:.1f}.")
+    
+    specialty_sales = df[df['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum()
+    total_sales = df['MAT Q3 2024 USD MNF'].sum()
+    if total_sales > 0:
+        specialty_pct = (specialty_sales / total_sales) * 100
+        insights.append(f"Specialty ürünler toplam satışların %{specialty_pct:.1f}'ini oluşturuyor.")
+    
+    avg_price_2022 = df['MAT Q3 2022 SU Avg Price USD MNF'].replace(0, np.nan).mean()
+    avg_price_2024 = df['MAT Q3 2024 SU Avg Price USD MNF'].replace(0, np.nan).mean()
+    if not np.isnan(avg_price_2022) and not np.isnan(avg_price_2024) and avg_price_2022 > 0:
+        price_change = calculate_growth(avg_price_2022, avg_price_2024)
+        insights.append(f"Ortalama SU fiyatı 2022-2024 arasında %{price_change:.1f} değişti.")
+    
+    if units_2023 > 0 and units_2024 > 0:
+        volume_growth = calculate_growth(units_2023, units_2024)
+        insights.append(f"Hacim (Units) 2023-2024 arasında %{volume_growth:.1f} büyüdü.")
+    
+    return insights
 
+st.title("🏥 Pharma Commercial Analytics Platform")
+st.markdown("---")
 
-class Utils:
-    """
-    Comprehensive utility functions for data formatting and manipulation
-    """
+uploaded_file = st.file_uploader("Excel dosyasını yükleyin", type=['xlsx', 'xls'])
+
+if uploaded_file is not None:
+    df = load_data(uploaded_file)
     
-    @staticmethod
-    def format_number(num: float, prefix: str = "", suffix: str = "", decimals: int = 2) -> str:
-        """
-        Format number with intelligent abbreviation
+    st.sidebar.header("🔍 Global Filtreler")
+    
+    countries = ['All'] + sorted(df['Country'].dropna().unique().tolist())
+    country_filter = st.sidebar.multiselect("Country", options=sorted(df['Country'].dropna().unique().tolist()), default=[])
+    
+    corporations = ['All'] + sorted(df['Corporation'].dropna().unique().tolist())
+    corp_filter = st.sidebar.selectbox("Corporation", options=corporations)
+    
+    molecules = ['All'] + sorted(df['Molecule'].dropna().unique().tolist())
+    mol_filter = st.sidebar.selectbox("Molecule", options=molecules)
+    
+    sectors = ['All'] + sorted(df['Sector'].dropna().unique().tolist())
+    sector_filter = st.sidebar.selectbox("Sector", options=sectors)
+    
+    panels = ['All'] + sorted(df['Panel'].dropna().unique().tolist())
+    panel_filter = st.sidebar.selectbox("Panel", options=panels)
+    
+    year_filter = st.sidebar.multiselect("Yıl", options=['2022', '2023', '2024'], default=['2022', '2023', '2024'])
+    
+    specialty_options = ['All'] + sorted(df['Specialty Product'].dropna().unique().tolist())
+    specialty_filter = st.sidebar.selectbox("Specialty Product", options=specialty_options)
+    
+    filtered_df = apply_filters(df, country_filter, corp_filter, mol_filter, sector_filter, panel_filter, year_filter, specialty_filter)
+    
+    tabs = st.tabs([
+        "📊 Yönetici Özeti",
+        "🌍 Ülke & Bölge",
+        "🧬 Molekül Analizi",
+        "🏢 Corporation & Rekabet",
+        "💊 Specialty vs Non-Specialty",
+        "💰 Fiyat & Mix",
+        "📦 Pack/Strength/Size",
+        "🤖 Otomatik İçgörü"
+    ])
+    
+    with tabs[0]:
+        st.header("Yönetici Özeti")
         
-        Args:
-            num: Number to format
-            prefix: Prefix string (e.g., '$', '€')
-            suffix: Suffix string (e.g., '%', 'x')
-            decimals: Number of decimal places
+        col1, col2, col3, col4 = st.columns(4)
         
-        Returns:
-            Formatted string
-        """
-        if pd.isna(num) or num is None:
-            return "N/A"
-        
-        try:
-            num = float(num)
-        except:
-            return "N/A"
-        
-        abs_num = abs(num)
-        
-        if abs_num >= 1e12:
-            return f"{prefix}{num/1e12:.{decimals}f}T{suffix}"
-        elif abs_num >= 1e9:
-            return f"{prefix}{num/1e9:.{decimals}f}B{suffix}"
-        elif abs_num >= 1e6:
-            return f"{prefix}{num/1e6:.{decimals}f}M{suffix}"
-        elif abs_num >= 1e3:
-            return f"{prefix}{num/1e3:.{decimals}f}K{suffix}"
+        if '2022' in year_filter:
+            usd_2022 = filtered_df['MAT Q3 2022 USD MNF'].sum()
+            units_2022 = filtered_df['MAT Q3 2022 Units'].sum()
+            su_2022 = filtered_df['MAT Q3 2022 Standard Units'].sum()
         else:
-            return f"{prefix}{num:.{decimals}f}{suffix}"
-    
-    @staticmethod
-    def format_percentage(num: float, decimals: int = 1, include_sign: bool = True) -> str:
-        """Format percentage with optional sign"""
-        if pd.isna(num) or num is None:
-            return "N/A"
+            usd_2022 = 0
+            units_2022 = 0
+            su_2022 = 0
         
-        try:
-            num = float(num)
-        except:
-            return "N/A"
-        
-        sign = "+" if num > 0 and include_sign else ""
-        return f"{sign}{num:.{decimals}f}%"
-    
-    @staticmethod
-    def format_currency(num: float, currency: str = "USD", decimals: int = 2) -> str:
-        """Format currency with symbol"""
-        currency_symbols = {
-            'USD': '$',
-            'EUR': '€',
-            'GBP': '£',
-            'JPY': '¥',
-            'TRY': '₺'
-        }
-        
-        symbol = currency_symbols.get(currency, currency)
-        return Utils.format_number(num, prefix=symbol, decimals=decimals)
-    
-    @staticmethod
-    def calculate_cagr(start_value: float, end_value: float, periods: int) -> float:
-        """
-        Calculate Compound Annual Growth Rate
-        
-        Args:
-            start_value: Starting value
-            end_value: Ending value
-            periods: Number of periods
-        
-        Returns:
-            CAGR as percentage
-        """
-        if start_value <= 0 or end_value <= 0 or periods <= 0:
-            return np.nan
-        
-        try:
-            cagr = ((end_value / start_value) ** (1 / periods) - 1) * 100
-            return cagr
-        except:
-            return np.nan
-    
-    @staticmethod
-    def safe_division(numerator: float, denominator: float, default: float = 0.0) -> float:
-        """Safe division with default fallback"""
-        if denominator == 0 or pd.isna(numerator) or pd.isna(denominator):
-            return default
-        try:
-            return numerator / denominator
-        except:
-            return default
-    
-    @staticmethod
-    def get_color_scale(value: float, min_val: float, max_val: float, 
-                       reverse: bool = False) -> str:
-        """
-        Get color based on value position in range
-        
-        Args:
-            value: Current value
-            min_val: Minimum value
-            max_val: Maximum value
-            reverse: Reverse color scale
-        
-        Returns:
-            Color hex code
-        """
-        if pd.isna(value):
-            return Config.COLOR_INFO
-        
-        if max_val == min_val:
-            normalized = 0.5
+        if '2023' in year_filter:
+            usd_2023 = filtered_df['MAT Q3 2023 USD MNF'].sum()
+            units_2023 = filtered_df['MAT Q3 2023 Units'].sum()
+            su_2023 = filtered_df['MAT Q3 2023 Standard Units'].sum()
         else:
-            normalized = (value - min_val) / (max_val - min_val)
+            usd_2023 = 0
+            units_2023 = 0
+            su_2023 = 0
         
-        if reverse:
-            normalized = 1 - normalized
-        
-        if normalized < 0.25:
-            return Config.COLOR_DANGER
-        elif normalized < 0.5:
-            return Config.COLOR_WARNING
-        elif normalized < 0.75:
-            return Config.COLOR_INFO
+        if '2024' in year_filter:
+            usd_2024 = filtered_df['MAT Q3 2024 USD MNF'].sum()
+            units_2024 = filtered_df['MAT Q3 2024 Units'].sum()
+            su_2024 = filtered_df['MAT Q3 2024 Standard Units'].sum()
         else:
-            return Config.COLOR_SUCCESS
-    
-    @staticmethod
-    def create_download_link(df: pd.DataFrame, filename: str, 
-                           file_format: str = 'csv') -> None:
-        """
-        Create download button for dataframe with duplicate column handling
+            usd_2024 = 0
+            units_2024 = 0
+            su_2024 = 0
         
-        Args:
-            df: DataFrame to download
-            filename: Base filename
-            file_format: Format ('csv', 'json', 'xlsx', 'html')
-        """
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        full_filename = f"{filename}_{timestamp}.{file_format}"
+        with col1:
+            st.metric("2022 USD MNF", format_number(usd_2022))
+            st.metric("2022 Units", format_units(units_2022))
         
-        # Remove duplicate columns
-        df_export = df.loc[:, ~df.columns.duplicated()]
+        with col2:
+            growth_22_23 = calculate_growth(usd_2022, usd_2023) if usd_2022 > 0 else 0
+            st.metric("2023 USD MNF", format_number(usd_2023), f"{growth_22_23:+.1f}%")
+            st.metric("2023 Units", format_units(units_2023))
         
-        try:
-            if file_format == 'csv':
-                data = df_export.to_csv(index=False, encoding=Config.EXPORT_ENCODING)
-                mime = 'text/csv'
-            elif file_format == 'json':
-                data = df_export.to_json(orient='records', indent=2)
-                mime = 'application/json'
-            elif file_format == 'xlsx':
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df_export.to_excel(writer, index=False, sheet_name='Data')
-                data = output.getvalue()
-                mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            elif file_format == 'html':
-                data = df_export.to_html(index=False)
-                mime = 'text/html'
-            else:
-                data = df_export.to_csv(index=False)
-                mime = 'text/csv'
-            
-            st.download_button(
-                label=f"⬇️ Download {file_format.upper()}",
-                data=data,
-                file_name=full_filename,
-                mime=mime,
-                use_container_width=True
-            )
-            
-        except Exception as e:
-            Logger.error(f"Download creation failed: {str(e)}", e)
-            st.error(f"❌ Could not create download: {str(e)}")
-    
-    @staticmethod
-    def calculate_statistics(series: pd.Series) -> Dict[str, float]:
-        """
-        Calculate comprehensive statistics for a series
+        with col3:
+            growth_23_24 = calculate_growth(usd_2023, usd_2024) if usd_2023 > 0 else 0
+            st.metric("2024 USD MNF", format_number(usd_2024), f"{growth_23_24:+.1f}%")
+            st.metric("2024 Units", format_units(units_2024))
         
-        Args:
-            series: Pandas series
-        
-        Returns:
-            Dictionary of statistics
-        """
-        stats = {}
-        
-        try:
-            clean_series = series.dropna()
-            
-            if len(clean_series) == 0:
-                return stats
-            
-            stats['count'] = len(clean_series)
-            stats['mean'] = float(clean_series.mean())
-            stats['median'] = float(clean_series.median())
-            stats['std'] = float(clean_series.std())
-            stats['min'] = float(clean_series.min())
-            stats['max'] = float(clean_series.max())
-            stats['q1'] = float(clean_series.quantile(0.25))
-            stats['q3'] = float(clean_series.quantile(0.75))
-            stats['iqr'] = stats['q3'] - stats['q1']
-            stats['range'] = stats['max'] - stats['min']
-            stats['cv'] = (stats['std'] / stats['mean'] * 100) if stats['mean'] != 0 else 0
-            stats['skewness'] = float(clean_series.skew())
-            stats['kurtosis'] = float(clean_series.kurtosis())
-            
-            # Outlier detection
-            lower_bound = stats['q1'] - 1.5 * stats['iqr']
-            upper_bound = stats['q3'] + 1.5 * stats['iqr']
-            stats['outliers_count'] = int(((clean_series < lower_bound) | (clean_series > upper_bound)).sum())
-            stats['outliers_percentage'] = (stats['outliers_count'] / len(clean_series)) * 100
-            
-        except Exception as e:
-            Logger.warning(f"Statistics calculation failed: {str(e)}")
-        
-        return stats
-
-
-class PerformanceMonitor:
-    """
-    Monitor and optimize application performance
-    """
-    
-    def __init__(self):
-        self.start_time = time.time()
-        self.checkpoints = {}
-    
-    def checkpoint(self, name: str) -> None:
-        """Record a performance checkpoint"""
-        self.checkpoints[name] = time.time() - self.start_time
-    
-    def get_elapsed(self, name: Optional[str] = None) -> float:
-        """Get elapsed time for checkpoint or total"""
-        if name and name in self.checkpoints:
-            return self.checkpoints[name]
-        return time.time() - self.start_time
-    
-    def report(self) -> Dict[str, float]:
-        """Get performance report"""
-        return {
-            'total_elapsed': self.get_elapsed(),
-            **self.checkpoints
-        }
-
-
-# ============================================================================
-# DATA MANAGEMENT CLASS
-# ============================================================================
-
-class DataManager:
-    """
-    Advanced data processing and management with quality assurance
-    """
-    
-    @staticmethod
-    @st.cache_data(ttl=Config.CACHE_TTL, show_spinner=False)
-    def load_data(file, sample_size: Optional[int] = None) -> Optional[pd.DataFrame]:
-        """
-        Load and validate data from uploaded file
-        
-        Args:
-            file: Uploaded file object
-            sample_size: Optional sample size for large datasets
-        
-        Returns:
-            Processed DataFrame or None if error
-        """
-        monitor = PerformanceMonitor()
-        
-        try:
-            Logger.info(f"Loading data from {file.name}")
-            
-            # Determine file type and load
-            if file.name.endswith('.csv'):
-                df = pd.read_csv(file, nrows=sample_size, low_memory=False, encoding='utf-8')
-            elif file.name.endswith(('.xlsx', '.xls')):
-                df = pd.read_excel(file, nrows=sample_size, engine='openpyxl')
-            else:
-                st.error("❌ Unsupported file format! Please upload CSV or Excel file.")
-                return None
-            
-            monitor.checkpoint('load')
-            
-            if df is None or len(df) == 0:
-                st.error("❌ File is empty or could not be read!")
-                return None
-            
-            # Clean column names
-            df.columns = DataManager.clean_column_names(df.columns)
-            monitor.checkpoint('clean_columns')
-            
-            # Remove duplicate columns immediately
-            df = df.loc[:, ~df.columns.duplicated()]
-            monitor.checkpoint('remove_duplicates')
-            
-            # Optimize memory usage
-            df = DataManager.optimize_dataframe(df)
-            monitor.checkpoint('optimize')
-            
-            # Calculate quality metrics
-            quality_score = DataManager.assess_data_quality(df)
-            
-            # Performance report
-            perf_report = monitor.report()
-            memory_mb = df.memory_usage(deep=True).sum() / 1024**2
-            
-            st.success(
-                f"✅ **Data loaded successfully!**\n\n"
-                f"📊 {len(df):,} rows × {len(df.columns)} columns\n\n"
-                f"⏱️ Load time: {perf_report['total_elapsed']:.2f}s\n\n"
-                f"💾 Memory: {memory_mb:.1f} MB\n\n"
-                f"🎯 Quality Score: {quality_score:.1%}"
-            )
-            
-            Logger.info(f"Data loaded: {len(df)} rows, {len(df.columns)} columns")
-            
-            return df
-            
-        except Exception as e:
-            Logger.error(f"Data loading failed: {str(e)}", e)
-            st.error(f"❌ **Data loading error:**\n\n{str(e)}")
-            with st.expander("🔍 View detailed error"):
-                st.code(traceback.format_exc())
-            return None
-    
-    @staticmethod
-    def clean_column_names(columns: List[str]) -> List[str]:
-        """
-        Intelligently clean and standardize column names
-        
-        Args:
-            columns: List of column names
-        
-        Returns:
-            List of cleaned column names
-        """
-        cleaned = []
-        seen = {}
-        
-        # Turkish to English character mapping
-        tr_to_en = {
-            'İ': 'I', 'ı': 'i', 'Ş': 'S', 'ş': 's',
-            'Ğ': 'G', 'ğ': 'g', 'Ü': 'U', 'ü': 'u',
-            'Ö': 'O', 'ö': 'o', 'Ç': 'C', 'ç': 'c'
-        }
-        
-        for col in columns:
-            # Convert to string
-            col = str(col) if not isinstance(col, str) else col
-            
-            # Remove Turkish characters
-            for tr_char, en_char in tr_to_en.items():
-                col = col.replace(tr_char, en_char)
-            
-            # Clean whitespace and special characters
-            col = ' '.join(col.split()).strip()
-            col = re.sub(r'[^\w\s-]', '', col)
-            
-            # Standardize pharmaceutical data patterns
-            col = DataManager.standardize_pharma_column(col)
-            
-            # Handle duplicates by adding numeric suffix
-            if col in seen:
-                seen[col] += 1
-                col = f"{col}_{seen[col]}"
-            else:
-                seen[col] = 0
-            
-            cleaned.append(col)
-        
-        return cleaned
-    
-    @staticmethod
-    def standardize_pharma_column(col: str) -> str:
-        """
-        Standardize pharmaceutical-specific column patterns
-        
-        Args:
-            col: Column name
-        
-        Returns:
-            Standardized column name
-        """
-        # Sales columns
-        if 'USD' in col and 'MAT' in col:
-            year_match = re.search(r'(\d{4})', col)
-            year = year_match.group(1) if year_match else '2024'
-            
-            if 'Units' in col or 'Unit' in col:
-                return f'Birim_{year}'
-            elif 'Avg Price' in col or 'Price' in col:
-                return f'Ort_Fiyat_{year}'
-            else:
-                return f'Satis_{year}'
-        
-        # Growth columns
-        if 'Growth' in col or 'Buyume' in col:
-            year_match = re.findall(r'(\d{4})', col)
-            if len(year_match) >= 2:
-                return f'Buyume_{year_match[0]}_{year_match[1]}'
-        
-        return col
-    
-    @staticmethod
-    def optimize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Optimize DataFrame memory usage through intelligent type conversion
-        
-        Args:
-            df: Input DataFrame
-        
-        Returns:
-            Optimized DataFrame
-        """
-        try:
-            original_memory = df.memory_usage(deep=True).sum() / 1024**2
-            
-            # Optimize categorical columns
-            for col in df.select_dtypes(include=['object']).columns:
-                num_unique = df[col].nunique()
-                num_total = len(df)
-                
-                # Convert to category if cardinality is low
-                if num_unique / num_total < 0.5:
-                    df[col] = df[col].astype('category')
-            
-            # Optimize numeric columns
-            for col in df.select_dtypes(include=[np.number]).columns:
-                col_min = df[col].min()
-                col_max = df[col].max()
-                
-                if pd.api.types.is_integer_dtype(df[col]):
-                    # Unsigned integers
-                    if col_min >= 0:
-                        if col_max <= 255:
-                            df[col] = df[col].astype(np.uint8)
-                        elif col_max <= 65535:
-                            df[col] = df[col].astype(np.uint16)
-                        elif col_max <= 4294967295:
-                            df[col] = df[col].astype(np.uint32)
-                    # Signed integers
-                    else:
-                        if col_min >= -128 and col_max <= 127:
-                            df[col] = df[col].astype(np.int8)
-                        elif col_min >= -32768 and col_max <= 32767:
-                            df[col] = df[col].astype(np.int16)
-                        elif col_min >= -2147483648 and col_max <= 2147483647:
-                            df[col] = df[col].astype(np.int32)
-                # Float to float32
-                else:
-                    df[col] = df[col].astype(np.float32)
-            
-            optimized_memory = df.memory_usage(deep=True).sum() / 1024**2
-            savings = original_memory - optimized_memory
-            
-            if savings > 0:
-                st.info(
-                    f"💾 **Memory Optimization:**\n\n"
-                    f"Before: {original_memory:.1f} MB\n\n"
-                    f"After: {optimized_memory:.1f} MB\n\n"
-                    f"Saved: {savings:.1f} MB ({savings/original_memory*100:.1f}%)"
-                )
-                Logger.info(f"Memory optimized: {savings:.1f} MB saved")
-            
-            return df
-            
-        except Exception as e:
-            Logger.warning(f"Memory optimization failed: {str(e)}")
-            return df
-    
-    @staticmethod
-    def assess_data_quality(df: pd.DataFrame) -> float:
-        """
-        Assess overall data quality score
-        
-        Args:
-            df: DataFrame to assess
-        
-        Returns:
-            Quality score between 0 and 1
-        """
-        try:
-            scores = []
-            
-            # Completeness (missing data)
-            missing_pct = (df.isnull().sum().sum() / (len(df) * len(df.columns))) * 100
-            completeness = max(0, 1 - (missing_pct / 100))
-            scores.append(completeness)
-            
-            # Consistency (duplicate rows)
-            duplicate_pct = (df.duplicated().sum() / len(df)) * 100
-            consistency = max(0, 1 - (duplicate_pct / 100))
-            scores.append(consistency)
-            
-            # Validity (numeric columns within reasonable ranges)
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            if len(numeric_cols) > 0:
-                validity_scores = []
-                for col in numeric_cols:
-                    # Check for extreme outliers
-                    Q1 = df[col].quantile(0.25)
-                    Q3 = df[col].quantile(0.75)
-                    IQR = Q3 - Q1
-                    outliers = ((df[col] < (Q1 - 3 * IQR)) | (df[col] > (Q3 + 3 * IQR))).sum()
-                    validity_scores.append(max(0, 1 - (outliers / len(df))))
-                
-                validity = np.mean(validity_scores) if validity_scores else 1.0
-                scores.append(validity)
-            
-            # Overall score
-            quality_score = np.mean(scores)
-            
-            return quality_score
-            
-        except Exception as e:
-            Logger.warning(f"Quality assessment failed: {str(e)}")
-            return 0.7  # Default acceptable quality
-    
-    @staticmethod
-    def prepare_analysis_data(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Comprehensive feature engineering for pharmaceutical data analysis
-        
-        Args:
-            df: Input DataFrame
-        
-        Returns:
-            Enhanced DataFrame with calculated features
-        """
-        try:
-            Logger.info("Starting feature engineering")
-            monitor = PerformanceMonitor()
-            
-            # Identify sales columns
-            sales_cols = {}
-            for col in df.columns:
-                if 'Satis_' in col or 'Sales_' in col:
-                    year_match = re.search(r'(\d{4})', col)
-                    if year_match:
-                        year = year_match.group(1)
-                        if year not in sales_cols:
-                            sales_cols[year] = col
-            
-            if not sales_cols:
-                Logger.warning("No sales columns found")
-                return df
-            
-            years = sorted([int(y) for y in sales_cols.keys()])
-            Logger.info(f"Found {len(years)} years of sales data: {years}")
-            
-            # ========== PRICE CALCULATION ==========
-            price_cols = [col for col in df.columns if 'Ort_Fiyat' in col or 'Price' in col]
-            unit_cols = [col for col in df.columns if 'Birim_' in col or 'Unit' in col]
-            
-            if not price_cols and sales_cols and unit_cols:
-                Logger.info("Calculating prices from sales and units")
-                for year in sales_cols.keys():
-                    price_col_name = f'Ort_Fiyat_{year}'
-                    
-                    if price_col_name not in df.columns:
-                        sales_col = sales_cols[year]
-                        unit_col = f"Birim_{year}"
-                        
-                        if unit_col in df.columns and sales_col in df.columns:
-                            df[price_col_name] = np.where(
-                                df[unit_col] != 0,
-                                df[sales_col] / df[unit_col],
-                                np.nan
-                            )
-                            Logger.info(f"Created price column: {price_col_name}")
-            
-            monitor.checkpoint('prices')
-            
-            # ========== GROWTH RATES (YoY) ==========
-            for i in range(1, len(years)):
-                prev_year = str(years[i-1])
-                curr_year = str(years[i])
-                
-                growth_col_name = f'Buyume_{prev_year}_{curr_year}'
-                change_col_name = f'Degisim_{prev_year}_{curr_year}'
-                
-                if growth_col_name not in df.columns:
-                    if prev_year in sales_cols and curr_year in sales_cols:
-                        prev_col = sales_cols[prev_year]
-                        curr_col = sales_cols[curr_year]
-                        
-                        # YoY Growth %
-                        df[growth_col_name] = (
-                            (df[curr_col] - df[prev_col]) / 
-                            df[prev_col].replace(0, np.nan)
-                        ) * 100
-                        
-                        # Absolute change
-                        df[change_col_name] = df[curr_col] - df[prev_col]
-                        
-                        Logger.info(f"Calculated growth: {growth_col_name}")
-            
-            monitor.checkpoint('growth')
-            
-            # ========== PRICE ANALYSIS ==========
-            price_cols = [col for col in df.columns if 'Ort_Fiyat' in col]
-            
-            if price_cols and 'Ort_Fiyat_Genel' not in df.columns:
-                # Average price across years
-                df['Ort_Fiyat_Genel'] = df[price_cols].mean(axis=1, skipna=True)
-                
-                # Price volatility
-                df['Fiyat_Volatilite'] = df[price_cols].std(axis=1, skipna=True)
-                
-                # Price trend (slope)
-                if len(price_cols) >= 2:
-                    def calc_price_trend(row):
-                        prices = row[price_cols].dropna()
-                        if len(prices) < 2:
-                            return np.nan
-                        x = np.arange(len(prices))
-                        y = prices.values
-                        try:
-                            slope = np.polyfit(x, y, 1)[0]
-                            return slope
-                        except:
-                            return np.nan
-                    
-                    df['Fiyat_Trend'] = df.apply(calc_price_trend, axis=1)
-                
-                Logger.info("Price analysis features created")
-            
-            monitor.checkpoint('price_analysis')
-            
-            # ========== CAGR ==========
-            if len(years) >= 2 and 'CAGR' not in df.columns:
-                first_year = str(years[0])
-                last_year = str(years[-1])
-                
-                if first_year in sales_cols and last_year in sales_cols:
-                    num_years = len(years) - 1
-                    df['CAGR'] = (
-                        (df[sales_cols[last_year]] / df[sales_cols[first_year]].replace(0, np.nan))
-                        ** (1/num_years) - 1
-                    ) * 100
-                    Logger.info("CAGR calculated")
-            
-            monitor.checkpoint('cagr')
-            
-            # ========== MARKET SHARE ==========
-            if years and 'Pazar_Payi' not in df.columns:
-                last_year = str(years[-1])
-                if last_year in sales_cols:
-                    last_sales_col = sales_cols[last_year]
-                    total_sales = df[last_sales_col].sum()
-                    
-                    if total_sales > 0:
-                        df['Pazar_Payi'] = (df[last_sales_col] / total_sales) * 100
-                        
-                        # Cumulative market share (for Pareto analysis)
-                        df_sorted = df.sort_values(last_sales_col, ascending=False).reset_index(drop=True)
-                        df_sorted['Kumulatif_Pazar_Payi'] = df_sorted['Pazar_Payi'].cumsum()
-                        
-                        df = df.merge(
-                            df_sorted[['Kumulatif_Pazar_Payi']],
-                            left_index=True,
-                            right_index=True,
-                            how='left'
-                        )
-                        
-                        Logger.info("Market share calculated")
-            
-            monitor.checkpoint('market_share')
-            
-            # ========== SALES MOMENTUM ==========
-            growth_cols = [col for col in df.columns if 'Buyume_' in col]
-            
-            if growth_cols and 'Momentum_Ortalama' not in df.columns:
-                df['Momentum_Ortalama'] = df[growth_cols].mean(axis=1, skipna=True)
-                df['Momentum_Volatilite'] = df[growth_cols].std(axis=1, skipna=True)
-                
-                # Growth acceleration
-                if len(growth_cols) >= 2:
-                    df['Ivmelenme'] = df[growth_cols[-1]] - df[growth_cols[-2]]
-                
-                Logger.info("Momentum features created")
-            
-            monitor.checkpoint('momentum')
-            
-            # ========== VOLUME ANALYSIS ==========
-            unit_cols = [col for col in df.columns if 'Birim_' in col]
-            
-            if unit_cols and 'Toplam_Hacim' not in df.columns:
-                df['Toplam_Hacim'] = df[unit_cols].sum(axis=1, skipna=True)
-                df['Ortalama_Hacim'] = df[unit_cols].mean(axis=1, skipna=True)
-                
-                # Volume growth
-                if len(unit_cols) >= 2:
-                    df['Hacim_Buyume'] = (
-                        (df[unit_cols[-1]] - df[unit_cols[-2]]) / 
-                        df[unit_cols[-2]].replace(0, np.nan)
-                    ) * 100
-                
-                Logger.info("Volume features created")
-            
-            monitor.checkpoint('volume')
-            
-            # ========== PERFORMANCE SCORE ==========
-            if 'Performans_Skoru' not in df.columns:
-                score_features = []
-                
-                if 'CAGR' in df.columns:
-                    score_features.append('CAGR')
-                if growth_cols:
-                    score_features.append(growth_cols[-1])
-                if 'Pazar_Payi' in df.columns:
-                    score_features.append('Pazar_Payi')
-                
-                if score_features:
-                    try:
-                        scaler = StandardScaler()
-                        score_data = df[score_features].fillna(0)
-                        scaled_scores = scaler.fit_transform(score_data)
-                        df['Performans_Skoru'] = scaled_scores.mean(axis=1)
-                        
-                        # Normalize to 0-100
-                        score_min = df['Performans_Skoru'].min()
-                        score_max = df['Performans_Skoru'].max()
-                        
-                        if score_max != score_min:
-                            df['Performans_Skoru_100'] = (
-                                (df['Performans_Skoru'] - score_min) / 
-                                (score_max - score_min)
-                            ) * 100
-                        
-                        Logger.info("Performance score calculated")
-                    except Exception as e:
-                        Logger.warning(f"Performance score calculation failed: {str(e)}")
-            
-            monitor.checkpoint('performance')
-            
-            # ========== CLASSIFICATIONS ==========
-            # Growth category
-            if growth_cols and 'Buyume_Kategori' not in df.columns:
-                last_growth = growth_cols[-1]
-                df['Buyume_Kategori'] = pd.cut(
-                    df[last_growth],
-                    bins=[-np.inf, -20, -5, 5, 20, np.inf],
-                    labels=['Ciddi Dusuş', 'Dusuş', 'Stabil', 'Buyume', 'Yuksek Buyume']
-                )
-            
-            # Price tier
-            price_cols = [col for col in df.columns if 'Ort_Fiyat' in col]
-            if price_cols and 'Fiyat_Tier' not in df.columns:
-                try:
-                    df['Fiyat_Tier'] = pd.qcut(
-                        df[price_cols[-1]].dropna(),
-                        q=5,
-                        labels=['Ekonomi', 'Dusuk', 'Orta', 'Yuksek', 'Premium'],
-                        duplicates='drop'
-                    )
-                except:
-                    pass
-            
-            # Market position
-            if 'Pazar_Payi' in df.columns and 'Pazar_Pozisyon' not in df.columns:
-                try:
-                    df['Pazar_Pozisyon'] = pd.cut(
-                        df['Pazar_Payi'],
-                        bins=[0, 0.1, 0.5, 1, 5, 100],
-                        labels=['Niche', 'Kucuk', 'Orta', 'Buyuk', 'Lider']
-                    )
-                except:
-                    pass
-            
-            monitor.checkpoint('classifications')
-            
-            # ========== FINAL CLEANUP ==========
-            # Remove any duplicate columns that may have been created
-            df = df.loc[:, ~df.columns.duplicated()]
-            
-            # Count new features
-            new_features = len(df.columns) - len([c for c in df.columns if c in sales_cols.values()])
-            
-            perf_report = monitor.report()
-            
-            st.success(
-                f"✅ **Feature Engineering Complete!**\n\n"
-                f"🎯 {new_features} new features created\n\n"
-                f"⏱️ Processing time: {perf_report['total_elapsed']:.2f}s"
-            )
-            
-            Logger.info(f"Feature engineering complete: {new_features} features created in {perf_report['total_elapsed']:.2f}s")
-            
-            return df
-            
-        except Exception as e:
-            Logger.error(f"Feature engineering failed: {str(e)}", e)
-            st.warning(f"⚠️ Feature engineering partially completed: {str(e)}")
-            return df
-    
-    @staticmethod
-    def normalize_country_names(df: pd.DataFrame, country_column: Optional[str] = None) -> pd.DataFrame:
-        """
-        Normalize country names for geographic analysis
-        
-        Args:
-            df: Input DataFrame
-            country_column: Name of country column (auto-detected if None)
-        
-        Returns:
-            DataFrame with normalized country names
-        """
-        if country_column is None:
-            for possible_name in ['Country', 'Ülke', 'Ulke', 'country', 'COUNTRY']:
-                if possible_name in df.columns:
-                    country_column = possible_name
-                    break
-        
-        if country_column is None or country_column not in df.columns:
-            return df
-        
-        # Comprehensive country name mapping
-        country_mapping = {
-            # United States
-            'USA': 'United States', 'US': 'United States',
-            'U.S.A': 'United States', 'U.S.A.': 'United States',
-            'United States of America': 'United States',
-            'U.S': 'United States', 'Amerika': 'United States',
-            
-            # United Kingdom
-            'UK': 'United Kingdom', 'U.K': 'United Kingdom',
-            'U.K.': 'United Kingdom', 'Great Britain': 'United Kingdom',
-            'Ingiltere': 'United Kingdom',
-            
-            # UAE
-            'UAE': 'United Arab Emirates',
-            'U.A.E': 'United Arab Emirates',
-            'Emirlikleri': 'United Arab Emirates',
-            
-            # Korea
-            'S. Korea': 'South Korea',
-            'South Korea': 'Korea, Republic of',
-            'N. Korea': 'North Korea',
-            'Guney Kore': 'Korea, Republic of',
-            
-            # Russia
-            'Russia': 'Russian Federation',
-            'Rusya': 'Russian Federation',
-            
-            # European countries
-            'Almanya': 'Germany', 'Fransa': 'France',
-            'Italya': 'Italy', 'Ispanya': 'Spain',
-            'Yunanistan': 'Greece', 'Turkiye': 'Turkey',
-            'Hollanda': 'Netherlands', 'Belcika': 'Belgium',
-            'Avusturya': 'Austria', 'Isvicre': 'Switzerland',
-            'Polonya': 'Poland', 'Portekiz': 'Portugal',
-            
-            # Asian countries
-            'Cin': 'China', 'Japonya': 'Japan',
-            'Hindistan': 'India', 'Endonezya': 'Indonesia',
-            'Tayland': 'Thailand', 'Malezya': 'Malaysia',
-            'Singapur': 'Singapore', 'Vietnam': 'Viet Nam',
-            
-            # Americas
-            'Brezilya': 'Brazil', 'Arjantin': 'Argentina',
-            'Meksika': 'Mexico', 'Kanada': 'Canada',
-            'Sili': 'Chile', 'Kolombiya': 'Colombia',
-            
-            # Oceania
-            'Avustralya': 'Australia',
-            'Yeni Zelanda': 'New Zealand',
-            
-            # Middle East & Africa
-            'Suudi Arabistan': 'Saudi Arabia',
-            'Misir': 'Egypt', 'Guney Afrika': 'South Africa',
-            'Israil': 'Israel', 'Iran': 'Iran, Islamic Republic of'
-        }
-        
-        # Apply mapping
-        df[country_column] = df[country_column].replace(country_mapping)
-        
-        Logger.info(f"Country names normalized in column: {country_column}")
-        
-        return df
-
-
-# ============================================================================
-# FILTER SYSTEM CLASS - HATA DÜZELTMELERİ İLE
-# ============================================================================
-
-class FilterSystem:
-    """
-    Advanced filtering system with multi-dimensional capabilities
-    """
-    
-    @staticmethod
-    def find_column(df: pd.DataFrame, possible_names: List[str]) -> Optional[str]:
-        """
-        Find column by possible name variations
-        
-        Args:
-            df: DataFrame to search
-            possible_names: List of possible column names
-        
-        Returns:
-            Found column name or None
-        """
-        for name in possible_names:
-            if name in df.columns:
-                return name
-        return None
-    
-    @staticmethod
-    def create_filter_sidebar(df: pd.DataFrame) -> Tuple:
-        """
-        Create comprehensive filter sidebar interface
-        
-        Args:
-            df: DataFrame to filter
-        
-        Returns:
-            Tuple of (search_term, filters, apply_button, clear_button)
-        """
-        with st.sidebar.expander("🎯 ADVANCED FILTERING", expanded=True):
-            st.markdown("""
-            <div class="subsection-header">
-                <h3>🔍 Filter Control Panel</h3>
-                <p>Apply filters to refine your analysis</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            filters = {}
-            
-            # ========== GLOBAL SEARCH ==========
-            st.markdown("#### 🔎 Global Search")
-            search_term = st.text_input(
-                "Search across all columns",
-                placeholder="Enter search term...",
-                key="global_search",
-                help="Search for any text across all columns"
-            )
-            
-            st.markdown("---")
-            
-            # ========== CATEGORICAL FILTERS ==========
-            st.markdown("#### 📑 Categorical Filters")
-            
-            # Country filter
-            country_col = FilterSystem.find_column(df, ['Country', 'Ülke', 'Ulke'])
-            if country_col:
-                countries = sorted(df[country_col].dropna().unique())
-                if len(countries) > 0:
-                    selected_countries = st.multiselect(
-                        "🌍 Countries",
-                        options=countries,
-                        default=[],
-                        key="country_filter",
-                        help=f"Select from {len(countries)} countries"
-                    )
-                    if selected_countries:
-                        filters[country_col] = selected_countries
-            
-            # Corporation filter
-            corp_col = FilterSystem.find_column(df, ['Corporation', 'Şirket', 'Sirket', 'Company'])
-            if corp_col:
-                corporations = sorted(df[corp_col].dropna().unique())
-                if len(corporations) > 0:
-                    selected_corps = st.multiselect(
-                        "🏢 Companies",
-                        options=corporations,
-                        default=[],
-                        key="corp_filter",
-                        help=f"Select from {len(corporations)} companies"
-                    )
-                    if selected_corps:
-                        filters[corp_col] = selected_corps
-            
-            # Molecule filter
-            mol_col = FilterSystem.find_column(df, ['Molecule', 'Molekül', 'Molekul', 'Product'])
-            if mol_col:
-                molecules = sorted(df[mol_col].dropna().unique())
-                if len(molecules) > 0:
-                    # Limit display for large lists
-                    if len(molecules) > 100:
-                        st.info(f"ℹ️ {len(molecules)} molecules available. Use search to filter.")
-                        mol_search = st.text_input(
-                            "🔍 Search molecules",
-                            key="mol_search",
-                            placeholder="Type to search..."
-                        )
-                        if mol_search:
-                            molecules = [m for m in molecules if mol_search.lower() in str(m).lower()]
-                    
-                    selected_mols = st.multiselect(
-                        "🧪 Molecules",
-                        options=molecules[:100],  # Limit for performance
-                        default=[],
-                        key="mol_filter",
-                        help="Select molecules to analyze"
-                    )
-                    if selected_mols:
-                        filters[mol_col] = selected_mols
-            
-            st.markdown("---")
-            
-            # ========== NUMERICAL RANGE FILTERS ==========
-            st.markdown("#### 📊 Numerical Filters")
-            
-            # Sales filter
-            sales_cols = [col for col in df.columns if 'Satis_' in col or 'Sales_' in col]
-            if sales_cols:
-                last_sales = sales_cols[-1]
-                sales_data = df[last_sales].dropna()
-                
-                if len(sales_data) > 0:
-                    min_val = float(sales_data.min())
-                    max_val = float(sales_data.max())
-                    
-                    st.write(f"**Sales Range:** {Utils.format_currency(min_val)} - {Utils.format_currency(max_val)}")
-                    
-                    sales_range = st.slider(
-                        "💰 Sales Filter",
-                        min_value=min_val,
-                        max_value=max_val,
-                        value=(min_val, max_val),
-                        format="$%.0f",
-                        key="sales_filter"
-                    )
-                    
-                    if sales_range != (min_val, max_val):
-                        filters['sales_range'] = (sales_range, last_sales)
-            
-            # Growth filter - HATA DÜZELTMESİ BURADA
-            growth_cols = [col for col in df.columns if 'Buyume_' in col or 'Growth_' in col]
-            if growth_cols:
-                last_growth = growth_cols[-1]
-                # Sadece numerik verileri seç
-                growth_data = pd.to_numeric(df[last_growth], errors='coerce').dropna()
-                
-                if len(growth_data) > 0:
-                    min_growth = float(growth_data.min())
-                    max_growth = float(growth_data.max())
-                    
-                    st.write(f"**Growth Range:** {min_growth:.1f}% - {max_growth:.1f}%")
-                    
-                    growth_range = st.slider(
-                        "📈 Growth Filter (%)",
-                        min_value=min(min_growth, -50.0),
-                        max_value=max(max_growth, 100.0),
-                        value=(min(min_growth, -50.0), max(max_growth, 100.0)),
-                        format="%.1f%%",
-                        key="growth_filter"
-                    )
-                    
-                    if growth_range != (min_growth, max_growth):
-                        filters['growth_range'] = (growth_range, last_growth)
-            
-            st.markdown("---")
-            
-            # ========== ADVANCED FILTERS ==========
-            st.markdown("#### ⚙️ Advanced Options")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                positive_growth = st.checkbox(
-                    "📈 Positive Growth Only",
-                    value=False,
-                    key="positive_growth_filter"
-                )
-                if positive_growth:
-                    filters['positive_growth'] = True
-                
-                high_performers = st.checkbox(
-                    "🏆 Top 10% Only",
-                    value=False,
-                    key="top_performers_filter"
-                )
-                if high_performers:
-                    filters['top_performers'] = True
-            
-            with col2:
-                exclude_outliers = st.checkbox(
-                    "🎯 Exclude Outliers",
-                    value=False,
-                    key="exclude_outliers_filter"
-                )
-                if exclude_outliers:
-                    filters['exclude_outliers'] = True
-                
-                min_market_share = st.checkbox(
-                    "💎 Market Share > 1%",
-                    value=False,
-                    key="min_share_filter"
-                )
-                if min_market_share:
-                    filters['min_market_share'] = True
-            
-            st.markdown("---")
-            
-            # ========== ACTION BUTTONS ==========
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                apply_filters = st.button(
-                    "✅ Apply Filters",
-                    use_container_width=True,
-                    type="primary"
-                )
-            
-            with col2:
-                clear_filters = st.button(
-                    "🗑️ Clear All",
-                    use_container_width=True
-                )
-        
-        return search_term, filters, apply_filters, clear_filters
-    
-    @staticmethod
-    def apply_filters(df: pd.DataFrame, search_term: str, filters: Dict) -> pd.DataFrame:
-        """
-        Apply all filters to DataFrame
-        
-        Args:
-            df: Input DataFrame
-            search_term: Global search term
-            filters: Dictionary of filter conditions
-        
-        Returns:
-            Filtered DataFrame
-        """
-        filtered_df = df.copy()
-        original_count = len(filtered_df)
-        
-        try:
-            # Global search
-            if search_term:
-                search_mask = pd.Series(False, index=filtered_df.index)
-                
-                for col in filtered_df.columns:
-                    try:
-                        search_mask = search_mask | filtered_df[col].astype(str).str.contains(
-                            search_term, case=False, na=False, regex=False
-                        )
-                    except:
-                        continue
-                
-                filtered_df = filtered_df[search_mask]
-                Logger.info(f"Global search '{search_term}': {len(filtered_df)} / {original_count} rows")
-            
-            # Categorical filters
-            for col, values in filters.items():
-                if col in ['sales_range', 'growth_range', 'positive_growth', 'top_performers', 
-                          'exclude_outliers', 'min_market_share']:
-                    continue
-                
-                if col in filtered_df.columns and values:
-                    filtered_df = filtered_df[filtered_df[col].isin(values)]
-            
-            # Numerical range filters
-            if 'sales_range' in filters:
-                (min_val, max_val), col_name = filters['sales_range']
-                if col_name in filtered_df.columns:
-                    filtered_df = filtered_df[
-                        (filtered_df[col_name] >= min_val) & 
-                        (filtered_df[col_name] <= max_val)
-                    ]
-            
-            if 'growth_range' in filters:
-                (min_val, max_val), col_name = filters['growth_range']
-                if col_name in filtered_df.columns:
-                    # Numeric olarak convert et
-                    filtered_df[col_name] = pd.to_numeric(filtered_df[col_name], errors='coerce')
-                    filtered_df = filtered_df[
-                        (filtered_df[col_name] >= min_val) & 
-                        (filtered_df[col_name] <= max_val)
-                    ]
-            
-            # Boolean filters
-            if filters.get('positive_growth'):
-                growth_cols = [col for col in filtered_df.columns if 'Buyume_' in col or 'Growth_' in col]
-                if growth_cols:
-                    # Numeric conversion
-                    last_growth = growth_cols[-1]
-                    filtered_df[last_growth] = pd.to_numeric(filtered_df[last_growth], errors='coerce')
-                    filtered_df = filtered_df[filtered_df[last_growth] > 0]
-            
-            if filters.get('top_performers'):
-                sales_cols = [col for col in filtered_df.columns if 'Satis_' in col or 'Sales_' in col]
-                if sales_cols:
-                    threshold = filtered_df[sales_cols[-1]].quantile(0.9)
-                    filtered_df = filtered_df[filtered_df[sales_cols[-1]] >= threshold]
-            
-            if filters.get('exclude_outliers'):
-                sales_cols = [col for col in filtered_df.columns if 'Satis_' in col or 'Sales_' in col]
-                if sales_cols:
-                    Q1 = filtered_df[sales_cols[-1]].quantile(0.25)
-                    Q3 = filtered_df[sales_cols[-1]].quantile(0.75)
-                    IQR = Q3 - Q1
-                    filtered_df = filtered_df[
-                        (filtered_df[sales_cols[-1]] >= Q1 - 1.5 * IQR) &
-                        (filtered_df[sales_cols[-1]] <= Q3 + 1.5 * IQR)
-                    ]
-            
-            if filters.get('min_market_share') and 'Pazar_Payi' in filtered_df.columns:
-                filtered_df = filtered_df[filtered_df['Pazar_Payi'] >= 1.0]
-            
-            Logger.info(f"Filters applied: {len(filtered_df)} / {original_count} rows remaining")
-            
-            return filtered_df
-            
-        except Exception as e:
-            Logger.error(f"Filter application failed: {str(e)}", e)
-            st.error(f"❌ Filter error: {str(e)}")
-            return df
-
-
-# ============================================================================
-# ANALYTICS ENGINE CLASS
-# ============================================================================
-
-class AnalyticsEngine:
-    """
-    Comprehensive pharmaceutical market analytics engine
-    """
-    
-    @staticmethod
-    @st.cache_data(ttl=Config.CACHE_TTL, show_spinner=False)
-    def calculate_comprehensive_metrics(df: pd.DataFrame) -> Dict:
-        """
-        Calculate comprehensive market metrics
-        
-        Args:
-            df: Input DataFrame
-        
-        Returns:
-            Dictionary of calculated metrics
-        """
-        metrics = {}
-        
-        try:
-            Logger.info("Calculating comprehensive metrics")
-            
-            # Basic metrics
-            metrics['total_rows'] = len(df)
-            metrics['total_columns'] = len(df.columns)
-            metrics['memory_mb'] = df.memory_usage(deep=True).sum() / 1024**2
-            
-            # Find sales columns
-            sales_cols = [col for col in df.columns if 'Satis_' in col or 'Sales_' in col]
-            
-            if sales_cols:
-                last_sales = sales_cols[-1]
-                year_match = re.search(r'(\d{4})', last_sales)
-                metrics['last_year'] = year_match.group(1) if year_match else 'N/A'
-                
-                # Sales metrics
-                metrics['total_market_value'] = float(df[last_sales].sum())
-                metrics['avg_sales'] = float(df[last_sales].mean())
-                metrics['median_sales'] = float(df[last_sales].median())
-                metrics['std_sales'] = float(df[last_sales].std())
-                metrics['min_sales'] = float(df[last_sales].min())
-                metrics['max_sales'] = float(df[last_sales].max())
-                
-                # Sales distribution
-                metrics['sales_q1'] = float(df[last_sales].quantile(0.25))
-                metrics['sales_q3'] = float(df[last_sales].quantile(0.75))
-                metrics['sales_iqr'] = metrics['sales_q3'] - metrics['sales_q1']
-                metrics['sales_cv'] = (metrics['std_sales'] / metrics['avg_sales'] * 100) if metrics['avg_sales'] > 0 else 0
-            
-            # Growth metrics - HATA DÜZELTMESİ BURADA
-            growth_cols = [col for col in df.columns if 'Buyume_' in col or 'Growth_' in col]
-            
-            if growth_cols:
-                last_growth = growth_cols[-1]
-                # Sadece numerik verileri al
-                growth_data = pd.to_numeric(df[last_growth], errors='coerce').dropna()
-                
-                if len(growth_data) > 0:
-                    metrics['avg_growth'] = float(growth_data.mean())
-                    metrics['median_growth'] = float(growth_data.median())
-                    metrics['std_growth'] = float(growth_data.std())
-                    metrics['positive_growth_count'] = int((growth_data > 0).sum())
-                    metrics['negative_growth_count'] = int((growth_data < 0).sum())
-                    metrics['high_growth_count'] = int((growth_data > 20).sum())
-                    metrics['decline_count'] = int((growth_data < -10).sum())
-                    metrics['positive_growth_pct'] = (metrics['positive_growth_count'] / len(growth_data)) * 100
-            
-            # Market structure
-            corp_col = FilterSystem.find_column(df, ['Corporation', 'Şirket', 'Sirket'])
-            
-            if corp_col and sales_cols:
-                corp_sales = df.groupby(corp_col)[last_sales].sum().sort_values(ascending=False)
-                total_sales = corp_sales.sum()
-                
-                if total_sales > 0:
-                    market_shares = (corp_sales / total_sales * 100)
-                    
-                    # HHI (Herfindahl-Hirschman Index)
-                    metrics['hhi_index'] = float((market_shares ** 2).sum())
-                    
-                    # Concentration ratios
-                    for n in [1, 3, 4, 5, 10]:
-                        if len(corp_sales) >= n:
-                            metrics[f'top_{n}_share'] = float(corp_sales.nlargest(n).sum() / total_sales * 100)
-                    
-                    metrics['cr4'] = metrics.get('top_4_share', 0)
-                    metrics['num_competitors'] = len(corp_sales)
-                    metrics['effective_competitors'] = 10000 / metrics['hhi_index'] if metrics['hhi_index'] > 0 else 0
-                    
-                    # Gini coefficient
-                    metrics['gini_coefficient'] = AnalyticsEngine.calculate_gini(market_shares)
-            
-            # Geographic metrics
-            country_col = FilterSystem.find_column(df, ['Country', 'Ülke', 'Ulke'])
-            
-            if country_col:
-                metrics['country_coverage'] = df[country_col].nunique()
-                
-                if sales_cols:
-                    country_sales = df.groupby(country_col)[last_sales].sum()
-                    total_country_sales = country_sales.sum()
-                    
-                    if total_country_sales > 0:
-                        metrics['top_5_country_share'] = float(country_sales.nlargest(5).sum() / total_country_sales * 100)
-                        metrics['top_country'] = country_sales.idxmax()
-                        metrics['top_country_share'] = float(country_sales.max() / total_country_sales * 100)
-            
-            # Molecule diversity
-            mol_col = FilterSystem.find_column(df, ['Molecule', 'Molekül', 'Molekul'])
-            
-            if mol_col:
-                metrics['unique_molecules'] = df[mol_col].nunique()
-                
-                if sales_cols:
-                    mol_sales = df.groupby(mol_col)[last_sales].sum()
-                    total_mol_sales = mol_sales.sum()
-                    
-                    if total_mol_sales > 0:
-                        metrics['top_10_molecule_share'] = float(mol_sales.nlargest(10).sum() / total_mol_sales * 100)
-                        metrics['top_molecule'] = mol_sales.idxmax()
-                        metrics['top_molecule_sales'] = float(mol_sales.max())
-            
-            # Price metrics
-            price_cols = [col for col in df.columns if 'Ort_Fiyat' in col or 'Price' in col]
-            
-            if price_cols:
-                last_price = price_cols[-1]
-                price_data = df[last_price].dropna()
-                
-                metrics['avg_price'] = float(price_data.mean())
-                metrics['median_price'] = float(price_data.median())
-                metrics['std_price'] = float(price_data.std())
-                metrics['min_price'] = float(price_data.min())
-                metrics['max_price'] = float(price_data.max())
-                metrics['price_cv'] = (metrics['std_price'] / metrics['avg_price'] * 100) if metrics['avg_price'] > 0 else 0
-            
-            # CAGR metrics
-            if 'CAGR' in df.columns:
-                cagr_data = pd.to_numeric(df['CAGR'], errors='coerce').dropna()
-                metrics['avg_cagr'] = float(cagr_data.mean())
-                metrics['median_cagr'] = float(cagr_data.median())
-                metrics['positive_cagr_pct'] = float((cagr_data > 0).sum() / len(cagr_data) * 100)
-            
-            # Market share metrics
-            if 'Pazar_Payi' in df.columns:
-                share_data = pd.to_numeric(df['Pazar_Payi'], errors='coerce').dropna()
-                metrics['avg_market_share'] = float(share_data.mean())
-                metrics['median_market_share'] = float(share_data.median())
-                metrics['gini_market_share'] = AnalyticsEngine.calculate_gini(share_data)
-            
-            # Performance metrics
-            if 'Performans_Skoru_100' in df.columns:
-                perf_data = pd.to_numeric(df['Performans_Skoru_100'], errors='coerce').dropna()
-                metrics['avg_performance'] = float(perf_data.mean())
-                metrics['high_performers'] = int((perf_data > 75).sum())
-                metrics['low_performers'] = int((perf_data < 25).sum())
-            
-            Logger.info(f"Calculated {len(metrics)} metrics")
-            
-            return metrics
-            
-        except Exception as e:
-            Logger.error(f"Metrics calculation failed: {str(e)}", e)
-            return metrics
-    
-    @staticmethod
-    def calculate_gini(data: pd.Series) -> float:
-        """Calculate Gini coefficient for inequality measurement"""
-        try:
-            data = pd.to_numeric(data, errors='coerce').dropna()
-            if len(data) == 0:
-                return 0.0
-            
-            sorted_data = np.sort(data)
-            n = len(sorted_data)
-            cumsum = np.cumsum(sorted_data)
-            
-            return float((2 * np.sum((np.arange(1, n+1)) * sorted_data)) / (n * cumsum[-1]) - (n + 1) / n)
-            
-        except:
-            return 0.0
-    
-    @staticmethod
-    def generate_strategic_insights(df: pd.DataFrame, metrics: Dict) -> List[Dict]:
-        """
-        Generate strategic business insights from data
-        
-        Args:
-            df: DataFrame
-            metrics: Calculated metrics
-        
-        Returns:
-            List of insight dictionaries
-        """
-        insights = []
-        
-        try:
-            sales_cols = [col for col in df.columns if 'Satis_' in col or 'Sales_' in col]
-            if not sales_cols:
-                return insights
-            
-            last_sales = sales_cols[-1]
-            year = metrics.get('last_year', 'N/A')
-            
-            # Top products insight
-            top_10 = df.nlargest(10, last_sales)
-            top_share = (top_10[last_sales].sum() / df[last_sales].sum() * 100)
-            
-            insights.append({
-                'type': 'success',
-                'title': f'🏆 Top 10 Product Concentration - {year}',
-                'description': f"Top 10 products account for {top_share:.1f}% of total market ({Utils.format_currency(top_10[last_sales].sum())}). "
-                              f"Average: {Utils.format_currency(top_10[last_sales].mean())}"
-            })
-            
-            # Growth leaders
-            growth_cols = [col for col in df.columns if 'Buyume_' in col]
-            if growth_cols:
-                last_growth = growth_cols[-1]
-                # Numeric conversion
-                df_numeric = df.copy()
-                df_numeric[last_growth] = pd.to_numeric(df_numeric[last_growth], errors='coerce')
-                top_growth = df_numeric.nlargest(10, last_growth)
-                avg_top_growth = top_growth[last_growth].mean()
-                
-                insights.append({
-                    'type': 'info',
-                    'title': '🚀 Growth Champions',
-                    'description': f"Top 10 fastest-growing products show {avg_top_growth:.1f}% average growth "
-                                  f"(market average: {metrics.get('avg_growth', 0):.1f}%). "
-                                  f"Combined sales: {Utils.format_currency(top_growth[last_sales].sum())}"
-                })
-                
-                # Decline warning
-                decline_count = metrics.get('decline_count', 0)
-                if decline_count > 0:
-                    decline_pct = (decline_count / len(df)) * 100
-                    declining_df = df_numeric[df_numeric[last_growth] < -10]
-                    declining_sales = declining_df[last_sales].sum()
-                    
-                    insights.append({
-                        'type': 'warning',
-                        'title': '⚠️ Products in Decline',
-                        'description': f"{decline_count:,} products ({decline_pct:.1f}%) showing >10% decline. "
-                                      f"At-risk sales: {Utils.format_currency(declining_sales)}. Requires strategic review."
-                    })
-            
-            # Market structure
-            hhi = metrics.get('hhi_index', 0)
-            if hhi > 0:
-                if hhi > 2500:
-                    structure = "Highly Concentrated (Monopoly/Oligopoly)"
-                    risk = "Limited competition, potential for market power abuse"
-                elif hhi > 1800:
-                    structure = "Moderately Concentrated (Oligopoly)"
-                    risk = "Competitive but concentrated, moderate entry barriers"
-                else:
-                    structure = "Low Concentration (Competitive)"
-                    risk = "High competition, potential price pressure"
-                
-                insights.append({
-                    'type': 'info',
-                    'title': '📊 Market Structure Analysis',
-                    'description': f"HHI: {hhi:.0f} - {structure}. {risk}. "
-                                  f"Effective competitors: {metrics.get('effective_competitors', 0):.1f}"
-                })
-            
-            # Geographic concentration
-            country_col = FilterSystem.find_column(df, ['Country', 'Ülke'])
-            if country_col:
-                top_country = metrics.get('top_country', 'N/A')
-                country_share = metrics.get('top_country_share', 0)
-                
-                insights.append({
-                    'type': 'info',
-                    'title': f'🌍 Geographic Leader - {year}',
-                    'description': f"{top_country} dominates with {country_share:.1f}% market share. "
-                                  f"Operating in {metrics.get('country_coverage', 0)} countries. "
-                                  f"Top 5 countries: {metrics.get('top_5_country_share', 0):.1f}%"
-                })
-            
-            # Price analysis
-            avg_price = metrics.get('avg_price', 0)
-            price_cv = metrics.get('price_cv', 0)
-            
-            if avg_price > 0:
-                price_tier = "Premium" if avg_price > 100 else "Mid-range" if avg_price > 10 else "Economy"
-                
-                insights.append({
-                    'type': 'info',
-                    'title': f'💰 Pricing Profile - {year}',
-                    'description': f"Average price: {Utils.format_currency(avg_price)} ({price_tier} segment). "
-                                  f"Price variation: {price_cv:.1f}% CV. "
-                                  f"Range: {Utils.format_currency(metrics.get('min_price', 0))} - "
-                                  f"{Utils.format_currency(metrics.get('max_price', 0))}"
-                })
-            
-            # CAGR insight
-            avg_cagr = metrics.get('avg_cagr', 0)
-            if avg_cagr != 0:
-                cagr_status = "strong growth" if avg_cagr > 10 else "moderate growth" if avg_cagr > 0 else "declining"
-                
-                insights.append({
-                    'type': 'success' if avg_cagr > 10 else 'warning' if avg_cagr < 0 else 'info',
-                    'title': '📈 Long-term Growth Trend (CAGR)',
-                    'description': f"Average CAGR: {avg_cagr:.1f}% - {cagr_status} trajectory. "
-                                  f"{metrics.get('positive_cagr_pct', 0):.1f}% of products show positive CAGR."
-                })
-            
-            # Opportunity identification
-            if growth_cols and 'Pazar_Payi' in df.columns:
-                last_growth = growth_cols[-1]
-                df_numeric = df.copy()
-                df_numeric[last_growth] = pd.to_numeric(df_numeric[last_growth], errors='coerce')
-                opportunities = df_numeric[(df_numeric[last_growth] > 20) & (df_numeric['Pazar_Payi'] < 1)]
-                
-                if len(opportunities) > 0:
-                    opp_sales = opportunities[last_sales].sum()
-                    
-                    insights.append({
-                        'type': 'success',
-                        'title': '💎 High-Growth Opportunities',
-                        'description': f"{len(opportunities)} products show >20% growth with <1% market share. "
-                                      f"Investment opportunity: {Utils.format_currency(opp_sales)}. "
-                                      f"High potential for market expansion."
-                    })
-            
-            # Risk identification
-            if growth_cols and 'Pazar_Payi' in df.columns:
-                last_growth = growth_cols[-1]
-                df_numeric = df.copy()
-                df_numeric[last_growth] = pd.to_numeric(df_numeric[last_growth], errors='coerce')
-                risks = df_numeric[(df_numeric[last_growth] < -5) & (df_numeric['Pazar_Payi'] > 5)]
-                
-                if len(risks) > 0:
-                    risk_sales = risks[last_sales].sum()
-                    risk_share = (risk_sales / df[last_sales].sum()) * 100
-                    
-                    insights.append({
-                        'type': 'danger',
-                        'title': '🚨 Strategic Risk Alert',
-                        'description': f"{len(risks)} major products declining >5% despite >5% market share. "
-                                      f"At-risk revenue: {Utils.format_currency(risk_sales)} ({risk_share:.1f}%). "
-                                      f"Immediate intervention required."
-                    })
-            
-            Logger.info(f"Generated {len(insights)} strategic insights")
-            
-            return insights
-            
-        except Exception as e:
-            Logger.error(f"Insight generation failed: {str(e)}", e)
-            return insights
-
-
-# ============================================================================
-# MACHINE LEARNING ENGINE - ADVANCED
-# ============================================================================
-
-class MLEngine:
-    """
-    Advanced machine learning engine for pharmaceutical analytics
-    """
-    
-    @staticmethod
-    def train_forecasting_model(
-        df: pd.DataFrame,
-        target_col: str,
-        feature_cols: List[str],
-        forecast_years: int = 3,
-        model_type: str = 'rf'
-    ) -> Tuple[Optional[Dict], Optional[str]]:
-        """
-        Train advanced forecasting model
-        
-        Args:
-            df: Input DataFrame
-            target_col: Target column name
-            feature_cols: List of feature columns
-            forecast_years: Number of years to forecast
-            model_type: Model type ('rf', 'gbm', 'ridge', 'lasso')
-        
-        Returns:
-            Tuple of (results_dict, error_message)
-        """
-        try:
-            Logger.info(f"Training {model_type} forecasting model")
-            
-            # Prepare data - numeric conversion
-            ml_data = df[feature_cols + [target_col]].copy()
-            
-            # Convert all columns to numeric
-            for col in ml_data.columns:
-                ml_data[col] = pd.to_numeric(ml_data[col], errors='coerce')
-            
-            ml_data = ml_data.dropna()
-            
-            if len(ml_data) < Config.ML_MIN_SAMPLES:
-                return None, f"Insufficient data: {len(ml_data)} rows (minimum {Config.ML_MIN_SAMPLES} required)"
-            
-            X = ml_data[feature_cols]
-            y = ml_data[target_col]
-            
-            # Train-test split with stratification
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=Config.RANDOM_STATE
-            )
-            
-            # Feature scaling
-            scaler = StandardScaler()
-            X_train_scaled = scaler.fit_transform(X_train)
-            X_test_scaled = scaler.transform(X_test)
-            
-            # Select and configure model
-            if model_type == 'rf':
-                model = RandomForestRegressor(
-                    n_estimators=200,
-                    max_depth=15,
-                    min_samples_split=5,
-                    min_samples_leaf=2,
-                    random_state=Config.RANDOM_STATE,
-                    n_jobs=Config.N_JOBS
-                )
-            elif model_type == 'gbm':
-                model = GradientBoostingRegressor(
-                    n_estimators=200,
-                    max_depth=7,
-                    learning_rate=0.05,
-                    subsample=0.8,
-                    random_state=Config.RANDOM_STATE
-                )
-            elif model_type == 'ridge':
-                model = Ridge(alpha=1.0, random_state=Config.RANDOM_STATE)
-            elif model_type == 'lasso':
-                model = Lasso(alpha=0.1, random_state=Config.RANDOM_STATE)
-            else:
-                model = RandomForestRegressor(n_estimators=100, random_state=Config.RANDOM_STATE)
-            
-            # Train model
-            model.fit(X_train_scaled, y_train)
-            
-            # Predictions
-            y_pred_train = model.predict(X_train_scaled)
-            y_pred_test = model.predict(X_test_scaled)
-            
-            # Calculate metrics
-            mae_train = mean_absolute_error(y_train, y_pred_train)
-            mae_test = mean_absolute_error(y_test, y_pred_test)
-            rmse_train = np.sqrt(mean_squared_error(y_train, y_pred_train))
-            rmse_test = np.sqrt(mean_squared_error(y_test, y_pred_test))
-            r2_train = r2_score(y_train, y_pred_train)
-            r2_test = r2_score(y_test, y_pred_test)
-            
-            # MAPE
-            try:
-                mape_test = mean_absolute_percentage_error(y_test, y_pred_test)
-            except:
-                mape_test = 0
-            
-            # Cross-validation
-            try:
-                kf = KFold(n_splits=min(Config.CV_FOLDS, len(X)//10), shuffle=True, random_state=Config.RANDOM_STATE)
-                cv_scores = cross_val_score(model, X, y, cv=kf, scoring='r2', n_jobs=Config.N_JOBS)
-                cv_mean = cv_scores.mean()
-                cv_std = cv_scores.std()
-            except:
-                cv_mean = r2_test
-                cv_std = 0
-            
-            # Feature importance
-            if hasattr(model, 'feature_importances_'):
-                feature_importance = dict(zip(feature_cols, model.feature_importances_))
-            elif hasattr(model, 'coef_'):
-                feature_importance = dict(zip(feature_cols, np.abs(model.coef_)))
-            else:
-                feature_importance = {f: 1/len(feature_cols) for f in feature_cols}
-            
-            # Future forecasting
-            forecast = []
-            year_match = re.search(r'(\d{4})', target_col)
-            base_year = int(year_match.group(1)) if year_match else 2024
-            
-            for year_offset in range(1, forecast_years + 1):
-                future_year = base_year + year_offset
-                
-                # Use mean of features for forecast (simple approach)
-                future_X = X.mean(axis=0).values.reshape(1, -1)
-                future_X_scaled = scaler.transform(future_X)
-                future_pred = model.predict(future_X_scaled)[0]
-                
-                # Confidence intervals (based on RMSE)
-                confidence_low = future_pred - 1.96 * rmse_test
-                confidence_high = future_pred + 1.96 * rmse_test
-                
-                forecast.append({
-                    'year': str(future_year),
-                    'prediction': float(future_pred),
-                    'confidence_low': float(max(0, confidence_low)),
-                    'confidence_high': float(confidence_high)
-                })
-            
-            results = {
-                'model': model,
-                'scaler': scaler,
-                'model_type': model_type,
-                'mae_train': float(mae_train),
-                'mae_test': float(mae_test),
-                'rmse_train': float(rmse_train),
-                'rmse_test': float(rmse_test),
-                'r2_train': float(r2_train),
-                'r2_test': float(r2_test),
-                'mape_test': float(mape_test),
-                'cv_mean': float(cv_mean),
-                'cv_std': float(cv_std),
-                'forecast': forecast,
-                'feature_importance': {k: float(v) for k, v in feature_importance.items()},
-                'train_size': len(X_train),
-                'test_size': len(X_test),
-                'predictions': {
-                    'y_test': y_test.values.tolist(),
-                    'y_pred_test': y_pred_test.tolist()
-                }
-            }
-            
-            Logger.info(f"Model trained successfully: R²={r2_test:.3f}, RMSE={rmse_test:.2f}")
-            
-            return results, None
-            
-        except Exception as e:
-            Logger.error(f"Model training failed: {str(e)}", e)
-            return None, f"Training error: {str(e)}"
-    
-    @staticmethod
-    def perform_clustering(
-        df: pd.DataFrame,
-        feature_cols: List[str],
-        n_clusters: int = 4,
-        algorithm: str = 'kmeans'
-    ) -> Tuple[Optional[Dict], Optional[str]]:
-        """
-        Perform advanced clustering analysis
-        
-        Args:
-            df: Input DataFrame
-            feature_cols: Features for clustering
-            n_clusters: Number of clusters
-            algorithm: Algorithm ('kmeans', 'hierarchical', 'dbscan')
-        
-        Returns:
-            Tuple of (results_dict, error_message)
-        """
-        try:
-            Logger.info(f"Performing {algorithm} clustering with {n_clusters} clusters")
-            
-            # Prepare data - numeric conversion
-            cluster_data = df[feature_cols].copy()
-            for col in cluster_data.columns:
-                cluster_data[col] = pd.to_numeric(cluster_data[col], errors='coerce')
-            
-            cluster_data = cluster_data.fillna(0)
-            
-            if len(cluster_data) < Config.ML_MIN_SAMPLES_CLUSTERING:
-                return None, f"Insufficient data: {len(cluster_data)} rows (minimum {Config.ML_MIN_SAMPLES_CLUSTERING} required)"
-            
-            # Scale features
-            scaler = StandardScaler()
-            scaled_data = scaler.fit_transform(cluster_data)
-            
-            # Perform clustering
-            if algorithm == 'kmeans':
-                clusterer = KMeans(
-                    n_clusters=n_clusters,
-                    init='k-means++',
-                    n_init=20,
-                    max_iter=500,
-                    random_state=Config.RANDOM_STATE,
-                    n_jobs=Config.N_JOBS
-                )
-            elif algorithm == 'dbscan':
-                clusterer = DBSCAN(
-                    eps=0.5,
-                    min_samples=max(10, len(cluster_data)//100),
-                    n_jobs=Config.N_JOBS
-                )
-            elif algorithm == 'hierarchical':
-                clusterer = AgglomerativeClustering(
-                    n_clusters=n_clusters,
-                    linkage='ward'
-                )
-            else:
-                clusterer = KMeans(n_clusters=n_clusters, random_state=Config.RANDOM_STATE)
-            
-            # Fit and predict
-            clusters = clusterer.fit_predict(scaled_data)
-            
-            # Calculate quality metrics
-            silhouette = silhouette_score(scaled_data, clusters)
-            calinski = calinski_harabasz_score(scaled_data, clusters)
-            davies = davies_bouldin_score(scaled_data, clusters)
-            
-            # PCA for visualization
-            n_components = min(3, len(feature_cols))
-            pca = PCA(n_components=n_components, random_state=Config.RANDOM_STATE)
-            pca_data = pca.fit_transform(scaled_data)
-            
-            # Cluster statistics
-            cluster_stats = {}
-            unique_clusters = np.unique(clusters)
-            
-            for i in unique_clusters:
-                cluster_mask = clusters == i
-                cluster_stats[int(i)] = {
-                    'size': int(cluster_mask.sum()),
-                    'percentage': float((cluster_mask.sum() / len(clusters)) * 100),
-                    'mean_features': df[feature_cols][cluster_mask].mean().to_dict()
-                }
-            
-            # Assign meaningful names
-            cluster_names = {
-                0: 'Emerging Stars',
-                1: 'Mature Cash Cows',
-                2: 'Innovation Leaders',
-                3: 'Declining Products',
-                4: 'Niche Players',
-                5: 'Volume Products',
-                6: 'Premium Segment',
-                7: 'Economy Segment',
-                8: 'Growth Champions',
-                9: 'At Risk'
-            }
-            
-            cluster_labels = [cluster_names.get(c, f'Cluster {c}') for c in clusters]
-            
-            results = {
-                'clusters': clusters.tolist(),
-                'cluster_labels': cluster_labels,
-                'silhouette_score': float(silhouette),
-                'calinski_score': float(calinski),
-                'davies_bouldin_score': float(davies),
-                'pca_data': pca_data.tolist(),
-                'pca_variance': pca.explained_variance_ratio_.tolist(),
-                'cluster_stats': cluster_stats,
-                'n_clusters': len(unique_clusters),
-                'algorithm': algorithm,
-                'feature_cols': feature_cols
-            }
-            
-            if algorithm == 'kmeans':
-                results['centers'] = clusterer.cluster_centers_.tolist()
-                results['inertia'] = float(clusterer.inertia_)
-            
-            Logger.info(f"Clustering complete: {len(unique_clusters)} clusters, silhouette={silhouette:.3f}")
-            
-            return results, None
-            
-        except Exception as e:
-            Logger.error(f"Clustering failed: {str(e)}", e)
-            return None, f"Clustering error: {str(e)}"
-    
-    @staticmethod
-    def detect_anomalies(
-        df: pd.DataFrame,
-        feature_cols: List[str],
-        contamination: float = 0.1
-    ) -> Tuple[Optional[Dict], Optional[str]]:
-        """
-        Detect anomalies using Isolation Forest
-        
-        Args:
-            df: Input DataFrame
-            feature_cols: Features for anomaly detection
-            contamination: Expected proportion of outliers
-        
-        Returns:
-            Tuple of (results_dict, error_message)
-        """
-        try:
-            Logger.info(f"Detecting anomalies with contamination={contamination}")
-            
-            # Prepare data - numeric conversion
-            anomaly_data = df[feature_cols].copy()
-            for col in anomaly_data.columns:
-                anomaly_data[col] = pd.to_numeric(anomaly_data[col], errors='coerce')
-            
-            anomaly_data = anomaly_data.fillna(0)
-            
-            if len(anomaly_data) < Config.ML_MIN_SAMPLES_ANOMALY:
-                return None, f"Insufficient data: {len(anomaly_data)} rows"
-            
-            # Scale features
-            scaler = RobustScaler()
-            scaled_data = scaler.fit_transform(anomaly_data)
-            
-            # Isolation Forest
-            iso_forest = IsolationForest(
-                contamination=contamination,
-                n_estimators=200,
-                max_samples='auto',
-                random_state=Config.RANDOM_STATE,
-                n_jobs=Config.N_JOBS
-            )
-            
-            predictions = iso_forest.fit_predict(scaled_data)
-            anomaly_scores = iso_forest.score_samples(scaled_data)
-            
-            # Identify anomalies
-            is_anomaly = predictions == -1
-            anomaly_count = int(is_anomaly.sum())
-            anomaly_percentage = float((anomaly_count / len(predictions)) * 100)
-            
-            # Severity classification
-            severity = []
-            score_percentiles = np.percentile(anomaly_scores, [5, 10, 25])
-            
-            for score in anomaly_scores:
-                if score < score_percentiles[0]:
-                    severity.append('Critical')
-                elif score < score_percentiles[1]:
-                    severity.append('High')
-                elif score < score_percentiles[2]:
-                    severity.append('Medium')
-                else:
-                    severity.append('Low')
-            
-            results = {
-                'is_anomaly': is_anomaly.tolist(),
-                'anomaly_scores': anomaly_scores.tolist(),
-                'anomaly_count': anomaly_count,
-                'anomaly_percentage': anomaly_percentage,
-                'severity': severity,
-                'contamination': contamination,
-                'feature_cols': feature_cols
-            }
-            
-            Logger.info(f"Anomaly detection complete: {anomaly_count} anomalies ({anomaly_percentage:.1f}%)")
-            
-            return results, None
-            
-        except Exception as e:
-            Logger.error(f"Anomaly detection failed: {str(e)}", e)
-            return None, f"Detection error: {str(e)}"
-
-
-# ============================================================================
-# VISUALIZATION ENGINE - PROFESSIONAL
-# ============================================================================
-
-class Visualizer:
-    """
-    Professional visualization engine with publication-quality charts
-    """
-    
-    @staticmethod
-    def create_kpi_dashboard(df: pd.DataFrame, metrics: Dict) -> None:
-        """Create comprehensive KPI dashboard"""
-        try:
-            # Row 1: Primary KPIs
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                total_value = metrics.get('total_market_value', 0)
-                year = metrics.get('last_year', '')
-                growth = metrics.get('avg_growth', 0)
-                
-                delta_class = "positive" if growth > 0 else "negative" if growth < 0 else "neutral"
-                delta_icon = "↑" if growth > 0 else "↓" if growth < 0 else "→"
-                
-                st.markdown(f"""
-                <div class="kpi-card fade-in">
-                    <div class="kpi-title">Total Market Value</div>
-                    <div class="kpi-value">{Utils.format_currency(total_value)}</div>
-                    <div class="kpi-subtitle">{year} Global Market</div>
-                    <span class="kpi-delta {delta_class}">
-                        {delta_icon} {abs(growth):.1f}% YoY
-                    </span>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                avg_growth = metrics.get('avg_growth', 0)
-                median_growth = metrics.get('median_growth', 0)
-                
-                st.markdown(f"""
-                <div class="kpi-card fade-in" style="animation-delay: 0.1s;">
-                    <div class="kpi-title">Average Growth Rate</div>
-                    <div class="kpi-value">{Utils.format_percentage(avg_growth, include_sign=False)}</div>
-                    <div class="kpi-subtitle">Median: {Utils.format_percentage(median_growth, include_sign=False)}</div>
-                    <span class="metric-badge {'success' if avg_growth > 10 else 'warning' if avg_growth > 0 else 'danger'}">
-                        {'Strong Growth' if avg_growth > 10 else 'Moderate' if avg_growth > 0 else 'Declining'}
-                    </span>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col3:
-                hhi = metrics.get('hhi_index', 0)
-                eff_comp = metrics.get('effective_competitors', 0)
-                
-                if hhi > 2500:
-                    status = "Monopoly"
-                    status_class = "danger"
-                elif hhi > 1500:
-                    status = "Oligopoly"
-                    status_class = "warning"
-                else:
-                    status = "Competitive"
-                    status_class = "success"
-                
-                st.markdown(f"""
-                <div class="kpi-card fade-in" style="animation-delay: 0.2s;">
-                    <div class="kpi-title">Market Structure (HHI)</div>
-                    <div class="kpi-value">{hhi:.0f}</div>
-                    <div class="kpi-subtitle">Effective Competitors: {eff_comp:.1f}</div>
-                    <span class="metric-badge {status_class}">
-                        {status}
-                    </span>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col4:
-                molecules = metrics.get('unique_molecules', 0)
-                top_10_share = metrics.get('top_10_molecule_share', 0)
-                
-                st.markdown(f"""
-                <div class="kpi-card fade-in" style="animation-delay: 0.3s;">
-                    <div class="kpi-title">Product Diversity</div>
-                    <div class="kpi-value">{molecules:,}</div>
-                    <div class="kpi-subtitle">Unique Molecules</div>
-                    <span class="kpi-delta neutral">
-                        Top 10: {Utils.format_percentage(top_10_share, include_sign=False)}
-                    </span>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Row 2: Secondary metrics
-            col5, col6, col7, col8 = st.columns(4)
-            
-            with col5:
-                st.metric(
-                    "Countries",
-                    f"{metrics.get('country_coverage', 0)}",
-                    f"Top 5: {metrics.get('top_5_country_share', 0):.1f}%"
-                )
-            
-            with col6:
-                st.metric(
-                    "Average Price",
-                    Utils.format_currency(metrics.get('avg_price', 0)),
-                    f"CV: {metrics.get('price_cv', 0):.1f}%"
-                )
-            
-            with col7:
-                pos_growth_pct = metrics.get('positive_growth_pct', 0)
-                st.metric(
-                    "Growing Products",
-                    f"{pos_growth_pct:.1f}%",
-                    f"{metrics.get('high_growth_count', 0)} >20%"
-                )
-            
-            with col8:
-                st.metric(
-                    "Competitors",
-                    f"{metrics.get('num_competitors', 0)}",
-                    f"CR4: {metrics.get('cr4', 0):.1f}%"
-                )
-            
-        except Exception as e:
-            Logger.error(f"KPI dashboard error: {str(e)}", e)
-            st.error("❌ KPI dashboard error")
-
-
-# ============================================================================
-# MAIN APPLICATION
-# ============================================================================
-
-def main():
-    """Main application entry point"""
-    
-    # Professional header
-    st.markdown("""
-    <div class="section-header">
-        <h1>💊 PHARMAINTELLIGENCE PRO</h1>
-        <p>Enterprise Pharmaceutical Analytics Platform with Advanced Machine Learning</p>
-        <div class="version-badge">
-            Version 7.0 Professional Edition | Build: 2024-02-04
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Initialize session state
-    if 'data' not in st.session_state:
-        st.session_state.data = None
-    if 'filtered_data' not in st.session_state:
-        st.session_state.filtered_data = None
-    if 'metrics' not in st.session_state:
-        st.session_state.metrics = {}
-    if 'insights' not in st.session_state:
-        st.session_state.insights = []
-    
-    # Sidebar
-    with st.sidebar:
-        st.markdown("""
-        <div class="section-header" style="padding: 1.5rem; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.5rem;">📁 Data Upload</h2>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        uploaded_file = st.file_uploader(
-            "Upload Excel or CSV File",
-            type=['xlsx', 'xls', 'csv'],
-            help="Upload your pharmaceutical market data"
-        )
-        
-        if uploaded_file:
-            if st.button("🚀 Load & Process Data", type="primary", use_container_width=True):
-                with st.spinner("⏳ Processing data..."):
-                    df = DataManager.load_data(uploaded_file)
-                    
-                    if df is not None:
-                        df = DataManager.normalize_country_names(df)
-                        df = DataManager.prepare_analysis_data(df)
-                        
-                        st.session_state.data = df
-                        st.session_state.filtered_data = df.copy()
-                        
-                        st.session_state.metrics = AnalyticsEngine.calculate_comprehensive_metrics(df)
-                        st.session_state.insights = AnalyticsEngine.generate_strategic_insights(
-                            df, st.session_state.metrics
-                        )
-                        
-                        st.balloons()
-                        st.success(f"✅ Analysis complete! {len(df):,} rows ready.")
-                        time.sleep(1)
-                        st.rerun()
+        with col4:
+            st.metric("2022 Standard Units", format_units(su_2022))
+            st.metric("2023 Standard Units", format_units(su_2023))
+            st.metric("2024 Standard Units", format_units(su_2024))
         
         st.markdown("---")
         
-        if st.session_state.data is not None:
-            st.markdown("""
-            <div class="success-box">
-                <h4 style="margin: 0 0 0.5rem 0;">✅ Data Loaded</h4>
-            </div>
-            """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            years = []
+            usd_values = []
+            if '2022' in year_filter:
+                years.append('2022')
+                usd_values.append(usd_2022)
+            if '2023' in year_filter:
+                years.append('2023')
+                usd_values.append(usd_2023)
+            if '2024' in year_filter:
+                years.append('2024')
+                usd_values.append(usd_2024)
             
-            info_col1, info_col2 = st.columns(2)
-            with info_col1:
-                st.metric("Rows", f"{len(st.session_state.data):,}")
-            with info_col2:
-                st.metric("Columns", len(st.session_state.data.columns))
-    
-    # Main content
-    if st.session_state.data is None:
-        show_welcome_screen()
-        return
-    
-    df = st.session_state.data
-    
-    # Filters
-    search_term, filters, apply_filters, clear_filters = FilterSystem.create_filter_sidebar(df)
-    
-    if apply_filters:
-        with st.spinner("🔄 Applying filters..."):
-            filtered_df = FilterSystem.apply_filters(df, search_term, filters)
-            st.session_state.filtered_data = filtered_df
+            if len(years) > 0:
+                fig_usd = go.Figure()
+                fig_usd.add_trace(go.Bar(
+                    x=years,
+                    y=usd_values,
+                    marker_color='#1f77b4',
+                    text=[format_number(v) for v in usd_values],
+                    textposition='outside'
+                ))
+                fig_usd.update_layout(
+                    title="USD MNF Trendi",
+                    xaxis_title="Yıl",
+                    yaxis_title="USD MNF",
+                    height=400
+                )
+                st.plotly_chart(fig_usd, use_container_width=True)
+        
+        with col2:
+            units_values = []
+            su_values = []
+            if '2022' in year_filter:
+                units_values.append(units_2022)
+                su_values.append(su_2022)
+            if '2023' in year_filter:
+                units_values.append(units_2023)
+                su_values.append(su_2023)
+            if '2024' in year_filter:
+                units_values.append(units_2024)
+                su_values.append(su_2024)
             
-            st.session_state.metrics = AnalyticsEngine.calculate_comprehensive_metrics(filtered_df)
-            st.session_state.insights = AnalyticsEngine.generate_strategic_insights(
-                filtered_df, st.session_state.metrics
+            if len(years) > 0:
+                fig_volume = go.Figure()
+                fig_volume.add_trace(go.Scatter(
+                    x=years,
+                    y=units_values,
+                    mode='lines+markers',
+                    name='Units',
+                    line=dict(color='#ff7f0e', width=3)
+                ))
+                fig_volume.add_trace(go.Scatter(
+                    x=years,
+                    y=su_values,
+                    mode='lines+markers',
+                    name='Standard Units',
+                    line=dict(color='#2ca02c', width=3)
+                ))
+                fig_volume.update_layout(
+                    title="Hacim Trendi",
+                    xaxis_title="Yıl",
+                    yaxis_title="Birimler",
+                    height=400,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_volume, use_container_width=True)
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            avg_su_price_2022 = filtered_df['MAT Q3 2022 SU Avg Price USD MNF'].replace(0, np.nan).mean()
+            avg_su_price_2023 = filtered_df['MAT Q3 2023 SU Avg Price USD MNF'].replace(0, np.nan).mean()
+            avg_su_price_2024 = filtered_df['MAT Q3 2024 SU Avg Price USD MNF'].replace(0, np.nan).mean()
+            
+            price_years = []
+            price_values = []
+            if '2022' in year_filter and not np.isnan(avg_su_price_2022):
+                price_years.append('2022')
+                price_values.append(avg_su_price_2022)
+            if '2023' in year_filter and not np.isnan(avg_su_price_2023):
+                price_years.append('2023')
+                price_values.append(avg_su_price_2023)
+            if '2024' in year_filter and not np.isnan(avg_su_price_2024):
+                price_years.append('2024')
+                price_values.append(avg_su_price_2024)
+            
+            if len(price_years) > 0:
+                fig_price = go.Figure()
+                fig_price.add_trace(go.Scatter(
+                    x=price_years,
+                    y=price_values,
+                    mode='lines+markers',
+                    marker=dict(size=12, color='#d62728'),
+                    line=dict(width=3, color='#d62728')
+                ))
+                fig_price.update_layout(
+                    title="SU Avg Price Trendi",
+                    xaxis_title="Yıl",
+                    yaxis_title="USD",
+                    height=400
+                )
+                st.plotly_chart(fig_price, use_container_width=True)
+        
+        with col2:
+            avg_unit_price_2022 = filtered_df['MAT Q3 2022 Unit Avg Price USD MNF'].replace(0, np.nan).mean()
+            avg_unit_price_2023 = filtered_df['MAT Q3 2023 Unit Avg Price USD MNF'].replace(0, np.nan).mean()
+            avg_unit_price_2024 = filtered_df['MAT Q3 2024 Unit Avg Price USD MNF'].replace(0, np.nan).mean()
+            
+            unit_price_years = []
+            unit_price_values = []
+            if '2022' in year_filter and not np.isnan(avg_unit_price_2022):
+                unit_price_years.append('2022')
+                unit_price_values.append(avg_unit_price_2022)
+            if '2023' in year_filter and not np.isnan(avg_unit_price_2023):
+                unit_price_years.append('2023')
+                unit_price_values.append(avg_unit_price_2023)
+            if '2024' in year_filter and not np.isnan(avg_unit_price_2024):
+                unit_price_years.append('2024')
+                unit_price_values.append(avg_unit_price_2024)
+            
+            if len(unit_price_years) > 0:
+                fig_unit_price = go.Figure()
+                fig_unit_price.add_trace(go.Scatter(
+                    x=unit_price_years,
+                    y=unit_price_values,
+                    mode='lines+markers',
+                    marker=dict(size=12, color='#9467bd'),
+                    line=dict(width=3, color='#9467bd')
+                ))
+                fig_unit_price.update_layout(
+                    title="Unit Avg Price Trendi",
+                    xaxis_title="Yıl",
+                    yaxis_title="USD",
+                    height=400
+                )
+                st.plotly_chart(fig_unit_price, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("💡 Otomatik İçgörüler")
+        insights = get_insights(filtered_df, year_filter)
+        for idx, insight in enumerate(insights, 1):
+            st.info(f"{idx}. {insight}")
+    
+    with tabs[1]:
+        st.header("Ülke & Bölge Analizi")
+        
+        analysis_type = st.radio("Analiz Türü", ["Ülke", "Bölge", "Alt Bölge"], horizontal=True)
+        
+        if analysis_type == "Ülke":
+            group_col = 'Country'
+        elif analysis_type == "Bölge":
+            group_col = 'Region'
+        else:
+            group_col = 'Sub-Region'
+        
+        metric_choice = st.selectbox("Metrik Seçin", ["USD MNF", "Units", "Standard Units", "SU Avg Price", "Unit Avg Price"])
+        
+        year_choice = st.selectbox("Yıl Seçin", ['2022', '2023', '2024'], index=2)
+        
+        if metric_choice == "USD MNF":
+            metric_col = f'MAT Q3 {year_choice} USD MNF'
+        elif metric_choice == "Units":
+            metric_col = f'MAT Q3 {year_choice} Units'
+        elif metric_choice == "Standard Units":
+            metric_col = f'MAT Q3 {year_choice} Standard Units'
+        elif metric_choice == "SU Avg Price":
+            metric_col = f'MAT Q3 {year_choice} SU Avg Price USD MNF'
+        else:
+            metric_col = f'MAT Q3 {year_choice} Unit Avg Price USD MNF'
+        
+        if metric_choice in ["SU Avg Price", "Unit Avg Price"]:
+            country_data = filtered_df.groupby(group_col)[[metric_col]].mean().reset_index()
+        else:
+            country_data = filtered_df.groupby(group_col)[[metric_col]].sum().reset_index()
+        
+        country_data = country_data.sort_values(metric_col, ascending=False).head(20)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig_bar = px.bar(
+                country_data,
+                x=group_col,
+                y=metric_col,
+                title=f"Top 20 {analysis_type} - {metric_choice} ({year_choice})",
+                color=metric_col,
+                color_continuous_scale='Blues'
+            )
+            fig_bar.update_layout(height=500, xaxis_tickangle=-45)
+            st.plotly_chart(fig_bar, use_container_width=True)
+        
+        with col2:
+            fig_pie = px.pie(
+                country_data.head(10),
+                values=metric_col,
+                names=group_col,
+                title=f"Top 10 {analysis_type} Dağılımı - {metric_choice} ({year_choice})"
+            )
+            fig_pie.update_layout(height=500)
+            st.plotly_chart(fig_pie, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Karşılaştırmalı Analiz")
+        
+        comparison_data = filtered_df.groupby(group_col).agg({
+            f'MAT Q3 2022 {metric_choice}': 'sum' if metric_choice in ["USD MNF", "Units", "Standard Units"] else 'mean',
+            f'MAT Q3 2023 {metric_choice}': 'sum' if metric_choice in ["USD MNF", "Units", "Standard Units"] else 'mean',
+            f'MAT Q3 2024 {metric_choice}': 'sum' if metric_choice in ["USD MNF", "Units", "Standard Units"] else 'mean'
+        }).reset_index()
+        
+        comparison_data = comparison_data.sort_values(f'MAT Q3 2024 {metric_choice}', ascending=False).head(15)
+        
+        fig_comparison = go.Figure()
+        
+        if '2022' in year_filter:
+            fig_comparison.add_trace(go.Bar(
+                x=comparison_data[group_col],
+                y=comparison_data[f'MAT Q3 2022 {metric_choice}'],
+                name='2022',
+                marker_color='#1f77b4'
+            ))
+        
+        if '2023' in year_filter:
+            fig_comparison.add_trace(go.Bar(
+                x=comparison_data[group_col],
+                y=comparison_data[f'MAT Q3 2023 {metric_choice}'],
+                name='2023',
+                marker_color='#ff7f0e'
+            ))
+        
+        if '2024' in year_filter:
+            fig_comparison.add_trace(go.Bar(
+                x=comparison_data[group_col],
+                y=comparison_data[f'MAT Q3 2024 {metric_choice}'],
+                name='2024',
+                marker_color='#2ca02c'
+            ))
+        
+        fig_comparison.update_layout(
+            title=f"{analysis_type} Bazlı Yıllık Karşılaştırma - {metric_choice}",
+            xaxis_title=analysis_type,
+            yaxis_title=metric_choice,
+            barmode='group',
+            height=500,
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_comparison, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Isı Haritası")
+        
+        heatmap_data = filtered_df.groupby(group_col).agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2023 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum'
+        }).head(15)
+        
+        fig_heatmap = go.Figure(data=go.Heatmap(
+            z=heatmap_data.values,
+            x=['2022', '2023', '2024'],
+            y=heatmap_data.index,
+            colorscale='Viridis',
+            text=heatmap_data.values,
+            texttemplate='%{text:.2s}',
+            textfont={"size": 10}
+        ))
+        
+        fig_heatmap.update_layout(
+            title=f"{analysis_type} USD MNF Isı Haritası",
+            xaxis_title="Yıl",
+            yaxis_title=analysis_type,
+            height=600
+        )
+        st.plotly_chart(fig_heatmap, use_container_width=True)
+    
+    with tabs[2]:
+        st.header("Molekül Analizi")
+        
+        mol_metric = st.selectbox("Molekül Metriği", ["USD MNF", "Units", "Standard Units", "SU Avg Price", "Unit Avg Price"])
+        mol_year = st.selectbox("Molekül Yılı", ['2022', '2023', '2024'], index=2, key='mol_year')
+        
+        if mol_metric == "USD MNF":
+            mol_col = f'MAT Q3 {mol_year} USD MNF'
+            agg_func = 'sum'
+        elif mol_metric == "Units":
+            mol_col = f'MAT Q3 {mol_year} Units'
+            agg_func = 'sum'
+        elif mol_metric == "Standard Units":
+            mol_col = f'MAT Q3 {mol_year} Standard Units'
+            agg_func = 'sum'
+        elif mol_metric == "SU Avg Price":
+            mol_col = f'MAT Q3 {mol_year} SU Avg Price USD MNF'
+            agg_func = 'mean'
+        else:
+            mol_col = f'MAT Q3 {mol_year} Unit Avg Price USD MNF'
+            agg_func = 'mean'
+        
+        if agg_func == 'sum':
+            molecule_data = filtered_df.groupby('Molecule')[[mol_col]].sum().reset_index()
+        else:
+            molecule_data = filtered_df.groupby('Molecule')[[mol_col]].mean().reset_index()
+        
+        molecule_data = molecule_data.sort_values(mol_col, ascending=False).head(20)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig_mol_bar = px.bar(
+                molecule_data,
+                x='Molecule',
+                y=mol_col,
+                title=f"Top 20 Molekül - {mol_metric} ({mol_year})",
+                color=mol_col,
+                color_continuous_scale='Reds'
+            )
+            fig_mol_bar.update_layout(height=500, xaxis_tickangle=-45)
+            st.plotly_chart(fig_mol_bar, use_container_width=True)
+        
+        with col2:
+            fig_mol_treemap = px.treemap(
+                molecule_data.head(15),
+                path=['Molecule'],
+                values=mol_col,
+                title=f"Molekül Treemap - {mol_metric} ({mol_year})"
+            )
+            fig_mol_treemap.update_layout(height=500)
+            st.plotly_chart(fig_mol_treemap, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Molekül Trend Analizi")
+        
+        mol_trend_data = filtered_df.groupby('Molecule').agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2023 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum'
+        }).reset_index()
+        
+        mol_trend_data = mol_trend_data.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(10)
+        
+        fig_mol_trend = go.Figure()
+        
+        for idx, row in mol_trend_data.iterrows():
+            years = []
+            values = []
+            if '2022' in year_filter:
+                years.append('2022')
+                values.append(row['MAT Q3 2022 USD MNF'])
+            if '2023' in year_filter:
+                years.append('2023')
+                values.append(row['MAT Q3 2023 USD MNF'])
+            if '2024' in year_filter:
+                years.append('2024')
+                values.append(row['MAT Q3 2024 USD MNF'])
+            
+            fig_mol_trend.add_trace(go.Scatter(
+                x=years,
+                y=values,
+                mode='lines+markers',
+                name=row['Molecule'],
+                line=dict(width=2)
+            ))
+        
+        fig_mol_trend.update_layout(
+            title="Top 10 Molekül USD MNF Trendi",
+            xaxis_title="Yıl",
+            yaxis_title="USD MNF",
+            height=500,
+            legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.02)
+        )
+        st.plotly_chart(fig_mol_trend, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Molekül Fiyat Analizi")
+        
+        mol_price_data = filtered_df.groupby('Molecule').agg({
+            'MAT Q3 2022 SU Avg Price USD MNF': 'mean',
+            'MAT Q3 2023 SU Avg Price USD MNF': 'mean',
+            'MAT Q3 2024 SU Avg Price USD MNF': 'mean'
+        }).reset_index()
+        
+        mol_price_data = mol_price_data.sort_values('MAT Q3 2024 SU Avg Price USD MNF', ascending=False).head(15)
+        
+        fig_mol_price = go.Figure()
+        
+        if '2022' in year_filter:
+            fig_mol_price.add_trace(go.Bar(
+                x=mol_price_data['Molecule'],
+                y=mol_price_data['MAT Q3 2022 SU Avg Price USD MNF'],
+                name='2022',
+                marker_color='#8c564b'
+            ))
+        
+        if '2023' in year_filter:
+            fig_mol_price.add_trace(go.Bar(
+                x=mol_price_data['Molecule'],
+                y=mol_price_data['MAT Q3 2023 SU Avg Price USD MNF'],
+                name='2023',
+                marker_color='#e377c2'
+            ))
+        
+        if '2024' in year_filter:
+            fig_mol_price.add_trace(go.Bar(
+                x=mol_price_data['Molecule'],
+                y=mol_price_data['MAT Q3 2024 SU Avg Price USD MNF'],
+                name='2024',
+                marker_color='#7f7f7f'
+            ))
+        
+        fig_mol_price.update_layout(
+            title="Molekül SU Avg Price Karşılaştırma",
+            xaxis_title="Molekül",
+            yaxis_title="SU Avg Price USD",
+            barmode='group',
+            height=500,
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_mol_price, use_container_width=True)
+    
+    with tabs[3]:
+        st.header("Corporation & Rekabet Analizi")
+        
+        st.subheader("Pazar Payı Analizi")
+        
+        corp_year = st.selectbox("Corporation Yılı", ['2022', '2023', '2024'], index=2, key='corp_year')
+        
+        corp_data = filtered_df.groupby('Corporation')[[f'MAT Q3 {corp_year} USD MNF']].sum().reset_index()
+        corp_data = corp_data.sort_values(f'MAT Q3 {corp_year} USD MNF', ascending=False).head(15)
+        
+        total_market = corp_data[f'MAT Q3 {corp_year} USD MNF'].sum()
+        corp_data['Market Share %'] = (corp_data[f'MAT Q3 {corp_year} USD MNF'] / total_market * 100).round(2)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig_corp_bar = px.bar(
+                corp_data,
+                x='Corporation',
+                y=f'MAT Q3 {corp_year} USD MNF',
+                title=f"Corporation USD MNF ({corp_year})",
+                color='Market Share %',
+                color_continuous_scale='Greens',
+                text='Market Share %'
+            )
+            fig_corp_bar.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+            fig_corp_bar.update_layout(height=500, xaxis_tickangle=-45)
+            st.plotly_chart(fig_corp_bar, use_container_width=True)
+        
+        with col2:
+            fig_corp_pie = px.pie(
+                corp_data.head(10),
+                values=f'MAT Q3 {corp_year} USD MNF',
+                names='Corporation',
+                title=f"Top 10 Corporation Pazar Payı ({corp_year})"
+            )
+            fig_corp_pie.update_layout(height=500)
+            st.plotly_chart(fig_corp_pie, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Corporation Büyüme Analizi")
+        
+        corp_growth_data = filtered_df.groupby('Corporation').agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2023 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum'
+        }).reset_index()
+        
+        corp_growth_data['Growth 22-23 %'] = corp_growth_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 USD MNF'], x['MAT Q3 2023 USD MNF']), axis=1
+        )
+        corp_growth_data['Growth 23-24 %'] = corp_growth_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2023 USD MNF'], x['MAT Q3 2024 USD MNF']), axis=1
+        )
+        
+        corp_growth_data = corp_growth_data.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(15)
+        
+        fig_corp_growth = go.Figure()
+        
+        fig_corp_growth.add_trace(go.Bar(
+            x=corp_growth_data['Corporation'],
+            y=corp_growth_data['Growth 22-23 %'],
+            name='2022-2023',
+            marker_color='#17becf'
+        ))
+        
+        fig_corp_growth.add_trace(go.Bar(
+            x=corp_growth_data['Corporation'],
+            y=corp_growth_data['Growth 23-24 %'],
+            name='2023-2024',
+            marker_color='#bcbd22'
+        ))
+        
+        fig_corp_growth.update_layout(
+            title="Corporation Büyüme Oranları",
+            xaxis_title="Corporation",
+            yaxis_title="Büyüme %",
+            barmode='group',
+            height=500,
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_corp_growth, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Molekül Bazlı Rekabet Analizi")
+        
+        selected_molecule = st.selectbox(
+            "Molekül Seçin",
+            options=sorted(filtered_df['Molecule'].dropna().unique())
+        )
+        
+        if selected_molecule:
+            mol_corp_data = filtered_df[filtered_df['Molecule'] == selected_molecule].groupby('Corporation').agg({
+                f'MAT Q3 {corp_year} USD MNF': 'sum',
+                f'MAT Q3 {corp_year} SU Avg Price USD MNF': 'mean',
+                f'MAT Q3 {corp_year} Unit Avg Price USD MNF': 'mean'
+            }).reset_index()
+            
+            mol_corp_data = mol_corp_data.sort_values(f'MAT Q3 {corp_year} USD MNF', ascending=False)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fig_mol_corp_sales = px.bar(
+                    mol_corp_data,
+                    x='Corporation',
+                    y=f'MAT Q3 {corp_year} USD MNF',
+                    title=f"{selected_molecule} - Corporation Satışları ({corp_year})",
+                    color=f'MAT Q3 {corp_year} USD MNF',
+                    color_continuous_scale='Oranges'
+                )
+                fig_mol_corp_sales.update_layout(height=400, xaxis_tickangle=-45)
+                st.plotly_chart(fig_mol_corp_sales, use_container_width=True)
+            
+            with col2:
+                fig_mol_corp_price = px.bar(
+                    mol_corp_data,
+                    x='Corporation',
+                    y=f'MAT Q3 {corp_year} SU Avg Price USD MNF',
+                    title=f"{selected_molecule} - Corporation SU Avg Price ({corp_year})",
+                    color=f'MAT Q3 {corp_year} SU Avg Price USD MNF',
+                    color_continuous_scale='Purples'
+                )
+                fig_mol_corp_price.update_layout(height=400, xaxis_tickangle=-45)
+                st.plotly_chart(fig_mol_corp_price, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Pazar Payı Değişimi")
+        
+        corp_share_22 = filtered_df.groupby('Corporation')[['MAT Q3 2022 USD MNF']].sum()
+        corp_share_24 = filtered_df.groupby('Corporation')[['MAT Q3 2024 USD MNF']].sum()
+        
+        total_22 = corp_share_22['MAT Q3 2022 USD MNF'].sum()
+        total_24 = corp_share_24['MAT Q3 2024 USD MNF'].sum()
+        
+        corp_share_change = pd.DataFrame({
+            'Corporation': corp_share_22.index,
+            'Share 2022 %': (corp_share_22['MAT Q3 2022 USD MNF'] / total_22 * 100).values if total_22 > 0 else 0,
+            'Share 2024 %': (corp_share_24['MAT Q3 2024 USD MNF'] / total_24 * 100).values if total_24 > 0 else 0
+        })
+        
+        corp_share_change['Share Change'] = corp_share_change['Share 2024 %'] - corp_share_change['Share 2022 %']
+        corp_share_change = corp_share_change.sort_values('Share 2024 %', ascending=False).head(15)
+        
+        fig_share_change = go.Figure()
+        
+        fig_share_change.add_trace(go.Scatter(
+            x=corp_share_change['Corporation'],
+            y=corp_share_change['Share 2022 %'],
+            mode='markers',
+            name='2022',
+            marker=dict(size=12, color='#1f77b4')
+        ))
+        
+        fig_share_change.add_trace(go.Scatter(
+            x=corp_share_change['Corporation'],
+            y=corp_share_change['Share 2024 %'],
+            mode='markers',
+            name='2024',
+            marker=dict(size=12, color='#ff7f0e')
+        ))
+        
+        for idx, row in corp_share_change.iterrows():
+            fig_share_change.add_trace(go.Scatter(
+                x=[row['Corporation'], row['Corporation']],
+                y=[row['Share 2022 %'], row['Share 2024 %']],
+                mode='lines',
+                line=dict(color='gray', width=1),
+                showlegend=False
+            ))
+        
+        fig_share_change.update_layout(
+            title="Pazar Payı Değişimi 2022-2024",
+            xaxis_title="Corporation",
+            yaxis_title="Pazar Payı %",
+            height=500,
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_share_change, use_container_width=True)
+    
+    with tabs[4]:
+        st.header("Specialty vs Non-Specialty Analizi")
+        
+        spec_year = st.selectbox("Specialty Yılı", ['2022', '2023', '2024'], index=2, key='spec_year')
+        
+        specialty_data = filtered_df.groupby('Specialty Product').agg({
+            f'MAT Q3 {spec_year} USD MNF': 'sum',
+            f'MAT Q3 {spec_year} Units': 'sum',
+            f'MAT Q3 {spec_year} Standard Units': 'sum',
+            f'MAT Q3 {spec_year} SU Avg Price USD MNF': 'mean',
+            f'MAT Q3 {spec_year} Unit Avg Price USD MNF': 'mean'
+        }).reset_index()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            fig_spec_usd = px.pie(
+                specialty_data,
+                values=f'MAT Q3 {spec_year} USD MNF',
+                names='Specialty Product',
+                title=f"USD MNF Dağılımı ({spec_year})",
+                color_discrete_sequence=px.colors.sequential.RdBu
+            )
+            fig_spec_usd.update_layout(height=400)
+            st.plotly_chart(fig_spec_usd, use_container_width=True)
+        
+        with col2:
+            fig_spec_units = px.pie(
+                specialty_data,
+                values=f'MAT Q3 {spec_year} Units',
+                names='Specialty Product',
+                title=f"Units Dağılımı ({spec_year})",
+                color_discrete_sequence=px.colors.sequential.Teal
+            )
+            fig_spec_units.update_layout(height=400)
+            st.plotly_chart(fig_spec_units, use_container_width=True)
+        
+        with col3:
+            fig_spec_su = px.pie(
+                specialty_data,
+                values=f'MAT Q3 {spec_year} Standard Units',
+                names='Specialty Product',
+                title=f"Standard Units Dağılımı ({spec_year})",
+                color_discrete_sequence=px.colors.sequential.Magma
+            )
+            fig_spec_su.update_layout(height=400)
+            st.plotly_chart(fig_spec_su, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Fiyat Karşılaştırması")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig_spec_su_price = px.bar(
+                specialty_data,
+                x='Specialty Product',
+                y=f'MAT Q3 {spec_year} SU Avg Price USD MNF',
+                title=f"SU Avg Price Karşılaştırma ({spec_year})",
+                color=f'MAT Q3 {spec_year} SU Avg Price USD MNF',
+                color_continuous_scale='Viridis',
+                text=f'MAT Q3 {spec_year} SU Avg Price USD MNF'
+            )
+            fig_spec_su_price.update_traces(texttemplate='$%{text:.2f}', textposition='outside')
+            fig_spec_su_price.update_layout(height=400)
+            st.plotly_chart(fig_spec_su_price, use_container_width=True)
+        
+        with col2:
+            fig_spec_unit_price = px.bar(
+                specialty_data,
+                x='Specialty Product',
+                y=f'MAT Q3 {spec_year} Unit Avg Price USD MNF',
+                title=f"Unit Avg Price Karşılaştırma ({spec_year})",
+                color=f'MAT Q3 {spec_year} Unit Avg Price USD MNF',
+                color_continuous_scale='Plasma',
+                text=f'MAT Q3 {spec_year} Unit Avg Price USD MNF'
+            )
+            fig_spec_unit_price.update_traces(texttemplate='$%{text:.2f}', textposition='outside')
+            fig_spec_unit_price.update_layout(height=400)
+            st.plotly_chart(fig_spec_unit_price, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Trend Analizi")
+        
+        specialty_trend = filtered_df.groupby('Specialty Product').agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2023 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum'
+        }).reset_index()
+        
+        fig_spec_trend = go.Figure()
+        
+        for spec_type in specialty_trend['Specialty Product'].unique():
+            spec_row = specialty_trend[specialty_trend['Specialty Product'] == spec_type]
+            years = []
+            values = []
+            if '2022' in year_filter:
+                years.append('2022')
+                values.append(spec_row['MAT Q3 2022 USD MNF'].values[0])
+            if '2023' in year_filter:
+                years.append('2023')
+                values.append(spec_row['MAT Q3 2023 USD MNF'].values[0])
+            if '2024' in year_filter:
+                years.append('2024')
+                values.append(spec_row['MAT Q3 2024 USD MNF'].values[0])
+            
+            fig_spec_trend.add_trace(go.Scatter(
+                x=years,
+                y=values,
+                mode='lines+markers',
+                name=spec_type,
+                line=dict(width=3),
+                marker=dict(size=10)
+            ))
+        
+        fig_spec_trend.update_layout(
+            title="Specialty vs Non-Specialty USD MNF Trendi",
+            xaxis_title="Yıl",
+            yaxis_title="USD MNF",
+            height=500,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig_spec_trend, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Ülke Bazlı Specialty Analizi")
+        
+        country_spec = filtered_df.groupby(['Country', 'Specialty Product'])[[f'MAT Q3 {spec_year} USD MNF']].sum().reset_index()
+        country_spec_pivot = country_spec.pivot(index='Country', columns='Specialty Product', values=f'MAT Q3 {spec_year} USD MNF').fillna(0)
+        country_spec_pivot = country_spec_pivot.head(15)
+        
+        fig_country_spec = go.Figure()
+        
+        for col in country_spec_pivot.columns:
+            fig_country_spec.add_trace(go.Bar(
+                x=country_spec_pivot.index,
+                y=country_spec_pivot[col],
+                name=col
+            ))
+        
+        fig_country_spec.update_layout(
+            title=f"Ülke Bazlı Specialty Dağılımı ({spec_year})",
+            xaxis_title="Country",
+            yaxis_title="USD MNF",
+            barmode='stack',
+            height=500,
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_country_spec, use_container_width=True)
+    
+    with tabs[5]:
+        st.header("Fiyat & Mix Analizi")
+        
+        st.subheader("Fiyat vs Hacim Değişimi")
+        
+        price_volume_data = filtered_df.groupby('Molecule').agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum',
+            'MAT Q3 2022 Units': 'sum',
+            'MAT Q3 2024 Units': 'sum',
+            'MAT Q3 2022 SU Avg Price USD MNF': 'mean',
+            'MAT Q3 2024 SU Avg Price USD MNF': 'mean'
+        }).reset_index()
+        
+        price_volume_data['Volume Change %'] = price_volume_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 Units'], x['MAT Q3 2024 Units']), axis=1
+        )
+        price_volume_data['Price Change %'] = price_volume_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 SU Avg Price USD MNF'], x['MAT Q3 2024 SU Avg Price USD MNF']), axis=1
+        )
+        price_volume_data['Value Change %'] = price_volume_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 USD MNF'], x['MAT Q3 2024 USD MNF']), axis=1
+        )
+        
+        price_volume_data = price_volume_data[price_volume_data['MAT Q3 2024 USD MNF'] > 0]
+        price_volume_data = price_volume_data.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(30)
+        
+        fig_pv_scatter = px.scatter(
+            price_volume_data,
+            x='Volume Change %',
+            y='Price Change %',
+            size='MAT Q3 2024 USD MNF',
+            color='Value Change %',
+            hover_data=['Molecule'],
+            title="Fiyat vs Hacim Değişimi (2022-2024)",
+            color_continuous_scale='RdYlGn'
+        )
+        
+        fig_pv_scatter.add_hline(y=0, line_dash="dash", line_color="gray")
+        fig_pv_scatter.add_vline(x=0, line_dash="dash", line_color="gray")
+        
+        fig_pv_scatter.update_layout(
+            xaxis_title="Hacim Değişimi %",
+            yaxis_title="Fiyat Değişimi %",
+            height=600
+        )
+        st.plotly_chart(fig_pv_scatter, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Waterfall Analizi")
+        
+        total_2022 = filtered_df['MAT Q3 2022 USD MNF'].sum()
+        total_2024 = filtered_df['MAT Q3 2024 USD MNF'].sum()
+        
+        volume_impact = (filtered_df['MAT Q3 2024 Units'].sum() - filtered_df['MAT Q3 2022 Units'].sum()) * filtered_df['MAT Q3 2022 SU Avg Price USD MNF'].mean()
+        price_impact = total_2024 - total_2022 - volume_impact
+        
+        waterfall_data = pd.DataFrame({
+            'Category': ['2022 USD MNF', 'Hacim Etkisi', 'Fiyat Etkisi', '2024 USD MNF'],
+            'Value': [total_2022, volume_impact, price_impact, total_2024],
+            'Measure': ['absolute', 'relative', 'relative', 'total']
+        })
+        
+        fig_waterfall = go.Figure(go.Waterfall(
+            x=waterfall_data['Category'],
+            y=waterfall_data['Value'],
+            measure=waterfall_data['Measure'],
+            text=[format_number(v) for v in waterfall_data['Value']],
+            textposition="outside",
+            connector={"line": {"color": "rgb(63, 63, 63)"}},
+            decreasing={"marker": {"color": "#d62728"}},
+            increasing={"marker": {"color": "#2ca02c"}},
+            totals={"marker": {"color": "#1f77b4"}}
+        ))
+        
+        fig_waterfall.update_layout(
+            title="USD MNF Değişimi Waterfall (2022-2024)",
+            showlegend=False,
+            height=500
+        )
+        st.plotly_chart(fig_waterfall, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Ülke Bazlı Fiyat-Hacim Matrisi")
+        
+        country_pv_data = filtered_df.groupby('Country').agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum',
+            'MAT Q3 2022 Units': 'sum',
+            'MAT Q3 2024 Units': 'sum',
+            'MAT Q3 2022 SU Avg Price USD MNF': 'mean',
+            'MAT Q3 2024 SU Avg Price USD MNF': 'mean'
+        }).reset_index()
+        
+        country_pv_data['Volume Change %'] = country_pv_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 Units'], x['MAT Q3 2024 Units']), axis=1
+        )
+        country_pv_data['Price Change %'] = country_pv_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 SU Avg Price USD MNF'], x['MAT Q3 2024 SU Avg Price USD MNF']), axis=1
+        )
+        
+        country_pv_data = country_pv_data.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(20)
+        
+        fig_country_pv = px.scatter(
+            country_pv_data,
+            x='Volume Change %',
+            y='Price Change %',
+            size='MAT Q3 2024 USD MNF',
+            color='Country',
+            hover_data=['Country'],
+            title="Ülke Bazlı Fiyat-Hacim Matrisi (2022-2024)"
+        )
+        
+        fig_country_pv.add_hline(y=0, line_dash="dash", line_color="gray")
+        fig_country_pv.add_vline(x=0, line_dash="dash", line_color="gray")
+        
+        fig_country_pv.update_layout(
+            xaxis_title="Hacim Değişimi %",
+            yaxis_title="Fiyat Değişimi %",
+            height=600,
+            showlegend=True
+        )
+        st.plotly_chart(fig_country_pv, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Corporation Fiyat-Mix Analizi")
+        
+        corp_pm_data = filtered_df.groupby('Corporation').agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum',
+            'MAT Q3 2022 SU Avg Price USD MNF': 'mean',
+            'MAT Q3 2024 SU Avg Price USD MNF': 'mean'
+        }).reset_index()
+        
+        corp_pm_data['Value Change %'] = corp_pm_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 USD MNF'], x['MAT Q3 2024 USD MNF']), axis=1
+        )
+        corp_pm_data['Price Change %'] = corp_pm_data.apply(
+            lambda x: calculate_growth(x['MAT Q3 2022 SU Avg Price USD MNF'], x['MAT Q3 2024 SU Avg Price USD MNF']), axis=1
+        )
+        
+        corp_pm_data = corp_pm_data.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(15)
+        
+        fig_corp_pm = go.Figure()
+        
+        fig_corp_pm.add_trace(go.Bar(
+            x=corp_pm_data['Corporation'],
+            y=corp_pm_data['Value Change %'],
+            name='Value Change %',
+            marker_color='#1f77b4'
+        ))
+        
+        fig_corp_pm.add_trace(go.Scatter(
+            x=corp_pm_data['Corporation'],
+            y=corp_pm_data['Price Change %'],
+            name='Price Change %',
+            mode='markers',
+            marker=dict(size=12, color='#ff7f0e', symbol='diamond')
+        ))
+        
+        fig_corp_pm.update_layout(
+            title="Corporation Value vs Price Change (2022-2024)",
+            xaxis_title="Corporation",
+            yaxis_title="Change %",
+            height=500,
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_corp_pm, use_container_width=True)
+    
+    with tabs[6]:
+        st.header("Pack / Strength / Size Analizi")
+        
+        pack_analysis_type = st.selectbox("Analiz Tipi", ["International Pack", "International Strength", "International Size"])
+        pack_year = st.selectbox("Pack Yılı", ['2022', '2023', '2024'], index=2, key='pack_year')
+        
+        if pack_analysis_type == "International Pack":
+            group_col = 'International Pack'
+        elif pack_analysis_type == "International Strength":
+            group_col = 'International Strength'
+        else:
+            group_col = 'International Size'
+        
+        pack_data = filtered_df.groupby(group_col).agg({
+            f'MAT Q3 {pack_year} USD MNF': 'sum',
+            f'MAT Q3 {pack_year} Units': 'sum',
+            f'MAT Q3 {pack_year} Standard Units': 'sum',
+            f'MAT Q3 {pack_year} SU Avg Price USD MNF': 'mean',
+            f'MAT Q3 {pack_year} Unit Avg Price USD MNF': 'mean'
+        }).reset_index()
+        
+        pack_data = pack_data.sort_values(f'MAT Q3 {pack_year} USD MNF', ascending=False).head(20)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig_pack_usd = px.bar(
+                pack_data,
+                x=group_col,
+                y=f'MAT Q3 {pack_year} USD MNF',
+                title=f"{pack_analysis_type} USD MNF ({pack_year})",
+                color=f'MAT Q3 {pack_year} USD MNF',
+                color_continuous_scale='Blues'
+            )
+            fig_pack_usd.update_layout(height=500, xaxis_tickangle=-45)
+            st.plotly_chart(fig_pack_usd, use_container_width=True)
+        
+        with col2:
+            fig_pack_units = px.bar(
+                pack_data,
+                x=group_col,
+                y=f'MAT Q3 {pack_year} Units',
+                title=f"{pack_analysis_type} Units ({pack_year})",
+                color=f'MAT Q3 {pack_year} Units',
+                color_continuous_scale='Greens'
+            )
+            fig_pack_units.update_layout(height=500, xaxis_tickangle=-45)
+            st.plotly_chart(fig_pack_units, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Fiyat Analizi")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig_pack_su_price = px.bar(
+                pack_data,
+                x=group_col,
+                y=f'MAT Q3 {pack_year} SU Avg Price USD MNF',
+                title=f"{pack_analysis_type} SU Avg Price ({pack_year})",
+                color=f'MAT Q3 {pack_year} SU Avg Price USD MNF',
+                color_continuous_scale='Reds'
+            )
+            fig_pack_su_price.update_layout(height=500, xaxis_tickangle=-45)
+            st.plotly_chart(fig_pack_su_price, use_container_width=True)
+        
+        with col2:
+            fig_pack_unit_price = px.bar(
+                pack_data,
+                x=group_col,
+                y=f'MAT Q3 {pack_year} Unit Avg Price USD MNF',
+                title=f"{pack_analysis_type} Unit Avg Price ({pack_year})",
+                color=f'MAT Q3 {pack_year} Unit Avg Price USD MNF',
+                color_continuous_scale='Purples'
+            )
+            fig_pack_unit_price.update_layout(height=500, xaxis_tickangle=-45)
+            st.plotly_chart(fig_pack_unit_price, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Trend Analizi")
+        
+        pack_trend_data = filtered_df.groupby(group_col).agg({
+            'MAT Q3 2022 USD MNF': 'sum',
+            'MAT Q3 2023 USD MNF': 'sum',
+            'MAT Q3 2024 USD MNF': 'sum'
+        }).reset_index()
+        
+        pack_trend_data = pack_trend_data.sort_values('MAT Q3 2024 USD MNF', ascending=False).head(10)
+        
+        fig_pack_trend = go.Figure()
+        
+        for idx, row in pack_trend_data.iterrows():
+            years = []
+            values = []
+            if '2022' in year_filter:
+                years.append('2022')
+                values.append(row['MAT Q3 2022 USD MNF'])
+            if '2023' in year_filter:
+                years.append('2023')
+                values.append(row['MAT Q3 2023 USD MNF'])
+            if '2024' in year_filter:
+                years.append('2024')
+                values.append(row['MAT Q3 2024 USD MNF'])
+            
+            fig_pack_trend.add_trace(go.Scatter(
+                x=years,
+                y=values,
+                mode='lines+markers',
+                name=str(row[group_col]),
+                line=dict(width=2)
+            ))
+        
+        fig_pack_trend.update_layout(
+            title=f"Top 10 {pack_analysis_type} USD MNF Trendi",
+            xaxis_title="Yıl",
+            yaxis_title="USD MNF",
+            height=500,
+            legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.02)
+        )
+        st.plotly_chart(fig_pack_trend, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Kombinasyon Analizi")
+        
+        combo_data = filtered_df.groupby(['International Pack', 'International Strength']).agg({
+            f'MAT Q3 {pack_year} USD MNF': 'sum'
+        }).reset_index()
+        
+        combo_data = combo_data.sort_values(f'MAT Q3 {pack_year} USD MNF', ascending=False).head(20)
+        
+        fig_combo = px.treemap(
+            combo_data,
+            path=['International Pack', 'International Strength'],
+            values=f'MAT Q3 {pack_year} USD MNF',
+            title=f"Pack & Strength Kombinasyonu Treemap ({pack_year})"
+        )
+        fig_combo.update_layout(height=600)
+        st.plotly_chart(fig_combo, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("Size & Volume Analizi")
+        
+        size_vol_data = filtered_df.groupby('International Size').agg({
+            f'MAT Q3 {pack_year} USD MNF': 'sum',
+            f'MAT Q3 {pack_year} Units': 'sum',
+            f'MAT Q3 {pack_year} SU Avg Price USD MNF': 'mean'
+        }).reset_index()
+        
+        size_vol_data = size_vol_data.sort_values(f'MAT Q3 {pack_year} USD MNF', ascending=False).head(15)
+        
+        fig_size_vol = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        fig_size_vol.add_trace(
+            go.Bar(
+                x=size_vol_data['International Size'],
+                y=size_vol_data[f'MAT Q3 {pack_year} USD MNF'],
+                name="USD MNF",
+                marker_color='#1f77b4'
+            ),
+            secondary_y=False
+        )
+        
+        fig_size_vol.add_trace(
+            go.Scatter(
+                x=size_vol_data['International Size'],
+                y=size_vol_data[f'MAT Q3 {pack_year} SU Avg Price USD MNF'],
+                name="SU Avg Price",
+                mode='lines+markers',
+                marker=dict(size=10, color='#ff7f0e'),
+                line=dict(width=3, color='#ff7f0e')
+            ),
+            secondary_y=True
+        )
+        
+        fig_size_vol.update_layout(
+            title=f"Size USD MNF & SU Avg Price ({pack_year})",
+            xaxis_tickangle=-45,
+            height=500
+        )
+        fig_size_vol.update_xaxis(title_text="International Size")
+        fig_size_vol.update_yaxis(title_text="USD MNF", secondary_y=False)
+        fig_size_vol.update_yaxis(title_text="SU Avg Price", secondary_y=True)
+        
+        st.plotly_chart(fig_size_vol, use_container_width=True)
+    
+    with tabs[7]:
+        st.header("Otomatik İçgörü Motoru")
+        
+        insights = get_insights(filtered_df, year_filter)
+        
+        st.subheader("📈 Temel İçgörüler")
+        
+        for idx, insight in enumerate(insights, 1):
+            st.success(f"**{idx}.** {insight}")
+        
+        st.markdown("---")
+        st.subheader("🎯 Detaylı Analizler")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Büyüme Liderleri")
+            
+            if '2023' in year_filter and '2024' in year_filter:
+                mol_growth = filtered_df.groupby('Molecule').agg({
+                    'MAT Q3 2023 USD MNF': 'sum',
+                    'MAT Q3 2024 USD MNF': 'sum'
+                }).reset_index()
+                
+                mol_growth['Growth %'] = mol_growth.apply(
+                    lambda x: calculate_growth(x['MAT Q3 2023 USD MNF'], x['MAT Q3 2024 USD MNF']), axis=1
+                )
+                
+                mol_growth = mol_growth[mol_growth['MAT Q3 2024 USD MNF'] > 100000]
+                top_growers = mol_growth.sort_values('Growth %', ascending=False).head(5)
+                
+                for idx, row in top_growers.iterrows():
+                    st.info(f"**{row['Molecule']}** %{row['Growth %']:.1f} büyüme ile öne çıkıyor.")
+        
+        with col2:
+            st.markdown("### Fiyat Değişimleri")
+            
+            if '2022' in year_filter and '2024' in year_filter:
+                price_change_data = filtered_df.groupby('Molecule').agg({
+                    'MAT Q3 2022 SU Avg Price USD MNF': 'mean',
+                    'MAT Q3 2024 SU Avg Price USD MNF': 'mean',
+                    'MAT Q3 2024 USD MNF': 'sum'
+                }).reset_index()
+                
+                price_change_data['Price Change %'] = price_change_data.apply(
+                    lambda x: calculate_growth(x['MAT Q3 2022 SU Avg Price USD MNF'], x['MAT Q3 2024 SU Avg Price USD MNF']), axis=1
+                )
+                
+                price_change_data = price_change_data[price_change_data['MAT Q3 2024 USD MNF'] > 100000]
+                top_price_changes = price_change_data.sort_values('Price Change %', ascending=False).head(5)
+                
+                for idx, row in top_price_changes.iterrows():
+                    st.warning(f"**{row['Molecule']}** fiyatı %{row['Price Change %']:.1f} değişti.")
+        
+        st.markdown("---")
+        st.subheader("🌍 Coğrafi İçgörüler")
+        
+        if '2022' in year_filter and '2024' in year_filter:
+            country_growth = filtered_df.groupby('Country').agg({
+                'MAT Q3 2022 USD MNF': 'sum',
+                'MAT Q3 2024 USD MNF': 'sum'
+            }).reset_index()
+            
+            country_growth['Growth %'] = country_growth.apply(
+                lambda x: calculate_growth(x['MAT Q3 2022 USD MNF'], x['MAT Q3 2024 USD MNF']), axis=1
             )
             
-            st.success(f"✅ Filters applied: {len(filtered_df):,} / {len(df):,} rows")
-            time.sleep(0.5)
-            st.rerun()
-    
-    if clear_filters:
-        st.session_state.filtered_data = df.copy()
-        st.session_state.metrics = AnalyticsEngine.calculate_comprehensive_metrics(df)
-        st.session_state.insights = AnalyticsEngine.generate_strategic_insights(df, st.session_state.metrics)
-        st.success("✅ Filters cleared")
-        time.sleep(0.5)
-        st.rerun()
-    
-    # Main tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 OVERVIEW & INSIGHTS",
-        "🤖 ML LABORATORY",
-        "🎯 SEGMENTATION",
-        "📈 ADVANCED ANALYTICS",
-        "📑 REPORTS & EXPORT"
-    ])
-    
-    with tab1:
-        show_overview_tab()
-    
-    with tab2:
-        show_ml_lab_tab()
-    
-    with tab3:
-        show_segmentation_tab()
-    
-    with tab4:
-        show_advanced_analytics_tab()
-    
-    with tab5:
-        show_reporting_tab()
+            country_growth = country_growth[country_growth['MAT Q3 2024 USD MNF'] > 500000]
+            
+            top_country_growers = country_growth.sort_values('Growth %', ascending=False).head(5)
+            bottom_country_growers = country_growth.sort_values('Growth %', ascending=True).head(5)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### En Hızlı Büyüyen Ülkeler")
+                for idx, row in top_country_growers.iterrows():
+                    st.success(f"**{row['Country']}**: %{row['Growth %']:.1f}")
+            
+            with col2:
+                st.markdown("#### Zorlu Pazarlar")
+                for idx, row in bottom_country_growers.iterrows():
+                    st.error(f"**{row['Country']}**: %{row['Growth %']:.1f}")
+        
+        st.markdown("---")
+        st.subheader("🏢 Rekabet İçgörüleri")
+        
+        if '2023' in year_filter and '2024' in year_filter:
+            corp_performance = filtered_df.groupby('Corporation').agg({
+                'MAT Q3 2023 USD MNF': 'sum',
+                'MAT Q3 2024 USD MNF': 'sum'
+            }).reset_index()
+            
+            corp_performance['Growth %'] = corp_performance.apply(
+                lambda x: calculate_growth(x['MAT Q3 2023 USD MNF'], x['MAT Q3 2024 USD MNF']), axis=1
+            )
+            
+            corp_performance = corp_performance[corp_performance['MAT Q3 2024 USD MNF'] > 1000000]
+            corp_performance = corp_performance.sort_values('Growth %', ascending=False)
+            
+            if len(corp_performance) > 0:
+                st.info(f"**{corp_performance.iloc[0]['Corporation']}** şirketi %{corp_performance.iloc[0]['Growth %']:.1f} büyüme ile rakiplerini geride bırakıyor.")
+                
+                if len(corp_performance) > 1:
+                    st.warning(f"**{corp_performance.iloc[-1]['Corporation']}** şirketi %{corp_performance.iloc[-1]['Growth %']:.1f} performans ile dikkat çekiyor.")
+        
+        st.markdown("---")
+        st.subheader("💊 Ürün Portföyü İçgörüleri")
+        
+        specialty_insights = []
+        
+        if '2024' in year_filter:
+            specialty_sales = filtered_df[filtered_df['Specialty Product'] == 'Yes']['MAT Q3 2024 USD MNF'].sum()
+            total_sales = filtered_df['MAT Q3 2024 USD MNF'].sum()
+            
+            if total_sales > 0:
+                specialty_pct = (specialty_sales / total_sales) * 100
+                specialty_insights.append(f"Specialty ürünler portföyün %{specialty_pct:.1f}'ini oluşturuyor.")
+            
+            specialty_avg_price = filtered_df[filtered_df['Specialty Product'] == 'Yes']['MAT Q3 2024 SU Avg Price USD MNF'].mean()
+            non_specialty_avg_price = filtered_df[filtered_df['Specialty Product'] != 'Yes']['MAT Q3 2024 SU Avg Price USD MNF'].mean()
+            
+            if specialty_avg_price > 0 and non_specialty_avg_price > 0:
+                price_premium = ((specialty_avg_price - non_specialty_avg_price) / non_specialty_avg_price) * 100
+                specialty_insights.append(f"Specialty ürünler ortalama %{price_premium:.1f} fiyat primi taşıyor.")
+        
+        for insight in specialty_insights:
+            st.info(insight)
+        
+        st.markdown("---")
+        st.subheader("📊 Özet Kart")
+        
+        summary_metrics = {
+            "Toplam Ülke": filtered_df['Country'].nunique(),
+            "Toplam Molekül": filtered_df['Molecule'].nunique(),
+            "Toplam Corporation": filtered_df['Corporation'].nunique(),
+            "Toplam Ürün": filtered_df['International Product'].nunique()
+        }
+        
+        cols = st.columns(4)
+        for idx, (key, value) in enumerate(summary_metrics.items()):
+            cols[idx].metric(key, value)
 
-
-def show_welcome_screen():
-    """Professional welcome screen"""
+else:
+    st.info("Lütfen Excel dosyasını yükleyin.")
     st.markdown("""
-    <div style="text-align: center; padding: 4rem 1rem;">
-        <div style="font-size: 6rem; margin-bottom: 1.5rem;">💊</div>
-        <h1 style="color: #2acaea; font-size: 3rem; margin-bottom: 1rem;">
-            Welcome to PharmaIntelligence Pro
-        </h1>
-        <p style="color: #cbd5e1; font-size: 1.3rem; max-width: 900px; margin: 0 auto 3rem auto; line-height: 1.8;">
-            Enterprise-grade pharmaceutical analytics platform powered by advanced machine learning.
-            Transform your market data into actionable strategic insights.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    ### Beklenen Kolon Yapısı:
     
-    # Feature showcase
-    st.markdown('<div class="feature-showcase">', unsafe_allow_html=True)
+    **Tanımlayıcı Kolonlar:**
+    - Source.Name, Country, Sector, Panel, Region, Sub-Region
+    - Corporation, Manufacturer, Molecule List, Molecule, Chemical Salt
+    - International Product, Specialty Product, NFC123
+    - International Pack, International Strength, International Size
+    - International Volume, International Prescription
     
-    features = [
-        ("🤖", "AI Forecasting", "Random Forest & Gradient Boosting models for accurate sales predictions"),
-        ("🎯", "Smart Clustering", "K-Means & Hierarchical clustering for market segmentation"),
-        ("⚠️", "Anomaly Detection", "Isolation Forest algorithm for outlier identification"),
-        ("📊", "Market Analytics", "Comprehensive HHI, CAGR, and competitive analysis"),
-        ("🌍", "Geographic Intelligence", "Country-level market analysis and visualization"),
-        ("💡", "Strategic Insights", "AI-powered business intelligence and recommendations"),
-        ("📈", "Advanced Metrics", "Performance scoring, momentum tracking, and trend analysis"),
-        ("📑", "Export & Reports", "Professional reports in CSV, JSON, Excel, and HTML")
-    ]
+    **Metrik Kolonlar (her yıl için):**
+    - MAT Q3 YYYY USD MNF
+    - MAT Q3 YYYY Standard Units
+    - MAT Q3 YYYY Units
+    - MAT Q3 YYYY SU Avg Price USD MNF
+    - MAT Q3 YYYY Unit Avg Price USD MNF
     
-    cols = st.columns(4)
-    for idx, (icon, title, desc) in enumerate(features):
-        with cols[idx % 4]:
-            st.markdown(f"""
-            <div class="feature-card scale-in" style="animation-delay: {idx * 0.1}s;">
-                <div class="feature-icon">{icon}</div>
-                <div class="feature-title">{title}</div>
-                <div class="feature-description">{desc}</div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Getting started
-    st.markdown("""
-    <div class="info-box" style="max-width: 900px; margin: 3rem auto;">
-        <h3 style="margin: 0 0 1.5rem 0; color: #60a5fa; font-size: 1.5rem;">🚀 Getting Started</h3>
-        <ol style="color: #cbd5e1; line-height: 2.5; font-size: 1.1rem; padding-left: 1.5rem;">
-            <li><strong>Upload Your Data:</strong> Use the sidebar to upload CSV or Excel files</li>
-            <li><strong>Automatic Processing:</strong> AI will analyze and enrich your data</li>
-            <li><strong>Explore Insights:</strong> Navigate through tabs for different analyses</li>
-            <li><strong>Apply Filters:</strong> Refine your analysis with advanced filtering</li>
-            <li><strong>Export Results:</strong> Download reports and processed data</li>
-        </ol>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-def show_overview_tab():
-    """Overview tab with KPIs and insights"""
-    df = st.session_state.filtered_data
-    metrics = st.session_state.metrics
-    insights = st.session_state.insights
-    
-    st.markdown('<div class="subsection-header"><h3>📊 Market Overview & Key Performance Indicators</h3></div>', 
-                unsafe_allow_html=True)
-    
-    Visualizer.create_kpi_dashboard(df, metrics)
-    
-    st.markdown('<div class="subsection-header"><h3>💡 Strategic Insights & Recommendations</h3></div>', 
-                unsafe_allow_html=True)
-    
-    if insights:
-        cols = st.columns(2)
-        for idx, insight in enumerate(insights):
-            with cols[idx % 2]:
-                st.markdown(f"""
-                <div class="insight-card {insight.get('type', 'info')} fade-in" style="animation-delay: {idx * 0.1}s;">
-                    <h4>{insight['title']}</h4>
-                    <p>{insight['description']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    st.markdown('<div class="subsection-header"><h3>📋 Data Preview</h3></div>', 
-                unsafe_allow_html=True)
-    
-    st.dataframe(df.head(100), use_container_width=True, height=400)
-
-
-def show_ml_lab_tab():
-    """ML Laboratory tab"""
-    df = st.session_state.filtered_data
-    
-    st.markdown("""
-    <div class="subsection-header">
-        <h3>🤖 Machine Learning Laboratory</h3>
-        <p>Advanced AI-powered analytics and predictions</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    ml_tabs = st.tabs([
-        "📈 Sales Forecasting",
-        "🎯 Product Clustering",
-        "⚠️ Anomaly Detection"
-    ])
-    
-    with ml_tabs[0]:
-        show_forecasting_panel(df)
-    
-    with ml_tabs[1]:
-        show_clustering_panel(df)
-    
-    with ml_tabs[2]:
-        show_anomaly_panel(df)
-
-
-def show_forecasting_panel(df):
-    """Forecasting panel with enhanced UI"""
-    st.markdown("### 📈 Sales Forecasting Engine")
-    
-    sales_cols = [col for col in df.columns if 'Satis_' in col or 'Sales_' in col]
-    growth_cols = [col for col in df.columns if 'Buyume_' in col]
-    price_cols = [col for col in df.columns if 'Ort_Fiyat' in col]
-    
-    if len(sales_cols) < 2:
-        st.warning("⚠️ At least 2 years of sales data required for forecasting")
-        return
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        available_features = sales_cols[:-1] + growth_cols + price_cols
-        selected_features = st.multiselect(
-            "📊 Select Features",
-            available_features,
-            default=available_features[:min(3, len(available_features))],
-            help="Choose features for model training"
-        )
-    
-    with col2:
-        model_type = st.selectbox(
-            "🤖 Model Type",
-            ["Random Forest", "Gradient Boosting", "Ridge Regression", "Lasso Regression"],
-            help="Select forecasting algorithm"
-        )
-    
-    with col3:
-        forecast_years = st.slider(
-            "📅 Forecast Horizon",
-            Config.MIN_FORECAST_YEARS,
-            Config.MAX_FORECAST_YEARS,
-            Config.DEFAULT_FORECAST_YEARS,
-            help="Number of years to forecast"
-        )
-    
-    if st.button("🚀 Train Model & Forecast", type="primary", use_container_width=True):
-        if not selected_features:
-            st.error("❌ Please select at least one feature!")
-            return
-        
-        with st.spinner("🔄 Training model... This may take a moment."):
-            model_map = {
-                "Random Forest": "rf",
-                "Gradient Boosting": "gbm",
-                "Ridge Regression": "ridge",
-                "Lasso Regression": "lasso"
-            }
-            
-            results, error = MLEngine.train_forecasting_model(
-                df,
-                target_col=sales_cols[-1],
-                feature_cols=selected_features,
-                forecast_years=forecast_years,
-                model_type=model_map[model_type]
-            )
-            
-            if error:
-                st.error(f"❌ {error}")
-            elif results:
-                st.success("✅ Model trained successfully!")
-                
-                # Performance metrics
-                st.markdown("#### 📊 Model Performance Metrics")
-                
-                metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-                
-                with metric_col1:
-                    st.metric("R² Score", f"{results['r2_test']:.3f}", "Test Set")
-                
-                with metric_col2:
-                    st.metric("MAE", Utils.format_currency(results['mae_test']), "Mean Abs Error")
-                
-                with metric_col3:
-                    st.metric("RMSE", Utils.format_currency(results['rmse_test']), "Root Mean Sq")
-                
-                with metric_col4:
-                    st.metric("CV Score", f"{results['cv_mean']:.3f}", f"±{results['cv_std']:.3f}")
-                
-                # Forecast visualization
-                st.markdown("#### 📈 Forecast Results")
-                
-                forecast_df = pd.DataFrame(results['forecast'])
-                st.dataframe(forecast_df, use_container_width=True)
-
-
-def show_clustering_panel(df):
-    """Clustering panel"""
-    st.markdown("### 🎯 Product Clustering & Segmentation")
-    
-    sales_cols = [col for col in df.columns if 'Satis_' in col]
-    growth_cols = [col for col in df.columns if 'Buyume_' in col]
-    price_cols = [col for col in df.columns if 'Ort_Fiyat' in col]
-    
-    available_features = sales_cols + growth_cols + price_cols
-    
-    if len(available_features) < 2:
-        st.warning("⚠️ At least 2 features required for clustering")
-        return
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        selected_features = st.multiselect(
-            "📊 Features",
-            available_features,
-            default=available_features[:min(3, len(available_features))]
-        )
-    
-    with col2:
-        algorithm = st.selectbox(
-            "🔧 Algorithm",
-            ["K-Means", "Hierarchical", "DBSCAN"]
-        )
-    
-    with col3:
-        n_clusters = st.slider(
-            "🎯 Clusters",
-            Config.MIN_N_CLUSTERS,
-            Config.MAX_N_CLUSTERS,
-            Config.DEFAULT_N_CLUSTERS
-        )
-    
-    if st.button("🚀 Run Clustering", type="primary", use_container_width=True):
-        if not selected_features:
-            st.error("❌ Select features!")
-            return
-        
-        with st.spinner("🔄 Performing clustering analysis..."):
-            algorithm_map = {
-                "K-Means": "kmeans",
-                "Hierarchical": "hierarchical",
-                "DBSCAN": "dbscan"
-            }
-            
-            results, error = MLEngine.perform_clustering(
-                df, selected_features, n_clusters, algorithm_map[algorithm]
-            )
-            
-            if error:
-                st.error(f"❌ {error}")
-            elif results:
-                st.success("✅ Clustering complete!")
-                
-                metric_col1, metric_col2, metric_col3 = st.columns(3)
-                
-                with metric_col1:
-                    st.metric("Silhouette Score", f"{results['silhouette_score']:.3f}")
-                
-                with metric_col2:
-                    st.metric("Calinski-Harabasz", f"{results['calinski_score']:.0f}")
-                
-                with metric_col3:
-                    st.metric("Davies-Bouldin", f"{results['davies_bouldin_score']:.3f}")
-                
-                with st.expander("📋 Cluster Statistics"):
-                    for cluster_id, stats in results['cluster_stats'].items():
-                        st.write(f"**Cluster {cluster_id}:** {stats['size']} products ({stats['percentage']:.1f}%)")
-
-
-def show_anomaly_panel(df):
-    """Anomaly detection panel"""
-    st.markdown("### ⚠️ Anomaly Detection System")
-    
-    sales_cols = [col for col in df.columns if 'Satis_' in col]
-    growth_cols = [col for col in df.columns if 'Buyume_' in col]
-    
-    available_features = sales_cols + growth_cols
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        selected_features = st.multiselect(
-            "📊 Features",
-            available_features,
-            default=available_features[:min(3, len(available_features))]
-        )
-    
-    with col2:
-        contamination = st.slider(
-            "🎯 Expected Anomaly Rate (%)",
-            int(Config.MIN_CONTAMINATION * 100),
-            int(Config.MAX_CONTAMINATION * 100),
-            int(Config.DEFAULT_CONTAMINATION * 100)
-        ) / 100
-    
-    if st.button("🚀 Detect Anomalies", type="primary", use_container_width=True):
-        if not selected_features:
-            st.error("❌ Select features!")
-            return
-        
-        with st.spinner("🔄 Analyzing data..."):
-            results, error = MLEngine.detect_anomalies(df, selected_features, contamination)
-            
-            if error:
-                st.error(f"❌ {error}")
-            elif results:
-                st.success("✅ Analysis complete!")
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("Anomalies", results['anomaly_count'])
-                
-                with col2:
-                    st.metric("Rate", f"{results['anomaly_percentage']:.2f}%")
-                
-                with col3:
-                    normal = len(df) - results['anomaly_count']
-                    st.metric("Normal", normal)
-
-
-def show_segmentation_tab():
-    """Segmentation analysis tab"""
-    df = st.session_state.filtered_data
-    
-    st.markdown('<div class="subsection-header"><h3>🎯 Market Segmentation Analysis</h3></div>', 
-                unsafe_allow_html=True)
-    
-    st.markdown("### Segment products by different criteria")
-    
-    if 'Buyume_Kategori' in df.columns:
-        st.markdown("#### 📈 Growth Categories")
-        growth_counts = df['Buyume_Kategori'].value_counts()
-        st.dataframe(growth_counts)
-    
-    if 'Fiyat_Tier' in df.columns:
-        st.markdown("#### 💰 Price Tiers")
-        price_counts = df['Fiyat_Tier'].value_counts()
-        st.dataframe(price_counts)
-    
-    if 'Pazar_Pozisyon' in df.columns:
-        st.markdown("#### 🏆 Market Position")
-        position_counts = df['Pazar_Pozisyon'].value_counts()
-        st.dataframe(position_counts)
-
-
-def show_advanced_analytics_tab():
-    """Advanced analytics tab"""
-    df = st.session_state.filtered_data
-    
-    st.markdown('<div class="subsection-header"><h3>📈 Advanced Market Analytics</h3></div>', 
-                unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### 📊 Correlation Analysis")
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        if len(numeric_cols) >= 2:
-            selected_cols = st.multiselect(
-                "Select columns for correlation",
-                numeric_cols,
-                default=numeric_cols[:min(5, len(numeric_cols))]
-            )
-            if len(selected_cols) >= 2:
-                corr_matrix = df[selected_cols].corr()
-                st.dataframe(corr_matrix)
-    
-    with col2:
-        st.markdown("#### 📈 Trend Analysis")
-        sales_cols = [col for col in df.columns if 'Satis_' in col]
-        if sales_cols:
-            selected_product = st.selectbox(
-                "Select product for trend",
-                df['Molekül'].unique() if 'Molekül' in df.columns else df.iloc[:, 0].unique()
-            )
-            if selected_product:
-                product_data = df[df['Molekül'] == selected_product] if 'Molekül' in df.columns else df[df.iloc[:, 0] == selected_product]
-                st.write(product_data[sales_cols].T)
-
-
-def show_reporting_tab():
-    """Reporting and export tab"""
-    df = st.session_state.filtered_data
-    metrics = st.session_state.metrics
-    
-    st.markdown('<div class="subsection-header"><h3>📑 Reports & Data Export</h3></div>', 
-                unsafe_allow_html=True)
-    
-    st.markdown("#### 📥 Download Options")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown("**CSV Format**")
-        Utils.create_download_link(df, "pharma_data", "csv")
-    
-    with col2:
-        st.markdown("**JSON Format**")
-        Utils.create_download_link(df, "pharma_data", "json")
-    
-    with col3:
-        st.markdown("**Excel Format**")
-        Utils.create_download_link(df, "pharma_data", "xlsx")
-    
-    with col4:
-        st.markdown("**HTML Format**")
-        Utils.create_download_link(df, "pharma_data", "html")
-
-
-# ============================================================================
-# APPLICATION ENTRY POINT
-# ============================================================================
-
-if __name__ == "__main__":
-    try:
-        gc.enable()
-        Logger.info(f"Starting {Config.APP_NAME} v{Config.VERSION}")
-        main()
-        Logger.info("Application running successfully")
-    except Exception as e:
-        Logger.error(f"Critical application error: {str(e)}", e)
-        st.error(f"❌ **Critical Error:**\n\n{str(e)}")
-        with st.expander("🔍 View Detailed Error"):
-            st.code(traceback.format_exc())
-        
-        if st.button("🔄 Restart Application", type="primary"):
-            st.rerun()
-
-# ============================================================================
-# END OF PHARMAINTELLIGENCE PRO v7.0 - PROFESSIONAL EDITION
-# ============================================================================
+    (YYYY: 2022, 2023, 2024)
+    """)
+```
+```
