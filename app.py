@@ -323,6 +323,28 @@ PROFESSIONAL_CSS = """
         font-size: 1.1rem;
     }
     
+    /* === FILTER STATUS === */
+    .filter-status {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.5rem;
+        border-left: 5px solid var(--accent-green);
+        box-shadow: var(--shadow-md);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+    
+    .filter-status-danger {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+        border-left: 5px solid var(--accent-yellow);
+    }
+    
+    .filter-status-warning {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(249, 115, 22, 0.2));
+        border-left: 5px solid var(--accent-blue);
+    }
+    
     /* === SEARCH BOX === */
     .search-box {
         background: var(--bg-card);
@@ -406,6 +428,16 @@ PROFESSIONAL_CSS = """
         background: rgba(59, 130, 246, 0.2);
         color: var(--accent-blue);
         border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    /* === SIDEBAR === */
+    .sidebar-title {
+        font-size: 1.4rem;
+        color: var(--text-primary);
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--accent-blue);
     }
 </style>
 """
@@ -694,7 +726,7 @@ class OptimizedDataProcessor:
 # ================================================
 
 class AdvancedFilterSystem:
-    """Gelişmiş filtreleme sistemi"""
+    """Gelişmiş filtreleme sistemi - Tümü seçeneği dahil"""
     
     @staticmethod
     def create_filter_sidebar(df):
@@ -718,32 +750,35 @@ class AdvancedFilterSystem:
             
             if 'Country' in available_columns:
                 countries = sorted(df['Country'].dropna().unique())
-                selected_countries = AdvancedFilterSystem.create_searchable_multiselect(
+                selected_countries = AdvancedFilterSystem.create_searchable_multiselect_with_all(
                     "🌍 Ülkeler",
                     countries,
-                    key="countries_filter"
+                    key="countries_filter",
+                    select_all_by_default=True
                 )
-                if selected_countries:
+                if selected_countries and "Tümü" not in selected_countries:
                     filter_config['Country'] = selected_countries
             
             if 'Corporation' in available_columns:
                 companies = sorted(df['Corporation'].dropna().unique())
-                selected_companies = AdvancedFilterSystem.create_searchable_multiselect(
+                selected_companies = AdvancedFilterSystem.create_searchable_multiselect_with_all(
                     "🏢 Şirketler",
                     companies,
-                    key="companies_filter"
+                    key="companies_filter",
+                    select_all_by_default=True
                 )
-                if selected_companies:
+                if selected_companies and "Tümü" not in selected_companies:
                     filter_config['Corporation'] = selected_companies
             
             if 'Molecule' in available_columns:
                 molecules = sorted(df['Molecule'].dropna().unique())
-                selected_molecules = AdvancedFilterSystem.create_searchable_multiselect(
+                selected_molecules = AdvancedFilterSystem.create_searchable_multiselect_with_all(
                     "🧪 Moleküller",
                     molecules,
-                    key="molecules_filter"
+                    key="molecules_filter",
+                    select_all_by_default=True
                 )
-                if selected_molecules:
+                if selected_molecules and "Tümü" not in selected_molecules:
                     filter_config['Molecule'] = selected_molecules
             
             # Numerik filtreler
@@ -757,15 +792,31 @@ class AdvancedFilterSystem:
                 min_sales = float(df[latest_sales_col].min())
                 max_sales = float(df[latest_sales_col].max())
                 
-                sales_range = st.slider(
-                    f"Satış Aralığı ({latest_sales_col.split('_')[-1]})",
-                    min_value=min_sales,
-                    max_value=max_sales,
-                    value=(min_sales, max_sales),
-                    format="$%.0f",
-                    key="sales_range"
-                )
-                filter_config['sales_range'] = (sales_range, latest_sales_col)
+                # Satış aralığı için iki kolonlu slider
+                col_slider1, col_slider2 = st.columns(2)
+                with col_slider1:
+                    min_value = st.number_input(
+                        "Min Satış ($)",
+                        min_value=min_sales,
+                        max_value=max_sales,
+                        value=min_sales,
+                        step=1000.0,
+                        key="sales_min"
+                    )
+                with col_slider2:
+                    max_value = st.number_input(
+                        "Max Satış ($)",
+                        min_value=min_sales,
+                        max_value=max_sales,
+                        value=max_sales,
+                        step=1000.0,
+                        key="sales_max"
+                    )
+                
+                if min_value <= max_value:
+                    filter_config['sales_range'] = ((min_value, max_value), latest_sales_col)
+                else:
+                    st.warning("Min değer Max değerden küçük olmalıdır")
             
             # Büyüme sütunlarını bul
             growth_cols = [col for col in df.columns if 'Growth_' in col]
@@ -774,57 +825,135 @@ class AdvancedFilterSystem:
                 min_growth = float(df[latest_growth_col].min())
                 max_growth = float(df[latest_growth_col].max())
                 
-                growth_range = st.slider(
-                    "Büyüme Oranı (%)",
-                    min_value=min_growth,
-                    max_value=max_growth,
-                    value=(min(min_growth, -50.0), max(max_growth, 150.0)),
-                    format="%.1f%%",
-                    key="growth_range"
+                # Büyüme aralığı
+                col_growth1, col_growth2 = st.columns(2)
+                with col_growth1:
+                    min_growth_val = st.number_input(
+                        "Min Büyüme (%)",
+                        min_value=min_growth,
+                        max_value=max_growth,
+                        value=min(min_growth, -50.0),
+                        step=5.0,
+                        key="growth_min"
+                    )
+                with col_growth2:
+                    max_growth_val = st.number_input(
+                        "Max Büyüme (%)",
+                        min_value=min_growth,
+                        max_value=max_growth,
+                        value=max(max_growth, 150.0),
+                        step=5.0,
+                        key="growth_max"
+                    )
+                
+                if min_growth_val <= max_growth_val:
+                    filter_config['growth_range'] = ((min_growth_val, max_growth_val), latest_growth_col)
+            
+            # Ek filtreler
+            st.markdown("---")
+            st.markdown('<div class="filter-title">⚙️ Ek Filtreler</div>', unsafe_allow_html=True)
+            
+            # Sadece pozitif büyüyen ürünler
+            only_positive_growth = st.checkbox("📈 Sadece Pozitif Büyüyen Ürünler", value=False)
+            if only_positive_growth and growth_cols:
+                filter_config['positive_growth'] = True
+            
+            # Sadece belirli bir satış eşiğinin üstündekiler
+            if sales_cols:
+                sales_threshold = st.number_input(
+                    "Satış Eşiği ($)",
+                    min_value=0.0,
+                    max_value=float(df[sales_cols[-1]].max()),
+                    value=0.0,
+                    step=1000.0,
+                    key="sales_threshold"
                 )
-                filter_config['growth_range'] = (growth_range, latest_growth_col)
+                if sales_threshold > 0:
+                    filter_config['sales_threshold'] = (sales_threshold, sales_cols[-1])
             
             # Filtreleme butonları
-            col1, col2 = st.columns(2)
+            st.markdown("---")
+            col1, col2, col3 = st.columns(3)
             with col1:
-                apply_filter = st.button("✅ Filtre Uygula", use_container_width=True, key="apply_filter")
+                apply_filter = st.button("✅ Filtre Uygula", width='stretch', key="apply_filter")
             with col2:
-                clear_filter = st.button("🗑️ Filtreleri Temizle", use_container_width=True, key="clear_filter")
+                clear_filter = st.button("🗑️ Filtreleri Temizle", width='stretch', key="clear_filter")
+            with col3:
+                save_filter = st.button("💾 Filtreyi Kaydet", width='stretch', key="save_filter")
+            
+            # Kayıtlı filtreler
+            if 'saved_filters' not in st.session_state:
+                st.session_state.saved_filters = {}
+            
+            if save_filter and filter_config:
+                filter_name = st.text_input("Filtre Adı", placeholder="Örn: Yüksek Büyüyen Ürünler")
+                if filter_name:
+                    st.session_state.saved_filters[filter_name] = filter_config
+                    st.success(f"✅ '{filter_name}' filtresi kaydedildi!")
+            
+            if st.session_state.saved_filters:
+                st.markdown('<div class="filter-title">💾 Kayıtlı Filtreler</div>', unsafe_allow_html=True)
+                saved_filter = st.selectbox(
+                    "Kayıtlı Filtreler",
+                    options=[""] + list(st.session_state.saved_filters.keys()),
+                    key="saved_filters_select"
+                )
+                
+                if saved_filter:
+                    if st.button("📂 Bu Filtreyi Yükle", width='stretch'):
+                        st.session_state.current_filters = st.session_state.saved_filters[saved_filter]
+                        st.success(f"✅ '{saved_filter}' filtresi yüklendi!")
+                        st.rerun()
             
             return search_term, filter_config, apply_filter, clear_filter
     
     @staticmethod
-    def create_searchable_multiselect(label, options, key):
-        """Arama yapılabilir multiselect"""
+    def create_searchable_multiselect_with_all(label, options, key, select_all_by_default=False):
+        """Arama yapılabilir multiselect - Tümü seçeneği dahil"""
         if not options:
             return []
+        
+        # "Tümü" seçeneğini ekle
+        all_options = ["Tümü"] + options
         
         # Arama kutusu
         search_query = st.text_input(f"{label} Ara", key=f"{key}_search", placeholder="Arama yapın...")
         
         # Filtrelenmiş seçenekler
         if search_query:
-            filtered_options = [opt for opt in options if search_query.lower() in str(opt).lower()]
+            filtered_options = ["Tümü"] + [opt for opt in options if search_query.lower() in str(opt).lower()]
         else:
-            filtered_options = options
+            filtered_options = all_options
         
         # Başlangıç seçimleri
-        if len(filtered_options) <= 20:
-            default_options = filtered_options[:min(5, len(filtered_options))]
+        if select_all_by_default:
+            default_options = ["Tümü"]
         else:
-            default_options = []
+            default_options = filtered_options[:min(5, len(filtered_options))]
         
         # Multiselect
         selected = st.multiselect(
             label,
             options=filtered_options,
             default=default_options,
-            key=key
+            key=key,
+            help="'Tümü' seçildiğinde diğer tüm seçenekler otomatik seçilir"
         )
+        
+        # "Tümü" mantığı
+        if "Tümü" in selected and len(selected) > 1:
+            # Eğer "Tümü" ve başka seçenekler seçilmişse, "Tümü" hariç diğerlerini al
+            selected = [opt for opt in selected if opt != "Tümü"]
+        elif "Tümü" in selected and len(selected) == 1:
+            # Sadece "Tümü" seçilmişse, tüm seçenekleri seç
+            selected = options
         
         # İstatistikler
         if selected:
-            st.caption(f"✅ {len(selected)} / {len(options)} seçildi")
+            if len(selected) == len(options):
+                st.caption(f"✅ TÜMÜ seçildi ({len(options)} öğe)")
+            else:
+                st.caption(f"✅ {len(selected)} / {len(options)} seçildi")
         
         return selected
     
@@ -838,16 +967,24 @@ class AdvancedFilterSystem:
             search_mask = pd.Series(False, index=filtered_df.index)
             for col in filtered_df.columns:
                 try:
-                    search_mask = search_mask | filtered_df[col].astype(str).str.contains(
-                        search_term, case=False, na=False
-                    )
+                    # Sayısal sütunları string'e çevir
+                    if pd.api.types.is_numeric_dtype(filtered_df[col]):
+                        search_mask = search_mask | filtered_df[col].astype(str).str.contains(
+                            search_term, case=False, na=False
+                        )
+                    else:
+                        search_mask = search_mask | filtered_df[col].astype(str).str.contains(
+                            search_term, case=False, na=False
+                        )
                 except:
                     continue
             filtered_df = filtered_df[search_mask]
+            if len(filtered_df) == 0:
+                st.warning("Arama sonucu bulunamadı!")
         
         # Kategori filtreleri
         for column, values in filter_config.items():
-            if column in filtered_df.columns and values:
+            if column in filtered_df.columns and values and column not in ['sales_range', 'growth_range', 'positive_growth', 'sales_threshold']:
                 filtered_df = filtered_df[filtered_df[column].isin(values)]
         
         # Numerik filtreler
@@ -867,7 +1004,61 @@ class AdvancedFilterSystem:
                     (filtered_df[col_name] <= max_val)
                 ]
         
+        # Pozitif büyüme filtresi
+        if 'positive_growth' in filter_config and filter_config['positive_growth']:
+            growth_cols = [col for col in filtered_df.columns if 'Growth_' in col]
+            if growth_cols:
+                filtered_df = filtered_df[filtered_df[growth_cols[-1]] > 0]
+        
+        # Satış eşiği filtresi
+        if 'sales_threshold' in filter_config:
+            threshold, col_name = filter_config['sales_threshold']
+            if col_name in filtered_df.columns:
+                filtered_df = filtered_df[filtered_df[col_name] >= threshold]
+        
         return filtered_df
+    
+    @staticmethod
+    def show_filter_status(current_filters, filtered_df, original_df):
+        """Filtre durumunu göster"""
+        if current_filters:
+            filter_info = f"🎯 **Aktif Filtreler:** "
+            filter_items = []
+            
+            for key, value in current_filters.items():
+                if key in ['Country', 'Corporation', 'Molecule']:
+                    if isinstance(value, list):
+                        if len(value) > 3:
+                            filter_items.append(f"{key}: {len(value)} seçenek")
+                        else:
+                            filter_items.append(f"{key}: {', '.join(value[:3])}")
+                elif key == 'sales_range':
+                    (min_val, max_val), col_name = value
+                    filter_items.append(f"Satış: ${min_val:,.0f}-${max_val:,.0f}")
+                elif key == 'growth_range':
+                    (min_val, max_val), col_name = value
+                    filter_items.append(f"Büyüme: %{min_val:.1f}-%{max_val:.1f}")
+                elif key == 'positive_growth':
+                    filter_items.append("Pozitif Büyüme")
+                elif key == 'sales_threshold':
+                    threshold, col_name = value
+                    filter_items.append(f"Satış > ${threshold:,.0f}")
+            
+            filter_info += " | ".join(filter_items)
+            filter_info += f" | **Gösterilen:** {len(filtered_df):,} / {len(original_df):,} satır"
+            
+            st.markdown(f'<div class="filter-status">{filter_info}</div>', unsafe_allow_html=True)
+            
+            # Filtre temizleme butonu
+            col1, col2 = st.columns([3, 1])
+            with col2:
+                if st.button("❌ Tüm Filtreleri Temizle", width='stretch', key="clear_all_filters"):
+                    st.session_state.filtered_df = st.session_state.df.copy()
+                    st.session_state.current_filters = {}
+                    st.session_state.metrics = AdvancedPharmaAnalytics().calculate_comprehensive_metrics(st.session_state.df)
+                    st.session_state.insights = AdvancedPharmaAnalytics().detect_strategic_insights(st.session_state.df)
+                    st.success("✅ Tüm filtreler temizlendi")
+                    st.rerun()
 
 # ================================================
 # 4. GELİŞMİŞ ANALİTİK MOTORU
@@ -1871,6 +2062,8 @@ def main():
         st.session_state.insights = []
     if 'current_filters' not in st.session_state:
         st.session_state.current_filters = {}
+    if 'saved_filters' not in st.session_state:
+        st.session_state.saved_filters = {}
     
     # ================================================
     # SIDEBAR - KONTROL PANELİ
@@ -1900,7 +2093,7 @@ def main():
                         disabled=not use_sample
                     )
                 
-                if st.button("🚀 Yükle & Analiz Et", type="primary", use_container_width=True):
+                if st.button("🚀 Yükle & Analiz Et", type="primary", width='stretch'):
                     with st.spinner("Veri işleniyor..."):
                         processor = OptimizedDataProcessor()
                         
@@ -1929,34 +2122,33 @@ def main():
         # Filtreleme Sistemi
         if st.session_state.df is not None:
             st.markdown("---")
-            with st.expander("🎯 GELİŞMİŞ FİLTRELEME", expanded=True):
-                df = st.session_state.df
-                
-                # Filtreleme sistemi
-                filter_system = AdvancedFilterSystem()
-                search_term, filter_config, apply_filter, clear_filter = filter_system.create_filter_sidebar(df)
-                
-                if apply_filter:
-                    with st.spinner("Filtreler uygulanıyor..."):
-                        filtered_df = filter_system.apply_filters(df, search_term, filter_config)
-                        st.session_state.filtered_df = filtered_df
-                        st.session_state.current_filters = filter_config
-                        
-                        # Filtrelenmiş veri için metrikleri güncelle
-                        analytics = AdvancedPharmaAnalytics()
-                        st.session_state.metrics = analytics.calculate_comprehensive_metrics(filtered_df)
-                        st.session_state.insights = analytics.detect_strategic_insights(filtered_df)
-                        
-                        st.success(f"✅ Filtreler uygulandı: {len(filtered_df):,} satır")
-                        st.rerun()
-                
-                if clear_filter:
-                    st.session_state.filtered_df = st.session_state.df.copy()
-                    st.session_state.current_filters = {}
-                    st.session_state.metrics = AdvancedPharmaAnalytics().calculate_comprehensive_metrics(st.session_state.df)
-                    st.session_state.insights = AdvancedPharmaAnalytics().detect_strategic_insights(st.session_state.df)
-                    st.success("✅ Filtreler temizlendi")
+            df = st.session_state.df
+            
+            # Filtreleme sistemi
+            filter_system = AdvancedFilterSystem()
+            search_term, filter_config, apply_filter, clear_filter = filter_system.create_filter_sidebar(df)
+            
+            if apply_filter:
+                with st.spinner("Filtreler uygulanıyor..."):
+                    filtered_df = filter_system.apply_filters(df, search_term, filter_config)
+                    st.session_state.filtered_df = filtered_df
+                    st.session_state.current_filters = filter_config
+                    
+                    # Filtrelenmiş veri için metrikleri güncelle
+                    analytics = AdvancedPharmaAnalytics()
+                    st.session_state.metrics = analytics.calculate_comprehensive_metrics(filtered_df)
+                    st.session_state.insights = analytics.detect_strategic_insights(filtered_df)
+                    
+                    st.success(f"✅ Filtreler uygulandı: {len(filtered_df):,} satır")
                     st.rerun()
+            
+            if clear_filter:
+                st.session_state.filtered_df = st.session_state.df.copy()
+                st.session_state.current_filters = {}
+                st.session_state.metrics = AdvancedPharmaAnalytics().calculate_comprehensive_metrics(st.session_state.df)
+                st.session_state.insights = AdvancedPharmaAnalytics().detect_strategic_insights(st.session_state.df)
+                st.success("✅ Filtreler temizlendi")
+                st.rerun()
         
         # Analiz Ayarları
         if st.session_state.df is not None:
@@ -1991,11 +2183,15 @@ def main():
     metrics = st.session_state.metrics
     insights = st.session_state.insights
     
-    # Filtre durumu göstergesi
-    if len(st.session_state.current_filters) > 0:
-        filter_info = f"🎯 Aktif Filtreler: {len(st.session_state.current_filters)} | "
-        filter_info += f"Gösterilen: {len(df):,} / {len(st.session_state.df):,} satır"
-        st.info(filter_info)
+    # Gelişmiş filtre durumu göstergesi
+    if st.session_state.current_filters:
+        AdvancedFilterSystem.show_filter_status(
+            st.session_state.current_filters,
+            df,
+            st.session_state.df
+        )
+    else:
+        st.info(f"🎯 Aktif filtre yok | Gösterilen: {len(df):,} satır")
     
     # Ana Tablar
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -2515,7 +2711,7 @@ def show_strategic_analysis_tab(df, insights):
         n_clusters = st.slider("Segment Sayısı", 2, 8, 4, key="n_clusters")
         method = st.selectbox("Segmentasyon Metodu", ['kmeans', 'dbscan'], key="seg_method")
         
-        if st.button("🔍 Segmentasyon Analizi Yap", type="primary", use_container_width=True, key="run_segmentation"):
+        if st.button("🔍 Segmentasyon Analizi Yap", type="primary", width='stretch', key="run_segmentation"):
             with st.spinner("Pazar segmentasyonu analiz ediliyor..."):
                 analytics = AdvancedPharmaAnalytics()
                 segmentation_results = analytics.perform_advanced_segmentation(df, n_clusters, method)
@@ -2627,7 +2823,7 @@ def show_reporting_tab(df, metrics, insights):
     report_cols = st.columns(3)
     
     with report_cols[0]:
-        if st.button("📈 Excel Raporu Oluştur", use_container_width=True, key="excel_report"):
+        if st.button("📈 Excel Raporu Oluştur", width='stretch', key="excel_report"):
             with st.spinner("Excel raporu oluşturuluyor..."):
                 reporting = ProfessionalReporting()
                 excel_report = reporting.generate_excel_report(df, metrics, insights)
@@ -2639,14 +2835,14 @@ def show_reporting_tab(df, metrics, insights):
                         data=excel_report,
                         file_name=f"pharma_report_{timestamp}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
+                        width='stretch',
                         key="download_excel"
                     )
                 else:
                     st.error("Excel raporu oluşturulamadı.")
     
     with report_cols[1]:
-        if st.button("📄 PDF Özet Oluştur", use_container_width=True, key="pdf_report"):
+        if st.button("📄 PDF Özet Oluştur", width='stretch', key="pdf_report"):
             with st.spinner("PDF özeti oluşturuluyor..."):
                 reporting = ProfessionalReporting()
                 pdf_summary = reporting.generate_pdf_summary(df, metrics, insights)
@@ -2657,12 +2853,12 @@ def show_reporting_tab(df, metrics, insights):
                     data=pdf_summary.encode('utf-8'),
                     file_name=f"pharma_summary_{timestamp}.txt",
                     mime="text/plain",
-                    use_container_width=True,
+                    width='stretch',
                     key="download_pdf"
                 )
     
     with report_cols[2]:
-        if st.button("🔄 Analizi Sıfırla", use_container_width=True, key="reset_analysis"):
+        if st.button("🔄 Analizi Sıfırla", width='stretch', key="reset_analysis"):
             st.session_state.df = None
             st.session_state.filtered_df = None
             st.session_state.metrics = None
@@ -2736,5 +2932,5 @@ if __name__ == "__main__":
         st.code(traceback.format_exc())
         
         # Yeniden deneme butonu
-        if st.button("🔄 Sayfayı Yenile"):
+        if st.button("🔄 Sayfayı Yenile", width='stretch'):
             st.rerun()
