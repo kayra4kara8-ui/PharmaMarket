@@ -4,7 +4,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import geopandas as gpd
 import pycountry
 from functools import lru_cache
 import warnings
@@ -292,56 +291,122 @@ class GlobalFilters:
 # ============================================
 class WorldMapHandler:
     def __init__(self):
-        self.world = self._load_world_geojson()
+        self.country_mapping = self._create_country_mapping()
     
-    def _load_world_geojson(self):
-        try:
-            world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-            return world
-        except:
-            return None
+    def _create_country_mapping(self):
+        mapping = {}
+        for country in pycountry.countries:
+            mapping[country.name] = country.alpha_3
+        
+        # Özel eşleştirmeler
+        special_mappings = {
+            'USA': 'USA',
+            'United States': 'USA',
+            'US': 'USA',
+            'UK': 'GBR',
+            'United Kingdom': 'GBR',
+            'UAE': 'ARE',
+            'United Arab Emirates': 'ARE',
+            'Russia': 'RUS',
+            'Russian Federation': 'RUS',
+            'Iran': 'IRN',
+            'South Korea': 'KOR',
+            'Korea, South': 'KOR',
+            'North Korea': 'PRK',
+            'Vietnam': 'VNM',
+            'Bolivia': 'BOL',
+            'Venezuela': 'VEN',
+            'Syria': 'SYR',
+            'Tanzania': 'TZA',
+            'Laos': 'LAO',
+            'Brunei': 'BRN',
+            'Cape Verde': 'CPV',
+            'Congo': 'COG',
+            'Congo DR': 'COD',
+            'DR Congo': 'COD',
+            'Ivory Coast': 'CIV',
+            "Côte d'Ivoire": 'CIV',
+            'East Timor': 'TLS',
+            'Timor-Leste': 'TLS',
+            'Macedonia': 'MKD',
+            'North Macedonia': 'MKD',
+            'Moldova': 'MDA',
+            'Palestine': 'PSE',
+            'Taiwan': 'TWN',
+            'Turkey': 'TUR',
+            'Türkiye': 'TUR',
+            'Czech Republic': 'CZE',
+            'Czechia': 'CZE',
+            'Slovakia': 'SVK',
+            'Slovak Republic': 'SVK'
+        }
+        
+        mapping.update(special_mappings)
+        return mapping
     
     def get_country_code(self, country_name):
+        country_name = str(country_name).strip()
+        
+        # Direkt eşleştirme
+        if country_name in self.country_mapping:
+            return self.country_mapping[country_name]
+        
+        # Alternatif isimler
+        alt_names = {
+            'United States of America': 'USA',
+            'America': 'USA',
+            'Great Britain': 'GBR',
+            'England': 'GBR',
+            'Scotland': 'GBR',
+            'Wales': 'GBR',
+            'Northern Ireland': 'GBR',
+            'UAE': 'ARE',
+            'Emirates': 'ARE',
+            'Russian Federation': 'RUS',
+            'Iran, Islamic Republic of': 'IRN',
+            'Iran (Islamic Republic of)': 'IRN',
+            'Korea, Republic of': 'KOR',
+            'South Korea': 'KOR',
+            "Korea, Democratic People's Republic of": 'PRK',
+            'North Korea': 'PRK',
+            'Viet Nam': 'VNM',
+            'Bolivia, Plurinational State of': 'BOL',
+            'Venezuela, Bolivarian Republic of': 'VEN',
+            'Syrian Arab Republic': 'SYR',
+            'Tanzania, United Republic of': 'TZA',
+            "Lao People's Democratic Republic": 'LAO',
+            'Brunei Darussalam': 'BRN',
+            'Cabo Verde': 'CPV',
+            'Congo, Republic of the': 'COG',
+            'Congo, The Democratic Republic of the': 'COD',
+            'Democratic Republic of Congo': 'COD',
+            "Côte d'Ivoire": 'CIV',
+            'Ivory Coast': 'CIV',
+            'Timor-Leste': 'TLS',
+            'East Timor': 'TLS',
+            'North Macedonia': 'MKD',
+            'Moldova, Republic of': 'MDA',
+            'Palestine, State of': 'PSE',
+            'Taiwan, Province of China': 'TWN',
+            'Türkiye': 'TUR',
+            'Czech Republic': 'CZE',
+            'Czechia': 'CZE',
+            'Slovakia': 'SVK',
+            'Slovak Republic': 'SVK'
+        }
+        
+        if country_name in alt_names:
+            return alt_names[country_name]
+        
+        # Pycountry ile deneme
         try:
-            country = pycountry.countries.get(name=country_name)
+            country = pycountry.countries.search_fuzzy(country_name)
             if country:
-                return country.alpha_3
-            
-            name_mapping = {
-                'USA': 'United States',
-                'UK': 'United Kingdom',
-                'UAE': 'United Arab Emirates',
-                'Russia': 'Russian Federation',
-                'Iran': 'Iran, Islamic Republic of',
-                'South Korea': 'Korea, Republic of',
-                'North Korea': "Korea, Democratic People's Republic of",
-                'Vietnam': 'Viet Nam',
-                'Bolivia': 'Bolivia, Plurinational State of',
-                'Venezuela': 'Venezuela, Bolivarian Republic of',
-                'Syria': 'Syrian Arab Republic',
-                'Tanzania': 'Tanzania, United Republic of',
-                'Laos': "Lao People's Democratic Republic",
-                'Brunei': 'Brunei Darussalam',
-                'Cape Verde': 'Cabo Verde',
-                'Congo': 'Congo',
-                'Congo DR': 'Congo, The Democratic Republic of the',
-                'Ivory Coast': "Côte d'Ivoire",
-                'East Timor': 'Timor-Leste',
-                'Macedonia': 'North Macedonia',
-                'Moldova': 'Moldova, Republic of',
-                'Palestine': 'Palestine, State of',
-                'Taiwan': 'Taiwan, Province of China',
-                'Turkey': 'Türkiye'
-            }
-            
-            if country_name in name_mapping:
-                country = pycountry.countries.get(name=name_mapping[country_name])
-                if country:
-                    return country.alpha_3
-            
-            return None
+                return country[0].alpha_3
         except:
-            return None
+            pass
+        
+        return None
     
     def prepare_map_data(self, df, year):
         if year == 2022:
@@ -372,9 +437,16 @@ class WorldMapHandler:
             country_data['Global_Pay_Pct'] = 0
         
         country_data['ISO_A3'] = country_data['Country'].apply(self.get_country_code)
-        country_data = country_data.dropna(subset=['ISO_A3'])
         
-        return country_data
+        # ISO kodu olmayanları filtreleme
+        country_data_with_iso = country_data.dropna(subset=['ISO_A3'])
+        
+        # ISO kodu olmayanlar için uyarı
+        missing_countries = country_data[country_data['ISO_A3'].isna()]['Country'].tolist()
+        if missing_countries and len(missing_countries) < 10:  # Sadece az sayıda eksik varsa göster
+            st.sidebar.warning(f"Harita için ISO kodu bulunamayan ülkeler: {', '.join(missing_countries[:5])}")
+        
+        return country_data_with_iso
 
 # ============================================
 # ANALİTİK MOTORLARI
@@ -501,8 +573,9 @@ class AnalyticsEngine:
             else:
                 usd_col = 'MAT Q3 2024\nUSD MNF'
             
-            specialty_total = df[df['Specialty Product'] == 'Specialty'][usd_col].sum()
-            non_specialty_total = df[df['Specialty Product'] != 'Specialty'][usd_col].sum()
+            specialty_mask = df['Specialty Product'].astype(str).str.contains('Specialty', case=False, na=False)
+            specialty_total = df[specialty_mask][usd_col].sum()
+            non_specialty_total = df[~specialty_mask][usd_col].sum()
             total_usd = specialty_total + non_specialty_total
             
             if total_usd > 0:
@@ -556,13 +629,14 @@ class InsightEngine:
         mol_share = country_df.groupby('Molecule').agg({
             'MAT Q3 2024\nUSD MNF': 'sum'
         }).reset_index()
-        mol_share['Share'] = (mol_share['MAT Q3 2024\nUSD MNF'] / mol_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
-        top_molecule = mol_share.nlargest(1, 'Share')
-        
-        if not top_molecule.empty:
-            mol_name = top_molecule.iloc[0]['Molecule']
-            mol_pct = top_molecule.iloc[0]['Share']
-            insights.append(f"💊 En büyük molekül: **{mol_name}** (%{mol_pct:.1f} pay)")
+        if not mol_share.empty and mol_share['MAT Q3 2024\nUSD MNF'].sum() > 0:
+            mol_share['Share'] = (mol_share['MAT Q3 2024\nUSD MNF'] / mol_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
+            top_molecule = mol_share.nlargest(1, 'Share')
+            
+            if not top_molecule.empty:
+                mol_name = top_molecule.iloc[0]['Molecule']
+                mol_pct = top_molecule.iloc[0]['Share']
+                insights.append(f"💊 En büyük molekül: **{mol_name}** (%{mol_pct:.1f} pay)")
         
         # Fiyat-Volume ayrıştırma
         pvm_22_23 = AnalyticsEngine.price_volume_mix_analysis(country_df, 2022, 2023)
@@ -594,25 +668,27 @@ class InsightEngine:
         country_share = mol_df.groupby('Country').agg({
             'MAT Q3 2024\nUSD MNF': 'sum'
         }).reset_index()
-        country_share['Share'] = (country_share['MAT Q3 2024\nUSD MNF'] / country_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
-        top_countries = country_share.nlargest(3, 'Share')
-        
-        if len(top_countries) > 0:
-            country_list = ", ".join([f"{row['Country']} (%{row['Share']:.1f})" for _, row in top_countries.iterrows()])
-            insights.append(f"📍 En büyük pazarlar: {country_list}")
+        if not country_share.empty and country_share['MAT Q3 2024\nUSD MNF'].sum() > 0:
+            country_share['Share'] = (country_share['MAT Q3 2024\nUSD MNF'] / country_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
+            top_countries = country_share.nlargest(3, 'Share')
+            
+            if len(top_countries) > 0:
+                country_list = ", ".join([f"{row['Country']} (%{row['Share']:.1f})" for _, row in top_countries.iterrows()])
+                insights.append(f"📍 En büyük pazarlar: {country_list}")
         
         # Üretici konsantrasyonu
         mfg_share = mol_df.groupby('Manufacturer').agg({
             'MAT Q3 2024\nUSD MNF': 'sum'
         }).reset_index()
-        mfg_share['Share'] = (mfg_share['MAT Q3 2024\nUSD MNF'] / mfg_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
-        top_mfg = mfg_share.nlargest(1, 'Share')
-        
-        if not top_mfg.empty:
-            mfg_name = top_mfg.iloc[0]['Manufacturer']
-            mfg_pct = top_mfg.iloc[0]['Share']
-            if mfg_pct > 50:
-                insights.append(f"🏭 **{mfg_name}**, %{mfg_pct:.1f} pay ile pazara hakim.")
+        if not mfg_share.empty and mfg_share['MAT Q3 2024\nUSD MNF'].sum() > 0:
+            mfg_share['Share'] = (mfg_share['MAT Q3 2024\nUSD MNF'] / mfg_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
+            top_mfg = mfg_share.nlargest(1, 'Share')
+            
+            if not top_mfg.empty:
+                mfg_name = top_mfg.iloc[0]['Manufacturer']
+                mfg_pct = top_mfg.iloc[0]['Share']
+                if mfg_pct > 50:
+                    insights.append(f"🏭 **{mfg_name}**, %{mfg_pct:.1f} pay ile pazara hakim.")
         
         return insights[:5]
     
@@ -625,9 +701,13 @@ class InsightEngine:
         insights = []
         
         # Pazar payı trendi
-        share_2022 = (corp_df['MAT Q3 2022\nUSD MNF'].sum() / self.df['MAT Q3 2022\nUSD MNF'].sum() * 100)
-        share_2023 = (corp_df['MAT Q3 2023\nUSD MNF'].sum() / self.df['MAT Q3 2023\nUSD MNF'].sum() * 100)
-        share_2024 = (corp_df['MAT Q3 2024\nUSD MNF'].sum() / self.df['MAT Q3 2024\nUSD MNF'].sum() * 100)
+        total_2022 = self.df['MAT Q3 2022\nUSD MNF'].sum()
+        total_2023 = self.df['MAT Q3 2023\nUSD MNF'].sum()
+        total_2024 = self.df['MAT Q3 2024\nUSD MNF'].sum()
+        
+        share_2022 = (corp_df['MAT Q3 2022\nUSD MNF'].sum() / total_2022 * 100) if total_2022 > 0 else 0
+        share_2023 = (corp_df['MAT Q3 2023\nUSD MNF'].sum() / total_2023 * 100) if total_2023 > 0 else 0
+        share_2024 = (corp_df['MAT Q3 2024\nUSD MNF'].sum() / total_2024 * 100) if total_2024 > 0 else 0
         
         share_change_22_24 = share_2024 - share_2022
         
@@ -887,19 +967,16 @@ def main():
             
             map_data = map_handler.prepare_map_data(filtered_df, year_select)
             
-            if not map_data.empty and map_handler.world is not None:
-                merged_data = map_handler.world.merge(map_data, how='left', left_on='iso_a3', right_on='ISO_A3')
-                
+            if not map_data.empty:
                 fig = px.choropleth(
-                    merged_data,
-                    geojson=merged_data.geometry,
-                    locations=merged_data.index,
+                    map_data,
+                    locations='ISO_A3',
                     color=f'MAT Q3 {year_select}\nUSD MNF',
-                    hover_name='name',
+                    hover_name='Country',
                     hover_data={
                         f'MAT Q3 {year_select}\nUSD MNF': ':.2f',
-                        f'MAT Q3 {year_select}\nUnits': True,
-                        f'MAT Q3 {year_select}\nStandard Units': True,
+                        f'MAT Q3 {year_select}\nUnits': ':.0f',
+                        f'MAT Q3 {year_select}\nStandard Units': ':.0f',
                         'Global_Pay_Pct': ':.2f%'
                     },
                     color_continuous_scale="Viridis",
@@ -907,7 +984,6 @@ def main():
                     title=f"Dünya Haritası - USD MNF Dağılımı ({year_select})"
                 )
                 
-                fig.update_geos(fitbounds="locations", visible=False)
                 fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
                 
                 st.plotly_chart(fig, use_container_width=True)
@@ -932,22 +1008,19 @@ def main():
                 
                 st.plotly_chart(fig_bar, use_container_width=True)
             else:
-                st.warning("Harita verisi bulunamadı veya ülke kodları eşleştirilemedi.")
+                st.warning("Harita verisi bulunamadı. Ülke isimleri ISO koduyla eşleştirilemedi.")
         
         with map_tab2:
             year_select_share = st.selectbox("Harita Yılı", [2024, 2023, 2022], key="map_share_year")
             
             share_data = map_handler.prepare_map_data(filtered_df, year_select_share)
             
-            if not share_data.empty and map_handler.world is not None:
-                merged_share = map_handler.world.merge(share_data, how='left', left_on='iso_a3', right_on='ISO_A3')
-                
+            if not share_data.empty:
                 fig = px.choropleth(
-                    merged_share,
-                    geojson=merged_share.geometry,
-                    locations=merged_share.index,
+                    share_data,
+                    locations='ISO_A3',
                     color='Global_Pay_Pct',
-                    hover_name='name',
+                    hover_name='Country',
                     hover_data={
                         f'MAT Q3 {year_select_share}\nUSD MNF': ':.2f',
                         'Global_Pay_Pct': ':.2f%'
@@ -957,7 +1030,6 @@ def main():
                     title=f"Dünya Haritası - Global Pay Dağılımı ({year_select_share})"
                 )
                 
-                fig.update_geos(fitbounds="locations", visible=False)
                 fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
                 
                 st.plotly_chart(fig, use_container_width=True)
@@ -969,12 +1041,19 @@ def main():
                 share_2024 = map_handler.prepare_map_data(filtered_df, 2024)
                 
                 if not share_2022.empty and not share_2024.empty:
+                    # Merge data
+                    share_2022_clean = share_2022[['Country', 'Global_Pay_Pct']].copy()
+                    share_2022_clean.columns = ['Country', 'Global_Pay_Pct_2022']
+                    
+                    share_2024_clean = share_2024[['Country', 'Global_Pay_Pct']].copy()
+                    share_2024_clean.columns = ['Country', 'Global_Pay_Pct_2024']
+                    
                     share_comparison = pd.merge(
-                        share_2022[['Country', 'Global_Pay_Pct']],
-                        share_2024[['Country', 'Global_Pay_Pct']],
+                        share_2022_clean,
+                        share_2024_clean,
                         on='Country',
-                        suffixes=('_2022', '_2024')
-                    )
+                        how='outer'
+                    ).fillna(0)
                     
                     share_comparison['Change'] = share_comparison['Global_Pay_Pct_2024'] - share_comparison['Global_Pay_Pct_2022']
                     top_gainers = share_comparison.nlargest(5, 'Change')
@@ -1013,81 +1092,80 @@ def main():
             
             growth_df = pd.DataFrame(country_growth)
             
-            if not growth_df.empty and map_handler.world is not None:
+            if not growth_df.empty:
                 growth_df['ISO_A3'] = growth_df['Country'].apply(map_handler.get_country_code)
                 growth_df = growth_df.dropna(subset=['ISO_A3'])
                 
-                merged_growth = map_handler.world.merge(growth_df, how='left', left_on='iso_a3', right_on='ISO_A3')
-                
-                # Büyüme kategorileri
-                def growth_category(x):
-                    if pd.isna(x):
-                        return 'Veri Yok'
-                    elif x > 20:
-                        return 'Çok Yüksek Büyüme (>20%)'
-                    elif x > 10:
-                        return 'Yüksek Büyüme (10-20%)'
-                    elif x > 0:
-                        return 'Orta Büyüme (0-10%)'
-                    elif x > -10:
-                        return 'Hafif Düşüş (0- -10%)'
-                    else:
-                        return 'Keskin Düşüş (<-10%)'
-                
-                merged_growth['Growth_Category'] = merged_growth['Growth_Pct'].apply(growth_category)
-                
-                color_discrete_map = {
-                    'Çok Yüksek Büyüme (>20%)': '#10B981',
-                    'Yüksek Büyüme (10-20%)': '#34D399',
-                    'Orta Büyüme (0-10%)': '#60A5FA',
-                    'Hafif Düşüş (0- -10%)': '#FBBF24',
-                    'Keskin Düşüş (<-10%)': '#DC2626',
-                    'Veri Yok': '#9CA3AF'
-                }
-                
-                fig = px.choropleth(
-                    merged_growth,
-                    geojson=merged_growth.geometry,
-                    locations=merged_growth.index,
-                    color='Growth_Category',
-                    hover_name='name',
-                    hover_data={
-                        'Growth_Pct': ':.1f%',
-                        'Country': True
-                    },
-                    color_discrete_map=color_discrete_map,
-                    category_orders={
-                        'Growth_Category': [
-                            'Çok Yüksek Büyüme (>20%)',
-                            'Yüksek Büyüme (10-20%)',
-                            'Orta Büyüme (0-10%)',
-                            'Hafif Düşüş (0- -10%)',
-                            'Keskin Düşüş (<-10%)',
-                            'Veri Yok'
-                        ]
-                    },
-                    title=f"Dünya Haritası - Büyüme Oranları ({start_year} → {end_year})"
-                )
-                
-                fig.update_geos(fitbounds="locations", visible=False)
-                fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Büyüme istatistikleri
-                st.markdown("##### 📈 Büyüme Dağılımı")
-                
-                growth_stats = growth_df['Growth_Pct'].describe()
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Ortalama Büyüme", f"{growth_stats['mean']:.1f}%")
-                with col2:
-                    st.metric("Medyan Büyüme", f"{growth_stats['50%']:.1f}%")
-                with col3:
-                    st.metric("Maksimum", f"{growth_stats['max']:.1f}%")
-                with col4:
-                    st.metric("Minimum", f"{growth_stats['min']:.1f}%")
+                if not growth_df.empty:
+                    # Büyüme kategorileri
+                    def growth_category(x):
+                        if pd.isna(x):
+                            return 'Veri Yok'
+                        elif x > 20:
+                            return 'Çok Yüksek Büyüme (>20%)'
+                        elif x > 10:
+                            return 'Yüksek Büyüme (10-20%)'
+                        elif x > 0:
+                            return 'Orta Büyüme (0-10%)'
+                        elif x > -10:
+                            return 'Hafif Düşüş (0- -10%)'
+                        else:
+                            return 'Keskin Düşüş (<-10%)'
+                    
+                    growth_df['Growth_Category'] = growth_df['Growth_Pct'].apply(growth_category)
+                    
+                    color_discrete_map = {
+                        'Çok Yüksek Büyüme (>20%)': '#10B981',
+                        'Yüksek Büyüme (10-20%)': '#34D399',
+                        'Orta Büyüme (0-10%)': '#60A5FA',
+                        'Hafif Düşüş (0- -10%)': '#FBBF24',
+                        'Keskin Düşüş (<-10%)': '#DC2626',
+                        'Veri Yok': '#9CA3AF'
+                    }
+                    
+                    fig = px.choropleth(
+                        growth_df,
+                        locations='ISO_A3',
+                        color='Growth_Category',
+                        hover_name='Country',
+                        hover_data={
+                            'Growth_Pct': ':.1f%',
+                            'Country': True
+                        },
+                        color_discrete_map=color_discrete_map,
+                        category_orders={
+                            'Growth_Category': [
+                                'Çok Yüksek Büyüme (>20%)',
+                                'Yüksek Büyüme (10-20%)',
+                                'Orta Büyüme (0-10%)',
+                                'Hafif Düşüş (0- -10%)',
+                                'Keskin Düşüş (<-10%)',
+                                'Veri Yok'
+                            ]
+                        },
+                        title=f"Dünya Haritası - Büyüme Oranları ({start_year} → {end_year})"
+                    )
+                    
+                    fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Büyüme istatistikleri
+                    st.markdown("##### 📈 Büyüme Dağılımı")
+                    
+                    growth_stats = growth_df['Growth_Pct'].describe()
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Ortalama Büyüme", f"{growth_stats['mean']:.1f}%")
+                    with col2:
+                        st.metric("Medyan Büyüme", f"{growth_stats['50%']:.1f}%")
+                    with col3:
+                        st.metric("Maksimum", f"{growth_stats['max']:.1f}%")
+                    with col4:
+                        st.metric("Minimum", f"{growth_stats['min']:.1f}%")
+                else:
+                    st.warning("Büyüme verisi haritalandırılamadı. Ülke kodları eşleştirilemedi.")
     
     # ============================================
     # TAB 3: Ülke Derinlemesine
@@ -1214,9 +1292,15 @@ def main():
                         st.plotly_chart(fig_pvm1, use_container_width=True)
                         
                         # Detaylı bilgiler
-                        st.write(f"**Toplam Büyüme:** %{((pvm_22_23['total_growth'] / country_df['MAT Q3 2022\nUSD MNF'].sum()) * 100) if country_df['MAT Q3 2022\nUSD MNF'].sum() > 0 else 0:.1f}")
-                        st.write(f"**Ortalama Fiyat Değişimi:** %{((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / pvm_22_23['weighted_price_start'] * 100) if pvm_22_23['weighted_price_start'] > 0 else 0:.1f}")
-                        st.write(f"**Volume Büyümesi:** %{pvm_22_23['unit_growth_pct']:.1f}")
+                        if country_df['MAT Q3 2022\nUSD MNF'].sum() > 0:
+                            total_growth_pct = (pvm_22_23['total_growth'] / country_df['MAT Q3 2022\nUSD MNF'].sum() * 100)
+                            st.write(f"**Toplam Büyüme:** %{total_growth_pct:.1f}")
+                        
+                        if pvm_22_23['weighted_price_start'] > 0:
+                            price_change_pct = ((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / pvm_22_23['weighted_price_start'] * 100)
+                            st.write(f"**Ortalama Fiyat Değişimi:** %{price_change_pct:.1f}")
+                        
+                        st.write(f"**Volume Büyümesi:** %{pvm_22_23.get('unit_growth_pct', 0):.1f}")
                 
                 with col2:
                     st.markdown("**2023 → 2024**")
@@ -1242,9 +1326,15 @@ def main():
                         st.plotly_chart(fig_pvm2, use_container_width=True)
                         
                         # Detaylı bilgiler
-                        st.write(f"**Toplam Büyüme:** %{((pvm_23_24['total_growth'] / country_df['MAT Q3 2023\nUSD MNF'].sum()) * 100) if country_df['MAT Q3 2023\nUSD MNF'].sum() > 0 else 0:.1f}")
-                        st.write(f"**Ortalama Fiyat Değişimi:** %{((pvm_23_24['weighted_price_end'] - pvm_23_24['weighted_price_start']) / pvm_23_24['weighted_price_start'] * 100) if pvm_23_24['weighted_price_start'] > 0 else 0:.1f}")
-                        st.write(f"**Volume Büyümesi:** %{pvm_23_24['unit_growth_pct']:.1f}")
+                        if country_df['MAT Q3 2023\nUSD MNF'].sum() > 0:
+                            total_growth_pct = (pvm_23_24['total_growth'] / country_df['MAT Q3 2023\nUSD MNF'].sum() * 100)
+                            st.write(f"**Toplam Büyüme:** %{total_growth_pct:.1f}")
+                        
+                        if pvm_23_24['weighted_price_start'] > 0:
+                            price_change_pct = ((pvm_23_24['weighted_price_end'] - pvm_23_24['weighted_price_start']) / pvm_23_24['weighted_price_start'] * 100)
+                            st.write(f"**Ortalama Fiyat Değişimi:** %{price_change_pct:.1f}")
+                        
+                        st.write(f"**Volume Büyümesi:** %{pvm_23_24.get('unit_growth_pct', 0):.1f}")
                 
                 # Molekül analizi
                 st.markdown("---")
@@ -1256,41 +1346,42 @@ def main():
                     'MAT Q3 2022\nUSD MNF': 'sum'
                 }).reset_index()
                 
-                mol_analysis['Share_2024'] = (mol_analysis['MAT Q3 2024\nUSD MNF'] / mol_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
-                mol_analysis = mol_analysis.sort_values('Share_2024', ascending=False).head(10)
-                
-                fig_mol = go.Figure()
-                
-                fig_mol.add_trace(go.Bar(
-                    x=mol_analysis['Molecule'],
-                    y=mol_analysis['MAT Q3 2024\nUSD MNF'],
-                    name='2024',
-                    marker_color='#3B82F6'
-                ))
-                
-                fig_mol.add_trace(go.Bar(
-                    x=mol_analysis['Molecule'],
-                    y=mol_analysis['MAT Q3 2023\nUSD MNF'],
-                    name='2023',
-                    marker_color='#60A5FA'
-                ))
-                
-                fig_mol.add_trace(go.Bar(
-                    x=mol_analysis['Molecule'],
-                    y=mol_analysis['MAT Q3 2022\nUSD MNF'],
-                    name='2022',
-                    marker_color='#93C5FD'
-                ))
-                
-                fig_mol.update_layout(
-                    title="Top 10 Molekül - Üç Yıllık Karşılaştırma",
-                    barmode='group',
-                    height=500,
-                    xaxis_tickangle=-45,
-                    yaxis_title="USD MNF"
-                )
-                
-                st.plotly_chart(fig_mol, use_container_width=True)
+                if not mol_analysis.empty and mol_analysis['MAT Q3 2024\nUSD MNF'].sum() > 0:
+                    mol_analysis['Share_2024'] = (mol_analysis['MAT Q3 2024\nUSD MNF'] / mol_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
+                    mol_analysis = mol_analysis.sort_values('Share_2024', ascending=False).head(10)
+                    
+                    fig_mol = go.Figure()
+                    
+                    fig_mol.add_trace(go.Bar(
+                        x=mol_analysis['Molecule'],
+                        y=mol_analysis['MAT Q3 2024\nUSD MNF'],
+                        name='2024',
+                        marker_color='#3B82F6'
+                    ))
+                    
+                    fig_mol.add_trace(go.Bar(
+                        x=mol_analysis['Molecule'],
+                        y=mol_analysis['MAT Q3 2023\nUSD MNF'],
+                        name='2023',
+                        marker_color='#60A5FA'
+                    ))
+                    
+                    fig_mol.add_trace(go.Bar(
+                        x=mol_analysis['Molecule'],
+                        y=mol_analysis['MAT Q3 2022\nUSD MNF'],
+                        name='2022',
+                        marker_color='#93C5FD'
+                    ))
+                    
+                    fig_mol.update_layout(
+                        title="Top 10 Molekül - Üç Yıllık Karşılaştırma",
+                        barmode='group',
+                        height=500,
+                        xaxis_tickangle=-45,
+                        yaxis_title="USD MNF"
+                    )
+                    
+                    st.plotly_chart(fig_mol, use_container_width=True)
                 
                 # Üretici analizi
                 st.markdown("##### 🏭 Üretici Dağılımı")
@@ -1299,21 +1390,22 @@ def main():
                     'MAT Q3 2024\nUSD MNF': 'sum'
                 }).reset_index()
                 
-                mfg_analysis['Share'] = (mfg_analysis['MAT Q3 2024\nUSD MNF'] / mfg_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
-                mfg_analysis = mfg_analysis.sort_values('Share', ascending=False)
-                
-                fig_mfg = px.pie(
-                    mfg_analysis.head(8),
-                    values='MAT Q3 2024\nUSD MNF',
-                    names='Manufacturer',
-                    title="Üretici Pay Dağılımı (2024)",
-                    hole=0.4
-                )
-                
-                fig_mfg.update_traces(textposition='inside', textinfo='percent+label')
-                fig_mfg.update_layout(height=500)
-                
-                st.plotly_chart(fig_mfg, use_container_width=True)
+                if not mfg_analysis.empty and mfg_analysis['MAT Q3 2024\nUSD MNF'].sum() > 0:
+                    mfg_analysis['Share'] = (mfg_analysis['MAT Q3 2024\nUSD MNF'] / mfg_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
+                    mfg_analysis = mfg_analysis.sort_values('Share', ascending=False)
+                    
+                    fig_mfg = px.pie(
+                        mfg_analysis.head(8),
+                        values='MAT Q3 2024\nUSD MNF',
+                        names='Manufacturer',
+                        title="Üretici Pay Dağılımı (2024)",
+                        hole=0.4
+                    )
+                    
+                    fig_mfg.update_traces(textposition='inside', textinfo='percent+label')
+                    fig_mfg.update_layout(height=500)
+                    
+                    st.plotly_chart(fig_mfg, use_container_width=True)
     
     # ============================================
     # TAB 4: Molekül & Ürün
@@ -1466,21 +1558,21 @@ def main():
                     }).reset_index()
                     
                     total_mol_2024 = country_dist['MAT Q3 2024\nUSD MNF'].sum()
-                    country_dist['Share_2024'] = (country_dist['MAT Q3 2024\nUSD MNF'] / total_mol_2024 * 100) if total_mol_2024 > 0 else 0
+                    if total_mol_2024 > 0:
+                        country_dist['Share_2024'] = (country_dist['MAT Q3 2024\nUSD MNF'] / total_mol_2024 * 100)
+                    else:
+                        country_dist['Share_2024'] = 0
                     
                     # Harita hazırlığı
                     country_dist['ISO_A3'] = country_dist['Country'].apply(map_handler.get_country_code)
                     country_dist = country_dist.dropna(subset=['ISO_A3'])
                     
-                    if not country_dist.empty and map_handler.world is not None:
-                        merged_mol = map_handler.world.merge(country_dist, how='left', left_on='iso_a3', right_on='ISO_A3')
-                        
+                    if not country_dist.empty:
                         fig = px.choropleth(
-                            merged_mol,
-                            geojson=merged_mol.geometry,
-                            locations=merged_mol.index,
+                            country_dist,
+                            locations='ISO_A3',
                             color='MAT Q3 2024\nUSD MNF',
-                            hover_name='name',
+                            hover_name='Country',
                             hover_data={
                                 'MAT Q3 2024\nUSD MNF': ':.2f',
                                 'Share_2024': ':.2f%',
@@ -1491,7 +1583,6 @@ def main():
                             title=f"{mol_for_map} - Coğrafi Dağılım (2024)"
                         )
                         
-                        fig.update_geos(fitbounds="locations", visible=False)
                         fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
                         
                         st.plotly_chart(fig, use_container_width=True)
@@ -1532,8 +1623,12 @@ def main():
                     # Konsantrasyon analizi
                     st.markdown("##### 🎯 Pazar Konsantrasyonu")
                     
-                    top5_share = top_countries_mol.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100 if total_mol_2024 > 0 else 0
-                    top3_share = top_countries_mol.head(3)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100 if total_mol_2024 > 0 else 0
+                    if total_mol_2024 > 0:
+                        top5_share = top_countries_mol.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100
+                        top3_share = top_countries_mol.head(3)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100
+                    else:
+                        top5_share = 0
+                        top3_share = 0
                     
                     col1, col2, col3 = st.columns(3)
                     
@@ -1918,21 +2013,21 @@ def main():
                     }).reset_index()
                     
                     total_corp_2024 = country_dist_corp['MAT Q3 2024\nUSD MNF'].sum()
-                    country_dist_corp['Share_2024'] = (country_dist_corp['MAT Q3 2024\nUSD MNF'] / total_corp_2024 * 100) if total_corp_2024 > 0 else 0
+                    if total_corp_2024 > 0:
+                        country_dist_corp['Share_2024'] = (country_dist_corp['MAT Q3 2024\nUSD MNF'] / total_corp_2024 * 100)
+                    else:
+                        country_dist_corp['Share_2024'] = 0
                     
                     # Harita
                     country_dist_corp['ISO_A3'] = country_dist_corp['Country'].apply(map_handler.get_country_code)
                     country_dist_corp = country_dist_corp.dropna(subset=['ISO_A3'])
                     
-                    if not country_dist_corp.empty and map_handler.world is not None:
-                        merged_corp = map_handler.world.merge(country_dist_corp, how='left', left_on='iso_a3', right_on='ISO_A3')
-                        
+                    if not country_dist_corp.empty:
                         fig = px.choropleth(
-                            merged_corp,
-                            geojson=merged_corp.geometry,
-                            locations=merged_corp.index,
+                            country_dist_corp,
+                            locations='ISO_A3',
                             color='MAT Q3 2024\nUSD MNF',
-                            hover_name='name',
+                            hover_name='Country',
                             hover_data={
                                 'MAT Q3 2024\nUSD MNF': ':.2f',
                                 'Share_2024': ':.2f%',
@@ -1942,7 +2037,6 @@ def main():
                             title=f"{selected_corp} - Coğrafi Dağılım (2024)"
                         )
                         
-                        fig.update_geos(fitbounds="locations", visible=False)
                         fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
                         
                         st.plotly_chart(fig, use_container_width=True)
@@ -1991,7 +2085,10 @@ def main():
                     st.markdown("##### 📊 Coğrafi Çeşitlilik Metrikleri")
                     
                     total_countries = len(country_dist_corp)
-                    top5_share_corp = top_countries_corp.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_corp_2024 * 100 if total_corp_2024 > 0 else 0
+                    if total_corp_2024 > 0:
+                        top5_share_corp = top_countries_corp.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_corp_2024 * 100
+                    else:
+                        top5_share_corp = 0
                     
                     col1, col2, col3 = st.columns(3)
                     
@@ -2012,21 +2109,22 @@ def main():
                         'MAT Q3 2024\nUSD MNF': 'sum'
                     }).reset_index()
                     
-                    mol_dist_corp['Share'] = (mol_dist_corp['MAT Q3 2024\nUSD MNF'] / mol_dist_corp['MAT Q3 2024\nUSD MNF'].sum() * 100)
-                    mol_dist_corp = mol_dist_corp.sort_values('Share', ascending=False).head(10)
-                    
-                    fig_pie_corp = px.pie(
-                        mol_dist_corp,
-                        values='MAT Q3 2024\nUSD MNF',
-                        names='Molecule',
-                        title=f"{selected_corp} - Molekül Dağılımı (2024)",
-                        hole=0.4
-                    )
-                    
-                    fig_pie_corp.update_traces(textposition='inside', textinfo='percent+label')
-                    fig_pie_corp.update_layout(height=500)
-                    
-                    st.plotly_chart(fig_pie_corp, use_container_width=True)
+                    if not mol_dist_corp.empty and mol_dist_corp['MAT Q3 2024\nUSD MNF'].sum() > 0:
+                        mol_dist_corp['Share'] = (mol_dist_corp['MAT Q3 2024\nUSD MNF'] / mol_dist_corp['MAT Q3 2024\nUSD MNF'].sum() * 100)
+                        mol_dist_corp = mol_dist_corp.sort_values('Share', ascending=False).head(10)
+                        
+                        fig_pie_corp = px.pie(
+                            mol_dist_corp,
+                            values='MAT Q3 2024\nUSD MNF',
+                            names='Molecule',
+                            title=f"{selected_corp} - Molekül Dağılımı (2024)",
+                            hole=0.4
+                        )
+                        
+                        fig_pie_corp.update_traces(textposition='inside', textinfo='percent+label')
+                        fig_pie_corp.update_layout(height=500)
+                        
+                        st.plotly_chart(fig_pie_corp, use_container_width=True)
     
     # ============================================
     # TAB 6: Specialty vs Non-Specialty
@@ -2049,10 +2147,11 @@ def main():
                 
                 with col1:
                     specialty_pct_2024 = spec_metrics.get('specialty_pct_2024', 0)
+                    specialty_pct_2023 = spec_metrics.get('specialty_pct_2023', 0)
                     st.metric(
                         "2024 Specialty Payı",
                         f"{specialty_pct_2024:.1f}%",
-                        delta=f"{specialty_pct_2024 - spec_metrics.get('specialty_pct_2023', 0):.1f}%"
+                        delta=f"{specialty_pct_2024 - specialty_pct_2023:.1f}%"
                     )
                 
                 with col2:
@@ -2206,9 +2305,7 @@ def main():
                 premium_df['ISO_A3'] = premium_df['Country'].apply(map_handler.get_country_code)
                 premium_df = premium_df.dropna(subset=['ISO_A3'])
                 
-                if not premium_df.empty and map_handler.world is not None:
-                    merged_premium = map_handler.world.merge(premium_df, how='left', left_on='iso_a3', right_on='ISO_A3')
-                    
+                if not premium_df.empty:
                     def premium_category(x):
                         if pd.isna(x):
                             return 'Veri Yok'
@@ -2223,7 +2320,7 @@ def main():
                         else:
                             return 'Keskin Düşüş (<-5%)'
                     
-                    merged_premium['Premium_Category'] = merged_premium['Premium_Change_22_24'].apply(premium_category)
+                    premium_df['Premium_Category'] = premium_df['Premium_Change_22_24'].apply(premium_category)
                     
                     color_discrete_map_premium = {
                         'Çok Yüksek Artış (>10%)': '#10B981',
@@ -2235,11 +2332,10 @@ def main():
                     }
                     
                     fig = px.choropleth(
-                        merged_premium,
-                        geojson=merged_premium.geometry,
-                        locations=merged_premium.index,
+                        premium_df,
+                        locations='ISO_A3',
                         color='Premium_Category',
-                        hover_name='name',
+                        hover_name='Country',
                         hover_data={
                             'Premium_Change_22_24': ':.1f%',
                             'Specialty_Pct_2022': ':.1f%',
@@ -2259,7 +2355,6 @@ def main():
                         title="Premiumlaşma Değişimi (2022 → 2024)"
                     )
                     
-                    fig.update_geos(fitbounds="locations", visible=False)
                     fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
                     
                     st.plotly_chart(fig, use_container_width=True)
@@ -2330,9 +2425,7 @@ def main():
                 spec_map_df['ISO_A3'] = spec_map_df['Country'].apply(map_handler.get_country_code)
                 spec_map_df = spec_map_df.dropna(subset=['ISO_A3'])
                 
-                if not spec_map_df.empty and map_handler.world is not None:
-                    merged_spec_map = map_handler.world.merge(spec_map_df, how='left', left_on='iso_a3', right_on='ISO_A3')
-                    
+                if not spec_map_df.empty:
                     def spec_category(x):
                         if pd.isna(x):
                             return 'Veri Yok'
@@ -2347,7 +2440,7 @@ def main():
                         else:
                             return 'Yok'
                     
-                    merged_spec_map['Spec_Category'] = merged_spec_map['Specialty_Pct'].apply(spec_category)
+                    spec_map_df['Spec_Category'] = spec_map_df['Specialty_Pct'].apply(spec_category)
                     
                     color_discrete_map_spec = {
                         'Çok Yüksek (>30%)': '#1E3A8A',
@@ -2359,11 +2452,10 @@ def main():
                     }
                     
                     fig = px.choropleth(
-                        merged_spec_map,
-                        geojson=merged_spec_map.geometry,
-                        locations=merged_spec_map.index,
+                        spec_map_df,
+                        locations='ISO_A3',
                         color='Spec_Category',
-                        hover_name='name',
+                        hover_name='Country',
                         hover_data={
                             'Specialty_Pct': ':.1f%',
                             'Specialty_USD': ':.2f',
@@ -2383,7 +2475,6 @@ def main():
                         title=f"Specialty Payı Coğrafi Dağılımı ({year_for_spec_map})"
                     )
                     
-                    fig.update_geos(fitbounds="locations", visible=False)
                     fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
                     
                     st.plotly_chart(fig, use_container_width=True)
@@ -2416,12 +2507,14 @@ def main():
                 st.markdown("##### 💊 Molekül Bazlı Specialty Analizi")
                 
                 # Specialty molekülleri
-                specialty_molecules = filtered_df[filtered_df['Specialty Product'] == 'Specialty']['Molecule'].unique()
+                specialty_molecules = filtered_df[
+                    filtered_df['Specialty Product'].astype(str).str.contains('Specialty', case=False, na=False)
+                ]['Molecule'].unique()
                 
                 if len(specialty_molecules) > 0:
                     mol_spec_data = []
                     
-                    for molecule in specialty_molecules[:10]:  # İlk 10 molekül
+                    for molecule in list(specialty_molecules)[:10]:  # İlk 10 molekül
                         mol_df_spec = filtered_df[filtered_df['Molecule'] == molecule]
                         
                         if len(mol_df_spec) > 0:
@@ -2532,7 +2625,11 @@ def main():
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    total_growth_pct = ((pvm_22_23['total_growth'] / filtered_df['MAT Q3 2022\nUSD MNF'].sum()) * 100) if filtered_df['MAT Q3 2022\nUSD MNF'].sum() > 0 else 0
+                    total_start = filtered_df['MAT Q3 2022\nUSD MNF'].sum()
+                    if total_start > 0:
+                        total_growth_pct = (pvm_22_23['total_growth'] / total_start * 100)
+                    else:
+                        total_growth_pct = 0
                     st.metric("Toplam Büyüme", f"{total_growth_pct:.1f}%", f"${pvm_22_23['total_growth']:,.0f}M")
                 
                 with col2:
@@ -2547,10 +2644,13 @@ def main():
                 # Fiyat ve volume trendi
                 st.markdown("##### 📊 Fiyat ve Volume Trendi")
                 
-                price_change = ((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / 
-                               pvm_22_23['weighted_price_start'] * 100) if pvm_22_23['weighted_price_start'] > 0 else 0
+                if pvm_22_23['weighted_price_start'] > 0:
+                    price_change = ((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / 
+                                   pvm_22_23['weighted_price_start'] * 100)
+                else:
+                    price_change = 0
                 
-                volume_change = pvm_22_23['unit_growth_pct']
+                volume_change = pvm_22_23.get('unit_growth_pct', 0)
                 
                 fig_trend = go.Figure()
                 
@@ -2598,17 +2698,23 @@ def main():
                 
                 country_pvm_data = []
                 
-                for country in filtered_df['Country'].unique()[:10]:  # İlk 10 ülke
+                for country in list(filtered_df['Country'].unique())[:10]:  # İlk 10 ülke
                     country_df_pvm = filtered_df[filtered_df['Country'] == country]
                     pvm_country = analytics.price_volume_mix_analysis(country_df_pvm, 2022, 2023)
                     
                     if pvm_country:
+                        country_start = country_df_pvm['MAT Q3 2022\nUSD MNF'].sum()
+                        if country_start > 0:
+                            total_growth_pct = (pvm_country.get('total_growth', 0) / country_start * 100)
+                        else:
+                            total_growth_pct = 0
+                        
                         country_pvm_data.append({
                             'Country': country,
                             'Price_Effect': pvm_country.get('price_effect_pct', 0),
                             'Volume_Effect': pvm_country.get('volume_effect_pct', 0),
                             'Mix_Effect': pvm_country.get('mix_effect_pct', 0),
-                            'Total_Growth': ((pvm_country.get('total_growth', 0) / country_df_pvm['MAT Q3 2022\nUSD MNF'].sum()) * 100) if country_df_pvm['MAT Q3 2022\nUSD MNF'].sum() > 0 else 0
+                            'Total_Growth': total_growth_pct
                         })
                 
                 if country_pvm_data:
@@ -2722,7 +2828,11 @@ def main():
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    total_growth_pct = ((pvm_23_24['total_growth'] / filtered_df['MAT Q3 2023\nUSD MNF'].sum()) * 100) if filtered_df['MAT Q3 2023\nUSD MNF'].sum() > 0 else 0
+                    total_start = filtered_df['MAT Q3 2023\nUSD MNF'].sum()
+                    if total_start > 0:
+                        total_growth_pct = (pvm_23_24['total_growth'] / total_start * 100)
+                    else:
+                        total_growth_pct = 0
                     st.metric("Toplam Büyüme", f"{total_growth_pct:.1f}%", f"${pvm_23_24['total_growth']:,.0f}M")
                 
                 with col2:
@@ -2737,49 +2847,51 @@ def main():
                 # Trend karşılaştırması
                 st.markdown("##### 📊 2022→2023 vs 2023→2024 Karşılaştırması")
                 
-                comparison_data = pd.DataFrame({
-                    'Dönem': ['2022→2023', '2023→2024'],
-                    'Fiyat Etkisi': [pvm_22_23.get('price_effect_pct', 0), pvm_23_24.get('price_effect_pct', 0)],
-                    'Volume Etkisi': [pvm_22_23.get('volume_effect_pct', 0), pvm_23_24.get('volume_effect_pct', 0)],
-                    'Mix Etkisi': [pvm_22_23.get('mix_effect_pct', 0), pvm_23_24.get('mix_effect_pct', 0)]
-                })
+                pvm_22_23 = analytics.price_volume_mix_analysis(filtered_df, 2022, 2023)
                 
-                fig_comp = go.Figure()
-                
-                fig_comp.add_trace(go.Bar(
-                    name='Fiyat Etkisi',
-                    x=comparison_data['Dönem'],
-                    y=comparison_data['Fiyat Etkisi'],
-                    marker_color='#3B82F6'
-                ))
-                
-                fig_comp.add_trace(go.Bar(
-                    name='Volume Etkisi',
-                    x=comparison_data['Dönem'],
-                    y=comparison_data['Volume Etkisi'],
-                    marker_color='#10B981'
-                ))
-                
-                fig_comp.add_trace(go.Bar(
-                    name='Mix Etkisi',
-                    x=comparison_data['Dönem'],
-                    y=comparison_data['Mix Etkisi'],
-                    marker_color='#F59E0B'
-                ))
-                
-                fig_comp.update_layout(
-                    title="Ayrıştırma Karşılaştırması",
-                    barmode='group',
-                    height=500,
-                    yaxis_title="Katkı (%)"
-                )
-                
-                st.plotly_chart(fig_comp, use_container_width=True)
-                
-                # Büyüme kaynakları analizi
-                st.markdown("##### 🔍 Büyüme Kaynakları Analizi")
-                
-                if pvm_22_23 and pvm_23_24:
+                if pvm_22_23:
+                    comparison_data = pd.DataFrame({
+                        'Dönem': ['2022→2023', '2023→2024'],
+                        'Fiyat Etkisi': [pvm_22_23.get('price_effect_pct', 0), pvm_23_24.get('price_effect_pct', 0)],
+                        'Volume Etkisi': [pvm_22_23.get('volume_effect_pct', 0), pvm_23_24.get('volume_effect_pct', 0)],
+                        'Mix Etkisi': [pvm_22_23.get('mix_effect_pct', 0), pvm_23_24.get('mix_effect_pct', 0)]
+                    })
+                    
+                    fig_comp = go.Figure()
+                    
+                    fig_comp.add_trace(go.Bar(
+                        name='Fiyat Etkisi',
+                        x=comparison_data['Dönem'],
+                        y=comparison_data['Fiyat Etkisi'],
+                        marker_color='#3B82F6'
+                    ))
+                    
+                    fig_comp.add_trace(go.Bar(
+                        name='Volume Etkisi',
+                        x=comparison_data['Dönem'],
+                        y=comparison_data['Volume Etkisi'],
+                        marker_color='#10B981'
+                    ))
+                    
+                    fig_comp.add_trace(go.Bar(
+                        name='Mix Etkisi',
+                        x=comparison_data['Dönem'],
+                        y=comparison_data['Mix Etkisi'],
+                        marker_color='#F59E0B'
+                    ))
+                    
+                    fig_comp.update_layout(
+                        title="Ayrıştırma Karşılaştırması",
+                        barmode='group',
+                        height=500,
+                        yaxis_title="Katkı (%)"
+                    )
+                    
+                    st.plotly_chart(fig_comp, use_container_width=True)
+                    
+                    # Büyüme kaynakları analizi
+                    st.markdown("##### 🔍 Büyüme Kaynakları Analizi")
+                    
                     price_contribution_change = pvm_23_24['price_effect_pct'] - pvm_22_23['price_effect_pct']
                     volume_contribution_change = pvm_23_24['volume_effect_pct'] - pvm_22_23['volume_effect_pct']
                     mix_contribution_change = pvm_23_24['mix_effect_pct'] - pvm_22_23['mix_effect_pct']
@@ -2812,6 +2924,9 @@ def main():
             growth_22_24_pct, growth_22_24_abs = analytics.calculate_growth(filtered_df, 2022, 2024)
             
             # Zincir ayrıştırma (22→23 + 23→24)
+            pvm_22_23 = analytics.price_volume_mix_analysis(filtered_df, 2022, 2023)
+            pvm_23_24 = analytics.price_volume_mix_analysis(filtered_df, 2023, 2024)
+            
             if pvm_22_23 and pvm_23_24:
                 chain_price = pvm_22_23['price_effect'] + pvm_23_24['price_effect']
                 chain_volume = pvm_22_23['volume_effect'] + pvm_23_24['volume_effect']
@@ -2819,9 +2934,14 @@ def main():
                 
                 total_start = filtered_df['MAT Q3 2022\nUSD MNF'].sum()
                 
-                chain_price_pct = (chain_price / total_start * 100) if total_start > 0 else 0
-                chain_volume_pct = (chain_volume / total_start * 100) if total_start > 0 else 0
-                chain_mix_pct = (chain_mix / total_start * 100) if total_start > 0 else 0
+                if total_start > 0:
+                    chain_price_pct = (chain_price / total_start * 100)
+                    chain_volume_pct = (chain_volume / total_start * 100)
+                    chain_mix_pct = (chain_mix / total_start * 100)
+                else:
+                    chain_price_pct = 0
+                    chain_volume_pct = 0
+                    chain_mix_pct = 0
             
             st.markdown("##### 📈 Zincir Büyüme Özeti")
             
@@ -3160,7 +3280,10 @@ def main():
                             
                             corp_total = corp_insight_df[usd_col].sum()
                             global_total = filtered_df[usd_col].sum()
-                            share = (corp_total / global_total * 100) if global_total > 0 else 0
+                            if global_total > 0:
+                                share = (corp_total / global_total * 100)
+                            else:
+                                share = 0
                             
                             share_trend.append({
                                 'Yıl': year,
@@ -3180,7 +3303,7 @@ def main():
                         fig_share_trend.update_layout(
                             height=400,
                             yaxis_title="Pazar Payı (%)",
-                            yaxis_range=[0, max(share_trend_df['Pazar Payı']) * 1.5]
+                            yaxis_range=[0, max(share_trend_df['Pazar Payı']) * 1.5 if len(share_trend_df) > 0 else 100]
                         )
                         
                         st.plotly_chart(fig_share_trend, use_container_width=True)
