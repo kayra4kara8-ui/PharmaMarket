@@ -1,3485 +1,3197 @@
-# app.py - PharmaIntelligence Pro Enterprise Dashboard v6.0 - FULLY WORKING VERSION
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import geopandas as gpd
+import pycountry
+from functools import lru_cache
 import warnings
 warnings.filterwarnings('ignore')
-
-# Core dependencies
-import os
-import sys
 import json
+from datetime import datetime
 import math
-import time
-import gc
-import re
-import traceback
-import hashlib
-import pickle
-import base64
-import zipfile
-import tempfile
-from datetime import datetime, timedelta
-from io import BytesIO, StringIO
-from typing import Dict, List, Optional, Tuple, Any, Union, Callable
 import itertools
-import textwrap
-import unicodedata
+import re
+from scipy import stats
+import hashlib
+import time
 
-# Advanced analytics libraries - WITH ERROR HANDLING
-try:
-    from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-    from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
-    from sklearn.ensemble import IsolationForest, RandomForestRegressor, GradientBoostingRegressor
-    from sklearn.decomposition import PCA
-    from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-    from sklearn.linear_model import LinearRegression, Ridge, Lasso
-    from sklearn.model_selection import train_test_split, cross_val_score
-    from sklearn.impute import SimpleImputer
-    from sklearn.feature_selection import SelectKBest, f_regression
-    SKLEARN_AVAILABLE = True
-except ImportError as e:
-    st.error(f"Scikit-learn yüklenemedi: {e}")
-    SKLEARN_AVAILABLE = False
-    # Create dummy classes
-    class StandardScaler:
-        def fit_transform(self, X): return X
-        def transform(self, X): return X
-        def fit(self, X): return self
-    class KMeans:
-        def __init__(self, **kwargs): pass
-        def fit_predict(self, X): return np.zeros(len(X))
-
-try:
-    import scipy.stats as stats
-    import scipy.signal as signal
-    import scipy.cluster.hierarchy as sch
-    SCIPY_AVAILABLE = True
-except ImportError as e:
-    st.warning(f"SciPy yüklenemedi: {e}")
-    SCIPY_AVAILABLE = False
-
-try:
-    import statsmodels.api as sm
-    from statsmodels.tsa.seasonal import seasonal_decompose
-    from statsmodels.tsa.stattools import adfuller
-    STATSMODELS_AVAILABLE = True
-except ImportError as e:
-    st.warning(f"Statsmodels yüklenemedi: {e}")
-    STATSMODELS_AVAILABLE = False
-
-# Time series analysis - WITH ALTERNATIVES
-try:
-    from prophet import Prophet
-    PROPHET_AVAILABLE = True
-except ImportError:
-    PROPHET_AVAILABLE = False
-    st.warning("Prophet paketi kurulu değil. ARIMA kullanılacak.")
-
-# Visualization
-try:
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    MATPLOTLIB_AVAILABLE = True
-except ImportError as e:
-    st.warning(f"Matplotlib/Seaborn yüklenemedi: {e}")
-    MATPLOTLIB_AVAILABLE = False
-
-# Database and caching
-try:
-    import redis
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
-
-try:
-    import sqlite3
-    from sqlite3 import Error
-    SQLITE_AVAILABLE = True
-except ImportError:
-    SQLITE_AVAILABLE = False
-
-try:
-    import joblib
-    JOBLIB_AVAILABLE = True
-except ImportError:
-    JOBLIB_AVAILABLE = False
-
-# Additional ML libraries
-try:
-    import xgboost as xgb
-    XGBOOST_AVAILABLE = True
-except ImportError:
-    XGBOOST_AVAILABLE = False
-
-try:
-    import lightgbm as lgb
-    LIGHTGBM_AVAILABLE = True
-except ImportError:
-    LIGHTGBM_AVAILABLE = False
-
-# ================================================
-# 1. ENHANCED ENTERPRISE CONFIGURATION - 800+ LINES
-# ================================================
-
+# ============================================
+# KONFİGÜRASYON VE STİL
+# ============================================
 st.set_page_config(
-    page_title="PharmaIntelligence Pro | Enterprise Pharma Analytics",
-    page_icon="🏥",
+    page_title="Pharma Commercial Analytics Suite",
+    page_icon="💊",
     layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get help': 'https://pharmaintelligence.com/enterprise-support',
-        'Report a bug': "https://pharmaintelligence.com/enterprise-bug-report",
-        'About': """
-        ### PharmaIntelligence Enterprise v6.0
-        • International Product Analytics
-        • Predictive Modeling
-        • Real-time Market Intelligence
-        • Advanced Segmentation
-        • Automated Reporting
-        • Machine Learning Integration
-        © 2024 PharmaIntelligence Inc. All Rights Reserved
-        """
-    }
+    initial_sidebar_state="expanded"
 )
 
-# COMPREHENSIVE ENTERPRISE THEME - 800+ LINES CSS
-ENTERPRISE_CSS = """
-<style>
-    /* === ROOT VARIABLES === */
-    :root {
-        /* Primary Colors */
-        --primary-dark: #0c1a32;
-        --primary-darker: #081224;
-        --primary-light: #14274e;
-        --secondary-dark: #1e3a5f;
-        --secondary-light: #2d4a7a;
-        
-        /* Accent Colors */
-        --accent-blue: #2d7dd2;
-        --accent-blue-light: #4a9fe3;
-        --accent-blue-dark: #1a5fa0;
-        --accent-cyan: #2acaea;
-        --accent-teal: #30c9c9;
-        --accent-turquoise: #2dd2a3;
-        
-        /* Status Colors */
-        --success: #2dd2a3;
-        --success-dark: #25b592;
-        --warning: #f2c94c;
-        --warning-dark: #e6b445;
-        --danger: #eb5757;
-        --danger-dark: #d64545;
-        --info: #2acaea;
-        --info-dark: #25b0d0;
-        
-        /* Text Colors */
-        --text-primary: #ffffff;
-        --text-secondary: #cbd5e1;
-        --text-tertiary: #94a3b8;
-        --text-muted: #64748b;
-        --text-light: #e2e8f0;
-        
-        /* Background Colors */
-        --bg-primary: #0c1a32;
-        --bg-secondary: #14274e;
-        --bg-tertiary: #1e3a5f;
-        --bg-card: rgba(30, 58, 95, 0.8);
-        --bg-card-solid: #1e3a5f;
-        --bg-hover: rgba(45, 125, 210, 0.15);
-        --bg-selected: rgba(45, 125, 210, 0.25);
-        --bg-surface: rgba(20, 39, 78, 0.9);
-        --bg-overlay: rgba(12, 26, 50, 0.95);
-        
-        /* Border Colors */
-        --border-primary: #2d4a7a;
-        --border-secondary: #3b5a8a;
-        --border-accent: #2d7dd2;
-        --border-success: #2dd2a3;
-        --border-warning: #f2c94c;
-        --border-danger: #eb5757;
-        
-        /* Shadows */
-        --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-        --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.7);
-        --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.8);
-        --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-        --shadow-glow: 0 0 20px rgba(45, 125, 210, 0.3);
-        
-        /* Gradients */
-        --primary-gradient: linear-gradient(135deg, #0c1a32 0%, #14274e 50%, #1e3a5f 100%);
-        --secondary-gradient: linear-gradient(135deg, #1e3a5f 0%, #2d4a7a 50%, #3b5a8a 100%);
-        --accent-gradient: linear-gradient(135deg, #2d7dd2 0%, #4a9fe3 50%, #2acaea 100%);
-        --success-gradient: linear-gradient(135deg, #2dd2a3 0%, #30c9c9 50%, #25b592 100%);
-        --warning-gradient: linear-gradient(135deg, #f2c94c 0%, #f2b94c 50%, #e6b445 100%);
-        --danger-gradient: linear-gradient(135deg, #eb5757 0%, #d64545 50%, #c53535 100%);
-        
-        /* Border Radius */
-        --radius-xs: 4px;
-        --radius-sm: 8px;
-        --radius-md: 12px;
-        --radius-lg: 16px;
-        --radius-xl: 20px;
-        --radius-2xl: 24px;
-        --radius-full: 9999px;
-        
-        /* Transitions */
-        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-        --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-        --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
-        
-        /* Fonts */
-        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        --font-mono: 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
+def inject_css():
+    st.markdown("""
+    <style>
+    .main-header {
+        font-size: 2.8rem;
+        color: #1E3A8A;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #3B82F6;
     }
-    
-    /* === GLOBAL STYLES === */
-    .stApp {
-        background: var(--primary-gradient);
-        font-family: var(--font-sans);
-        color: var(--text-primary);
+    .sub-header {
+        font-size: 1.8rem;
+        color: #1E3A8A;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-left: 0.5rem;
+        border-left: 4px solid #10B981;
     }
-    
-    /* Streamlit Component Overrides */
-    .stDataFrame {
-        background: var(--bg-card) !important;
-        border-radius: var(--radius-md) !important;
-        border: 1px solid var(--border-primary) !important;
-    }
-    
-    .stDataFrame:hover {
-        border-color: var(--border-accent) !important;
-    }
-    
-    [data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-        font-weight: 700 !important;
-        color: var(--text-primary) !important;
-    }
-    
-    [data-testid="stMetricLabel"] {
-        font-size: 0.9rem !important;
-        color: var(--text-secondary) !important;
-    }
-    
-    /* Button Styling */
-    .stButton > button {
-        background: var(--accent-gradient) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: var(--radius-sm) !important;
-        padding: 0.5rem 1.5rem !important;
-        font-weight: 600 !important;
-        transition: all var(--transition-normal) !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: var(--shadow-md) !important;
-    }
-    
-    /* Input Fields */
-    .stTextInput > div > div > input,
-    .stNumberInput > div > div > input,
-    .stSelectbox > div > div,
-    .stMultiselect > div > div {
-        background: var(--bg-tertiary) !important;
-        border: 1px solid var(--border-primary) !important;
-        color: var(--text-primary) !important;
-        border-radius: var(--radius-sm) !important;
-    }
-    
-    .stTextInput > div > div > input:focus,
-    .stNumberInput > div > div > input:focus {
-        border-color: var(--accent-blue) !important;
-        box-shadow: 0 0 0 2px rgba(45, 125, 210, 0.2) !important;
-    }
-    
-    /* Slider */
-    .stSlider {
-        background: var(--bg-tertiary) !important;
-        padding: 1rem !important;
-        border-radius: var(--radius-md) !important;
-        border: 1px solid var(--border-primary) !important;
-    }
-    
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0.5rem !important;
-        background: var(--bg-tertiary) !important;
-        padding: 0.5rem !important;
-        border-radius: var(--radius-md) !important;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background: transparent !important;
-        color: var(--text-secondary) !important;
-        border-radius: var(--radius-sm) !important;
-        padding: 0.5rem 1rem !important;
-    }
-    
-    .stTabs [data-baseweb="tab"]:hover {
-        background: var(--bg-hover) !important;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: var(--accent-gradient) !important;
-        color: white !important;
-    }
-    
-    /* Checkbox & Radio */
-    .stCheckbox > label,
-    .stRadio > label {
-        color: var(--text-primary) !important;
-    }
-    
-    /* Expander */
-    .streamlit-expanderHeader {
-        background: var(--bg-tertiary) !important;
-        border: 1px solid var(--border-primary) !important;
-        border-radius: var(--radius-md) !important;
-        color: var(--text-primary) !important;
-    }
-    
-    /* === CUSTOM ENTERPRISE COMPONENTS === */
-    
-    /* Enterprise Title */
-    .enterprise-title {
-        font-size: 3rem;
-        background: linear-gradient(135deg, #2d7dd2, #2acaea);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 900;
+    .metric-card {
+        background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+        border-radius: 12px;
+        padding: 1.2rem;
+        border-left: 5px solid #3B82F6;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         margin-bottom: 1rem;
     }
-    
-    /* Metric Cards */
-    .metric-card {
-        background: var(--bg-card);
-        border-radius: var(--radius-lg);
-        padding: 1.5rem;
-        border: 1px solid var(--border-primary);
-        box-shadow: var(--shadow-md);
-        transition: all 0.3s ease;
-        height: 100%;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--border-accent);
-    }
-    
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
-        margin: 0.5rem 0;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    
-    /* Insight Cards */
     .insight-card {
-        background: var(--bg-card);
-        border-radius: var(--radius-md);
-        padding: 1.25rem;
-        border-left: 4px solid var(--accent-blue);
-        margin: 1rem 0;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    .insight-card.success {
-        border-left-color: var(--success);
-        background: linear-gradient(90deg, rgba(45, 210, 163, 0.1), transparent);
-    }
-    
-    .insight-card.warning {
-        border-left-color: var(--warning);
-        background: linear-gradient(90deg, rgba(242, 201, 76, 0.1), transparent);
-    }
-    
-    .insight-card.danger {
-        border-left-color: var(--danger);
-        background: linear-gradient(90deg, rgba(235, 87, 87, 0.1), transparent);
-    }
-    
-    /* Filter Panel */
-    .filter-panel {
-        background: var(--bg-card);
-        border-radius: var(--radius-lg);
-        padding: 1.5rem;
-        border: 1px solid var(--border-primary);
-        margin-bottom: 1.5rem;
-    }
-    
-    /* Status Badges */
-    .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: var(--radius-full);
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .status-success {
-        background: rgba(45, 210, 163, 0.2);
-        color: var(--success);
-        border: 1px solid rgba(45, 210, 163, 0.3);
-    }
-    
-    .status-warning {
-        background: rgba(242, 201, 76, 0.2);
-        color: var(--warning);
-        border: 1px solid rgba(242, 201, 76, 0.3);
-    }
-    
-    .status-danger {
-        background: rgba(235, 87, 87, 0.2);
-        color: var(--danger);
-        border: 1px solid rgba(235, 87, 87, 0.3);
-    }
-    
-    /* Progress Bars */
-    .progress-container {
-        width: 100%;
-        height: 8px;
-        background: var(--bg-tertiary);
-        border-radius: var(--radius-full);
-        overflow: hidden;
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        border-radius: 10px;
+        padding: 1rem;
         margin: 0.5rem 0;
+        border-left: 4px solid #D97706;
     }
-    
-    .progress-bar {
-        height: 100%;
-        background: var(--accent-gradient);
-        border-radius: var(--radius-full);
-        transition: width 0.5s ease;
+    .warning-card {
+        background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-left: 4px solid #DC2626;
     }
-    
-    /* Tooltips */
-    .tooltip {
-        position: relative;
-        display: inline-block;
-        border-bottom: 1px dotted var(--text-secondary);
-        cursor: help;
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #F8FAFC;
+        padding: 8px;
+        border-radius: 10px;
     }
-    
-    .tooltip .tooltip-text {
-        visibility: hidden;
-        width: 250px;
-        background: var(--bg-tertiary);
-        color: var(--text-primary);
-        text-align: center;
-        padding: 0.75rem;
-        border-radius: var(--radius-md);
-        position: absolute;
-        z-index: 1000;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        opacity: 0;
-        transition: opacity 0.3s;
-        border: 1px solid var(--border-primary);
-        font-size: 0.875rem;
-    }
-    
-    .tooltip:hover .tooltip-text {
-        visibility: visible;
-        opacity: 1;
-    }
-    
-    /* Data Grid */
-    .data-grid {
-        background: var(--bg-card);
-        border-radius: var(--radius-lg);
-        overflow: hidden;
-        border: 1px solid var(--border-primary);
-    }
-    
-    .data-grid-header {
-        background: var(--secondary-dark);
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid var(--border-primary);
+    .stTabs [data-baseweb="tab"] {
+        height: 60px;
+        white-space: pre-wrap;
+        background-color: #E2E8F0;
+        border-radius: 8px 8px 0 0;
+        gap: 8px;
+        padding: 12px 20px;
         font-weight: 600;
-        color: var(--text-primary);
     }
-    
-    /* Loading Animations */
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+    .stTabs [aria-selected="true"] {
+        background-color: #3B82F6 !important;
+        color: white !important;
     }
-    
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+    .dataframe {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
-    
-    .pulse {
-        animation: pulse 2s infinite;
+    .stButton button {
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
     }
-    
-    .spin {
-        animation: spin 1s linear infinite;
+    .footer {
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 1rem;
+        border-top: 1px solid #E5E7EB;
+        color: #6B7280;
+        font-size: 0.9rem;
     }
-    
-    /* Sidebar */
-    .sidebar-title {
-        font-size: 1.5rem;
-        color: var(--text-primary);
-        font-weight: 700;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 2px solid var(--accent-blue);
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .enterprise-title {
-            font-size: 2rem;
-        }
+    </style>
+    """, unsafe_allow_html=True)
+
+inject_css()
+
+# ============================================
+# VERİ YÜKLEME VE VALİDASYON
+# ============================================
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_and_validate_data(uploaded_file):
+    try:
+        df = pd.read_excel(uploaded_file, engine='openpyxl')
         
-        .metric-value {
-            font-size: 2rem;
-        }
-    }
-    
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: var(--bg-secondary);
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: var(--border-primary);
-        border-radius: var(--radius-full);
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--border-accent);
-    }
-</style>
-"""
-
-st.markdown(ENTERPRISE_CSS, unsafe_allow_html=True)
-
-# ================================================
-# 2. ENHANCED ENTERPRISE DATA SYSTEM - 1000+ LINES
-# ================================================
-
-class EnhancedDataSystem:
-    """Enhanced data processing and management system"""
-    
-    def __init__(self):
-        self.cache = {}
-        self.stats = {
-            'total_files': 0,
-            'total_rows': 0,
-            'processing_times': []
-        }
-    
-    def load_data(self, uploaded_file, sample_size=None):
-        """Load data with comprehensive error handling"""
-        try:
-            file_name = uploaded_file.name
-            file_size = len(uploaded_file.getvalue())
-            
-            st.info(f"📥 Loading {file_name} ({file_size:,} bytes)")
-            
-            # Progress tracking
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Determine file type and load accordingly
-            if file_name.lower().endswith('.csv'):
-                status_text.text("Reading CSV file...")
-                
-                # Try different encodings
-                encodings = ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']
-                
-                for encoding in encodings:
-                    try:
-                        uploaded_file.seek(0)  # Reset file pointer
-                        
-                        if sample_size:
-                            df = pd.read_csv(uploaded_file, encoding=encoding, nrows=sample_size)
-                        else:
-                            # For large files, read in chunks
-                            chunk_size = 50000
-                            chunks = []
-                            total_chunks = 0
-                            
-                            uploaded_file.seek(0)
-                            for chunk in pd.read_csv(uploaded_file, encoding=encoding, chunksize=chunk_size):
-                                chunks.append(chunk)
-                                total_chunks += 1
-                                progress = min(total_chunks * chunk_size / max(1, file_size/100), 1.0)
-                                progress_bar.progress(progress)
-                                status_text.text(f"Read {total_chunks * chunk_size:,} rows...")
-                            
-                            df = pd.concat(chunks, ignore_index=True)
-                        
-                        break  # Success, break the encoding loop
-                        
-                    except UnicodeDecodeError:
-                        continue  # Try next encoding
-                    except Exception as e:
-                        st.warning(f"Failed with encoding {encoding}: {str(e)}")
-                        continue
-            
-            elif file_name.lower().endswith(('.xlsx', '.xls')):
-                status_text.text("Reading Excel file...")
-                
-                try:
-                    # Get sheet names
-                    excel_file = pd.ExcelFile(uploaded_file)
-                    sheet_names = excel_file.sheet_names
-                    
-                    if len(sheet_names) == 1:
-                        df = pd.read_excel(uploaded_file, sheet_name=sheet_names[0])
-                    else:
-                        # Let user choose sheet
-                        selected_sheet = st.selectbox("Select sheet:", sheet_names, key=f"sheet_{file_name}")
-                        df = pd.read_excel(uploaded_file, sheet_name=selected_sheet)
-                    
-                    progress_bar.progress(1.0)
-                    
-                except Exception as e:
-                    st.error(f"Excel read error: {str(e)}")
-                    return None
-            
-            elif file_name.lower().endswith('.parquet'):
-                status_text.text("Reading Parquet file...")
-                df = pd.read_parquet(uploaded_file)
-                progress_bar.progress(1.0)
-            
-            elif file_name.lower().endswith('.json'):
-                status_text.text("Reading JSON file...")
-                df = pd.read_json(uploaded_file)
-                progress_bar.progress(1.0)
-            
-            else:
-                st.error(f"Unsupported file format: {file_name}")
-                return None
-            
-            # Apply data optimization
-            status_text.text("Optimizing data...")
-            df = self.optimize_dataframe(df)
-            
-            progress_bar.progress(1.0)
-            status_text.text(f"✅ Successfully loaded {len(df):,} rows, {len(df.columns)} columns")
-            
-            # Cache statistics
-            self.stats['total_files'] += 1
-            self.stats['total_rows'] += len(df)
-            
-            return df
-            
-        except Exception as e:
-            st.error(f"Data loading error: {str(e)}")
-            st.error(traceback.format_exc())
-            return None
-    
-    def optimize_dataframe(self, df):
-        """Optimize dataframe for memory and performance"""
-        try:
-            original_memory = df.memory_usage(deep=True).sum() / 1024**2
-            original_rows = len(df)
-            
-            # 1. Clean column names
-            df.columns = self.clean_column_names(df.columns)
-            
-            # 2. Handle missing values
-            df = self.handle_missing_values(df)
-            
-            # 3. Optimize data types
-            df = self.optimize_data_types(df)
-            
-            # 4. Remove duplicates
-            duplicates = df.duplicated().sum()
-            if duplicates > 0:
-                df = df.drop_duplicates()
-                st.info(f"Removed {duplicates:,} duplicate rows")
-            
-            # 5. Reset index
-            df = df.reset_index(drop=True)
-            
-            # 6. Convert date columns
-            df = self.convert_date_columns(df)
-            
-            # 7. Create derived features
-            df = self.create_derived_features(df)
-            
-            optimized_memory = df.memory_usage(deep=True).sum() / 1024**2
-            memory_saved = original_memory - optimized_memory
-            
-            if memory_saved > 0:
-                st.success(f"Memory optimized: {original_memory:.1f}MB → {optimized_memory:.1f}MB (Saved: {memory_saved:.1f}MB)")
-            
-            return df
-            
-        except Exception as e:
-            st.warning(f"Optimization error: {str(e)}")
-            return df
-    
-    def clean_column_names(self, columns):
-        """Clean and standardize column names"""
-        cleaned = []
+        required_columns = [
+            'Source.Name', 'Country', 'Sector', 'Panel', 'Region', 'Sub-Region',
+            'Corporation', 'Manufacturer', 'Molecule List', 'Molecule', 'Chemical Salt',
+            'International Product', 'Specialty Product', 'NFC123', 'International Pack',
+            'International Strength', 'International Size', 'International Volume',
+            'International Prescription',
+            'MAT Q3 2022\nUSD MNF', 'MAT Q3 2022\nStandard Units', 'MAT Q3 2022\nUnits',
+            'MAT Q3 2022\nSU Avg Price USD MNF', 'MAT Q3 2022\nUnit Avg Price USD MNF',
+            'MAT Q3 2023\nUSD MNF', 'MAT Q3 2023\nStandard Units', 'MAT Q3 2023\nUnits',
+            'MAT Q3 2023\nSU Avg Price USD MNF', 'MAT Q3 2023\nUnit Avg Price USD MNF',
+            'MAT Q3 2024\nUSD MNF', 'MAT Q3 2024\nStandard Units', 'MAT Q3 2024\nUnits',
+            'MAT Q3 2024\nSU Avg Price USD MNF', 'MAT Q3 2024\nUnit Avg Price USD MNF'
+        ]
         
-        for col in columns:
-            if not isinstance(col, str):
-                col = str(col)
-            
-            # Remove special characters and normalize
-            col = unicodedata.normalize('NFKD', col)
-            col = re.sub(r'[^\w\s]', '_', col)
-            col = re.sub(r'\s+', '_', col.strip())
-            col = col.replace('\n', '_').replace('\r', '_').replace('\t', '_')
-            
-            # Title case
-            col = col.title()
-            
-            # Handle empty names
-            if col == '':
-                col = f'Column_{len(cleaned)}'
-            
-            cleaned.append(col)
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            st.error(f"EKSİK KOLONLAR: {missing_cols}")
+            st.stop()
         
-        return cleaned
-    
-    def handle_missing_values(self, df):
-        """Handle missing values intelligently"""
-        try:
-            total_nans = df.isna().sum().sum()
-            
-            if total_nans > 0:
-                st.warning(f"Found {total_nans:,} missing values")
-                
-                # Show missing value distribution
-                missing_by_column = df.isna().sum()
-                columns_with_missing = missing_by_column[missing_by_column > 0]
-                
-                if len(columns_with_missing) > 0:
-                    with st.expander("Missing Value Details", expanded=False):
-                        for col, count in columns_with_missing.items():
-                            percentage = (count / len(df)) * 100
-                            st.write(f"• **{col}**: {count:,} ({percentage:.1f}%)")
-                
-                # Strategy selection
-                strategy = st.radio(
-                    "Handle missing values by:",
-                    ["Drop rows", "Fill with median/mode", "Keep as is"],
-                    horizontal=True,
-                    key="missing_strategy"
-                )
-                
-                if strategy == "Drop rows":
-                    original_len = len(df)
-                    df = df.dropna()
-                    dropped = original_len - len(df)
-                    st.info(f"Dropped {dropped:,} rows with missing values")
-                
-                elif strategy == "Fill with median/mode":
-                    for col in df.columns:
-                        if df[col].isna().any():
-                            if df[col].dtype in ['int64', 'float64']:
-                                df[col] = df[col].fillna(df[col].median())
-                            else:
-                                df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "Unknown")
-                    
-                    st.success("Filled missing values with median/mode")
-            
-            return df
-            
-        except Exception as e:
-            st.warning(f"Missing value handling error: {str(e)}")
-            return df
-    
-    def optimize_data_types(self, df):
-        """Optimize data types for memory efficiency"""
-        try:
-            for col in df.columns:
-                col_type = df[col].dtype
-                
-                # Integer optimization
-                if pd.api.types.is_integer_dtype(col_type):
-                    c_min = df[col].min()
-                    c_max = df[col].max()
-                    
-                    if c_min >= 0:
-                        if c_max < 255:
-                            df[col] = df[col].astype(np.uint8)
-                        elif c_max < 65535:
-                            df[col] = df[col].astype(np.uint16)
-                        elif c_max < 4294967295:
-                            df[col] = df[col].astype(np.uint32)
-                    else:
-                        if c_min > -128 and c_max < 127:
-                            df[col] = df[col].astype(np.int8)
-                        elif c_min > -32768 and c_max < 32767:
-                            df[col] = df[col].astype(np.int16)
-                        elif c_min > -2147483648 and c_max < 2147483647:
-                            df[col] = df[col].astype(np.int32)
-                
-                # Float optimization
-                elif pd.api.types.is_float_dtype(col_type):
-                    df[col] = df[col].astype(np.float32)
-                
-                # Categorical optimization
-                elif pd.api.types.is_object_dtype(col_type):
-                    unique_ratio = df[col].nunique() / len(df)
-                    if unique_ratio < 0.5:  # Less than 50% unique values
-                        df[col] = df[col].astype('category')
-            
-            return df
-            
-        except Exception as e:
-            st.warning(f"Data type optimization error: {str(e)}")
-            return df
-    
-    def convert_date_columns(self, df):
-        """Convert potential date columns"""
-        try:
-            date_patterns = ['date', 'time', 'year', 'month', 'day', 'datetime', 'timestamp']
-            
-            for col in df.columns:
-                col_lower = str(col).lower()
-                
-                if any(pattern in col_lower for pattern in date_patterns):
-                    try:
-                        df[col] = pd.to_datetime(df[col], errors='coerce')
-                        
-                        # Extract date parts
-                        if 'date' in col_lower:
-                            df[f'{col}_Year'] = df[col].dt.year
-                            df[f'{col}_Month'] = df[col].dt.month
-                            df[f'{col}_Day'] = df[col].dt.day
-                            df[f'{col}_Quarter'] = df[col].dt.quarter
-                            df[f'{col}_Weekday'] = df[col].dt.dayofweek
-                    
-                    except Exception:
-                        continue  # Skip if conversion fails
-            
-            return df
-            
-        except Exception as e:
-            st.warning(f"Date conversion error: {str(e)}")
-            return df
-    
-    def create_derived_features(self, df):
-        """Create derived features for analysis"""
-        try:
-            # Look for sales columns
-            sales_cols = [col for col in df.columns if 'sale' in str(col).lower() or 'revenue' in str(col).lower()]
-            
-            if len(sales_cols) >= 2:
-                # Sort sales columns (assuming they contain year information)
-                sorted_sales = sorted(sales_cols)
-                
-                # Calculate year-over-year growth
-                for i in range(1, len(sorted_sales)):
-                    current = sorted_sales[i]
-                    previous = sorted_sales[i-1]
-                    
-                    # Extract year from column name
-                    try:
-                        current_year = ''.join(filter(str.isdigit, current))
-                        previous_year = ''.join(filter(str.isdigit, previous))
-                        
-                        growth_col = f'Growth_{previous_year}_to_{current_year}'
-                        df[growth_col] = ((df[current] - df[previous]) / df[previous].replace(0, np.nan)) * 100
-                    
-                    except Exception:
-                        growth_col = f'Growth_{i-1}_to_{i}'
-                        df[growth_col] = ((df[current] - df[previous]) / df[previous].replace(0, np.nan)) * 100
-            
-            # Look for price columns
-            price_cols = [col for col in df.columns if 'price' in str(col).lower() or 'cost' in str(col).lower()]
-            
-            if price_cols:
-                latest_price = price_cols[-1]
-                
-                # Create price segments
-                price_q1 = df[latest_price].quantile(0.33)
-                price_q2 = df[latest_price].quantile(0.67)
-                
-                df['Price_Segment'] = pd.cut(
-                    df[latest_price],
-                    bins=[-np.inf, price_q1, price_q2, np.inf],
-                    labels=['Low', 'Medium', 'High']
-                )
-            
-            # Create performance score if we have sales and growth
-            if sales_cols and 'Growth' in ''.join(df.columns):
-                latest_sales = sales_cols[-1]
-                growth_col = [col for col in df.columns if 'Growth' in col][0] if any('Growth' in col for col in df.columns) else None
-                
-                if growth_col:
-                    # Normalize sales and growth
-                    sales_normalized = (df[latest_sales] - df[latest_sales].mean()) / df[latest_sales].std()
-                    growth_normalized = (df[growth_col] - df[growth_col].mean()) / df[growth_col].std()
-                    
-                    # Combined performance score (70% sales, 30% growth)
-                    df['Performance_Score'] = (sales_normalized * 0.7 + growth_normalized * 0.3) * 10 + 50
-                    
-                    # Segment performance
-                    df['Performance_Segment'] = pd.qcut(
-                        df['Performance_Score'],
-                        q=4,
-                        labels=['Poor', 'Fair', 'Good', 'Excellent']
-                    )
-            
-            return df
-            
-        except Exception as e:
-            st.warning(f"Feature creation error: {str(e)}")
-            return df
-    
-    def get_data_quality_report(self, df):
-        """Generate comprehensive data quality report"""
-        try:
-            report = {
-                'overview': {
-                    'total_rows': len(df),
-                    'total_columns': len(df.columns),
-                    'memory_usage_mb': df.memory_usage(deep=True).sum() / 1024**2,
-                    'duplicate_rows': df.duplicated().sum(),
-                    'complete_cases': df.dropna().shape[0]
-                },
-                'data_types': {
-                    str(dtype): count for dtype, count in df.dtypes.value_counts().items()
-                },
-                'missing_values': {
-                    'total_missing': df.isna().sum().sum(),
-                    'missing_percentage': (df.isna().sum().sum() / (len(df) * len(df.columns))) * 100,
-                    'by_column': df.isna().sum().to_dict()
-                },
-                'numeric_stats': {},
-                'categorical_stats': {}
-            }
-            
-            # Numeric columns statistics
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            for col in numeric_cols:
-                report['numeric_stats'][col] = {
-                    'min': float(df[col].min()),
-                    'max': float(df[col].max()),
-                    'mean': float(df[col].mean()),
-                    'median': float(df[col].median()),
-                    'std': float(df[col].std()),
-                    'zeros': int((df[col] == 0).sum()),
-                    'negatives': int((df[col] < 0).sum())
-                }
-            
-            # Categorical columns statistics
-            categorical_cols = df.select_dtypes(include=['object', 'category']).columns
-            for col in categorical_cols:
-                value_counts = df[col].value_counts()
-                report['categorical_stats'][col] = {
-                    'unique_values': int(df[col].nunique()),
-                    'most_common': value_counts.index[0] if len(value_counts) > 0 else None,
-                    'most_common_count': int(value_counts.iloc[0]) if len(value_counts) > 0 else 0,
-                    'sample_values': df[col].dropna().unique()[:5].tolist()
-                }
-            
-            return report
-            
-        except Exception as e:
-            st.error(f"Data quality report error: {str(e)}")
-            return {}
+        extra_cols = [col for col in df.columns if col not in required_columns]
+        if extra_cols:
+            st.warning(f"EKSTRA KOLONLAR (göz ardı edilecek): {extra_cols}")
+        
+        df = df[required_columns]
+        
+        numeric_columns = [col for col in df.columns if any(x in col for x in ['USD', 'Units', 'Price'])]
+        for col in numeric_columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        
+        return df
+    except Exception as e:
+        st.error(f"Veri yükleme hatası: {str(e)}")
+        st.stop()
 
-# ================================================
-# 3. ENHANCED FILTERING SYSTEM - 600+ LINES
-# ================================================
-
-class EnhancedFilterSystem:
-    """Enhanced filtering system with advanced capabilities"""
+# ============================================
+# GLOBAL FİLTRELER
+# ============================================
+class GlobalFilters:
+    def __init__(self, df):
+        self.df = df
+        self.initialize_filters()
     
-    def __init__(self):
-        self.filter_history = []
-        self.saved_filters = {}
-        self.active_filters = {}
-    
-    def create_filter_panel(self, df):
-        """Create comprehensive filter panel"""
+    def initialize_filters(self):
         with st.sidebar:
-            st.markdown("### 🎯 FILTERS")
+            st.markdown("### 🌍 GLOBAL FİLTRELER")
             
-            # Quick filter buttons
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🔄 Reset", use_container_width=True):
-                    self.active_filters = {}
-                    st.rerun()
-            
-            with col2:
-                if st.button("💾 Save", use_container_width=True):
-                    filter_name = st.text_input("Filter name:")
-                    if filter_name:
-                        self.saved_filters[filter_name] = self.active_filters.copy()
-                        st.success(f"Filter '{filter_name}' saved!")
-            
-            # Basic filters
-            with st.expander("🔍 Basic Filters", expanded=True):
-                self.active_filters.update(self.create_basic_filters(df))
-            
-            # Numeric filters
-            with st.expander("📊 Numeric Filters", expanded=False):
-                self.active_filters.update(self.create_numeric_filters(df))
-            
-            # Categorical filters
-            with st.expander("🏷️ Categorical Filters", expanded=False):
-                self.active_filters.update(self.create_categorical_filters(df))
-            
-            # Date filters
-            with st.expander("📅 Date Filters", expanded=False):
-                self.active_filters.update(self.create_date_filters(df))
-            
-            # Advanced filters
-            with st.expander("⚙️ Advanced Filters", expanded=False):
-                self.active_filters.update(self.create_advanced_filters(df))
-            
-            # Apply filters button
-            if st.button("✅ Apply Filters", type="primary", use_container_width=True):
-                self.filter_history.append({
-                    'timestamp': datetime.now().isoformat(),
-                    'filters': self.active_filters.copy()
-                })
-                return True
-            
-            return False
-    
-    def create_basic_filters(self, df):
-        """Create basic search filter"""
-        filters = {}
-        
-        search_term = st.text_input(
-            "Search in all columns:",
-            placeholder="Enter search term...",
-            help="Search across all text columns"
-        )
-        
-        if search_term:
-            filters['search'] = search_term
-        
-        return filters
-    
-    def create_numeric_filters(self, df):
-        """Create numeric range filters"""
-        filters = {}
-        
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        
-        if numeric_cols:
-            selected_col = st.selectbox(
-                "Select numeric column:",
-                numeric_cols,
-                key="numeric_filter_col"
+            # Country (çoklu seçim)
+            all_countries = sorted(self.df['Country'].dropna().unique())
+            self.selected_countries = st.multiselect(
+                "Ülke (Çoklu Seçim)",
+                options=all_countries,
+                default=all_countries[:5] if len(all_countries) > 5 else all_countries,
+                key="country_filter"
             )
             
-            if selected_col:
-                col_min = float(df[selected_col].min())
-                col_max = float(df[selected_col].max())
-                
-                range_type = st.radio(
-                    "Filter type:",
-                    ["Range", "Threshold"],
-                    horizontal=True,
-                    key=f"range_type_{selected_col}"
-                )
-                
-                if range_type == "Range":
-                    min_val, max_val = st.slider(
-                        f"Select range for {selected_col}:",
-                        min_value=col_min,
-                        max_value=col_max,
-                        value=(col_min, col_max),
-                        key=f"range_{selected_col}"
-                    )
-                    
-                    if min_val != col_min or max_val != col_max:
-                        filters[f'numeric_{selected_col}'] = {
-                            'type': 'range',
-                            'min': min_val,
-                            'max': max_val
-                        }
-                
-                else:  # Threshold
-                    threshold = st.number_input(
-                        f"Threshold for {selected_col}:",
-                        min_value=col_min,
-                        max_value=col_max,
-                        value=col_min,
-                        key=f"threshold_{selected_col}"
-                    )
-                    
-                    comparison = st.selectbox(
-                        "Comparison:",
-                        ["Greater than", "Less than", "Equal to"],
-                        key=f"comparison_{selected_col}"
-                    )
-                    
-                    filters[f'numeric_{selected_col}'] = {
-                        'type': 'threshold',
-                        'threshold': threshold,
-                        'comparison': comparison
-                    }
-        
-        return filters
-    
-    def create_categorical_filters(self, df):
-        """Create categorical filters"""
-        filters = {}
-        
-        categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-        
-        if categorical_cols:
-            selected_col = st.selectbox(
-                "Select categorical column:",
-                categorical_cols,
-                key="categorical_filter_col"
+            # Region
+            all_regions = sorted(self.df['Region'].dropna().unique())
+            self.selected_region = st.selectbox(
+                "Bölge",
+                options=["Tümü"] + all_regions,
+                key="region_filter"
             )
             
-            if selected_col:
-                unique_values = df[selected_col].dropna().unique()
-                
-                if len(unique_values) <= 20:
-                    # Show all values for small sets
-                    selected_values = st.multiselect(
-                        f"Select values for {selected_col}:",
-                        options=unique_values,
-                        default=[],
-                        key=f"cat_multiselect_{selected_col}"
-                    )
-                else:
-                    # Searchable select for large sets
-                    search_term = st.text_input(
-                        f"Search in {selected_col}:",
-                        placeholder="Type to search...",
-                        key=f"cat_search_{selected_col}"
-                    )
-                    
-                    if search_term:
-                        filtered_values = [val for val in unique_values if search_term.lower() in str(val).lower()]
-                    else:
-                        filtered_values = list(unique_values)[:50]  # Limit display
-                    
-                    selected_values = st.multiselect(
-                        f"Select values for {selected_col}:",
-                        options=filtered_values,
-                        default=[],
-                        key=f"cat_multiselect_{selected_col}"
-                    )
-                
-                if selected_values:
-                    filters[f'categorical_{selected_col}'] = selected_values
-        
-        return filters
-    
-    def create_date_filters(self, df):
-        """Create date filters"""
-        filters = {}
-        
-        date_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
-        
-        if date_cols:
-            selected_col = st.selectbox(
-                "Select date column:",
-                date_cols,
-                key="date_filter_col"
+            # Sub-Region
+            all_subregions = sorted(self.df['Sub-Region'].dropna().unique())
+            self.selected_subregion = st.selectbox(
+                "Alt Bölge",
+                options=["Tümü"] + all_subregions,
+                key="subregion_filter"
             )
             
-            if selected_col:
-                min_date = df[selected_col].min().date()
-                max_date = df[selected_col].max().date()
-                
-                date_range = st.date_input(
-                    f"Select date range for {selected_col}:",
-                    value=(min_date, max_date),
-                    min_value=min_date,
-                    max_value=max_date,
-                    key=f"date_range_{selected_col}"
-                )
-                
-                if len(date_range) == 2:
-                    start_date, end_date = date_range
-                    if start_date != min_date or end_date != max_date:
-                        filters[f'date_{selected_col}'] = {
-                            'start': start_date,
-                            'end': end_date
-                        }
-        
-        return filters
-    
-    def create_advanced_filters(self, df):
-        """Create advanced filters"""
-        filters = {}
-        
-        # Outlier detection filter
-        if st.checkbox("Filter outliers", key="outlier_filter"):
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            
-            if numeric_cols:
-                outlier_col = st.selectbox(
-                    "Column for outlier detection:",
-                    numeric_cols,
-                    key="outlier_col"
-                )
-                
-                method = st.selectbox(
-                    "Outlier detection method:",
-                    ["IQR", "Z-score", "Percentile"],
-                    key="outlier_method"
-                )
-                
-                if method == "IQR":
-                    iqr_multiplier = st.slider("IQR multiplier:", 1.0, 5.0, 1.5, 0.1)
-                    filters['outlier'] = {
-                        'column': outlier_col,
-                        'method': 'iqr',
-                        'multiplier': iqr_multiplier
-                    }
-                elif method == "Z-score":
-                    z_threshold = st.slider("Z-score threshold:", 1.0, 5.0, 3.0, 0.1)
-                    filters['outlier'] = {
-                        'column': outlier_col,
-                        'method': 'zscore',
-                        'threshold': z_threshold
-                    }
-                else:  # Percentile
-                    lower_percentile = st.slider("Lower percentile:", 0.0, 50.0, 1.0, 0.1)
-                    upper_percentile = st.slider("Upper percentile:", 50.0, 100.0, 99.0, 0.1)
-                    filters['outlier'] = {
-                        'column': outlier_col,
-                        'method': 'percentile',
-                        'lower': lower_percentile,
-                        'upper': upper_percentile
-                    }
-        
-        # Custom expression filter
-        if st.checkbox("Custom filter expression", key="custom_filter"):
-            expression = st.text_area(
-                "Enter filter expression (Python syntax):",
-                placeholder="Example: df['Sales'] > 1000 and df['Growth'] > 0",
-                help="Use 'df' to refer to the dataframe"
+            # Sector
+            all_sectors = sorted(self.df['Sector'].dropna().unique())
+            self.selected_sector = st.selectbox(
+                "Sektör",
+                options=["Tümü"] + all_sectors,
+                key="sector_filter"
             )
             
-            if expression:
-                filters['custom'] = expression
-        
-        return filters
+            # Panel
+            all_panels = sorted(self.df['Panel'].dropna().unique())
+            self.selected_panel = st.selectbox(
+                "Panel",
+                options=["Tümü"] + all_panels,
+                key="panel_filter"
+            )
+            
+            # Corporation (çoklu)
+            all_corps = sorted(self.df['Corporation'].dropna().unique())
+            self.selected_corps = st.multiselect(
+                "Kuruluş (Çoklu)",
+                options=all_corps,
+                default=all_corps[:3] if len(all_corps) > 3 else all_corps,
+                key="corp_filter"
+            )
+            
+            # Manufacturer
+            all_manufacturers = sorted(self.df['Manufacturer'].dropna().unique())
+            self.selected_manufacturer = st.selectbox(
+                "Üretici",
+                options=["Tümü"] + all_manufacturers,
+                key="manufacturer_filter"
+            )
+            
+            # Molecule (çoklu)
+            all_molecules = sorted(self.df['Molecule'].dropna().unique())
+            self.selected_molecules = st.multiselect(
+                "Molekül (Çoklu)",
+                options=all_molecules,
+                default=all_molecules[:5] if len(all_molecules) > 5 else all_molecules,
+                key="molecule_filter"
+            )
+            
+            # Specialty Product
+            all_specialty = sorted(self.df['Specialty Product'].dropna().unique())
+            self.selected_specialty = st.selectbox(
+                "Özel Ürün",
+                options=["Tümü"] + all_specialty,
+                key="specialty_filter"
+            )
+            
+            # International Product
+            all_intl = sorted(self.df['International Product'].dropna().unique())
+            self.selected_intl = st.selectbox(
+                "Uluslararası Ürün",
+                options=["Tümü"] + all_intl,
+                key="intl_filter"
+            )
     
-    def apply_filters(self, df, filters):
-        """Apply filters to dataframe"""
-        if not filters:
-            return df
-        
+    def apply_filters(self, df):
         filtered_df = df.copy()
-        applied_filters = []
         
-        # Apply search filter
-        if 'search' in filters:
-            search_mask = pd.Series(False, index=filtered_df.index)
-            search_term = filters['search'].lower()
-            
-            for col in filtered_df.select_dtypes(include=['object']).columns:
-                try:
-                    search_mask = search_mask | filtered_df[col].astype(str).str.lower().str.contains(search_term, na=False)
-                except:
-                    continue
-            
-            filtered_df = filtered_df[search_mask]
-            applied_filters.append(f"Search: '{filters['search']}'")
+        if self.selected_countries:
+            filtered_df = filtered_df[filtered_df['Country'].isin(self.selected_countries)]
         
-        # Apply numeric filters
-        for key, value in filters.items():
-            if key.startswith('numeric_'):
-                col_name = key.replace('numeric_', '')
-                
-                if value['type'] == 'range':
-                    mask = (filtered_df[col_name] >= value['min']) & (filtered_df[col_name] <= value['max'])
-                    filtered_df = filtered_df[mask]
-                    applied_filters.append(f"{col_name}: {value['min']} to {value['max']}")
-                
-                elif value['type'] == 'threshold':
-                    if value['comparison'] == "Greater than":
-                        mask = filtered_df[col_name] > value['threshold']
-                    elif value['comparison'] == "Less than":
-                        mask = filtered_df[col_name] < value['threshold']
-                    else:  # Equal to
-                        mask = filtered_df[col_name] == value['threshold']
-                    
-                    filtered_df = filtered_df[mask]
-                    applied_filters.append(f"{col_name} {value['comparison'].lower()} {value['threshold']}")
+        if self.selected_region != "Tümü":
+            filtered_df = filtered_df[filtered_df['Region'] == self.selected_region]
         
-        # Apply categorical filters
-        for key, value in filters.items():
-            if key.startswith('categorical_'):
-                col_name = key.replace('categorical_', '')
-                filtered_df = filtered_df[filtered_df[col_name].isin(value)]
-                applied_filters.append(f"{col_name}: {len(value)} values selected")
+        if self.selected_subregion != "Tümü":
+            filtered_df = filtered_df[filtered_df['Sub-Region'] == self.selected_subregion]
         
-        # Apply date filters
-        for key, value in filters.items():
-            if key.startswith('date_'):
-                col_name = key.replace('date_', '')
-                start_date = pd.to_datetime(value['start'])
-                end_date = pd.to_datetime(value['end'])
-                
-                mask = (filtered_df[col_name] >= start_date) & (filtered_df[col_name] <= end_date)
-                filtered_df = filtered_df[mask]
-                applied_filters.append(f"{col_name}: {value['start']} to {value['end']}")
+        if self.selected_sector != "Tümü":
+            filtered_df = filtered_df[filtered_df['Sector'] == self.selected_sector]
         
-        # Apply outlier filter
-        if 'outlier' in filters:
-            outlier_filter = filters['outlier']
-            col_name = outlier_filter['column']
-            
-            if outlier_filter['method'] == 'iqr':
-                Q1 = filtered_df[col_name].quantile(0.25)
-                Q3 = filtered_df[col_name].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - outlier_filter['multiplier'] * IQR
-                upper_bound = Q3 + outlier_filter['multiplier'] * IQR
-                
-                mask = (filtered_df[col_name] >= lower_bound) & (filtered_df[col_name] <= upper_bound)
-                filtered_df = filtered_df[mask]
-                removed = len(filtered_df) - mask.sum()
-                applied_filters.append(f"Outliers removed: {removed} rows")
-            
-            elif outlier_filter['method'] == 'zscore':
-                if SCIPY_AVAILABLE:
-                    z_scores = np.abs(stats.zscore(filtered_df[col_name].fillna(0)))
-                    mask = z_scores < outlier_filter['threshold']
-                    filtered_df = filtered_df[mask]
-                    removed = len(filtered_df) - mask.sum()
-                    applied_filters.append(f"Outliers removed (Z-score): {removed} rows")
-            
-            else:  # percentile
-                lower_bound = filtered_df[col_name].quantile(outlier_filter['lower'] / 100)
-                upper_bound = filtered_df[col_name].quantile(outlier_filter['upper'] / 100)
-                
-                mask = (filtered_df[col_name] >= lower_bound) & (filtered_df[col_name] <= upper_bound)
-                filtered_df = filtered_df[mask]
-                removed = len(filtered_df) - mask.sum()
-                applied_filters.append(f"Outliers removed (Percentile): {removed} rows")
+        if self.selected_panel != "Tümü":
+            filtered_df = filtered_df[filtered_df['Panel'] == self.selected_panel]
         
-        # Apply custom filter
-        if 'custom' in filters:
-            try:
-                # Security note: In production, use a safer evaluation method
-                mask = eval(filters['custom'], {'df': filtered_df, 'np': np, 'pd': pd})
-                filtered_df = filtered_df[mask]
-                applied_filters.append("Custom filter applied")
-            except Exception as e:
-                st.error(f"Custom filter error: {str(e)}")
+        if self.selected_corps:
+            filtered_df = filtered_df[filtered_df['Corporation'].isin(self.selected_corps)]
         
-        # Show filter summary
-        if applied_filters:
-            st.info(f"**Applied filters ({len(applied_filters)}):** {', '.join(applied_filters)}")
-            st.success(f"**Results:** {len(filtered_df):,} of {len(df):,} rows shown")
+        if self.selected_manufacturer != "Tümü":
+            filtered_df = filtered_df[filtered_df['Manufacturer'] == self.selected_manufacturer]
+        
+        if self.selected_molecules:
+            filtered_df = filtered_df[filtered_df['Molecule'].isin(self.selected_molecules)]
+        
+        if self.selected_specialty != "Tümü":
+            filtered_df = filtered_df[filtered_df['Specialty Product'] == self.selected_specialty]
+        
+        if self.selected_intl != "Tümü":
+            filtered_df = filtered_df[filtered_df['International Product'] == self.selected_intl]
         
         return filtered_df
 
-# ================================================
-# 4. ENHANCED ANALYTICS ENGINE - 1200+ LINES
-# ================================================
-
-class EnhancedAnalyticsEngine:
-    """Enhanced analytics engine with ML capabilities"""
-    
+# ============================================
+# HARİTA İŞLEMLERİ
+# ============================================
+class WorldMapHandler:
     def __init__(self):
-        self.models = {}
-        self.analysis_cache = {}
+        self.world = self._load_world_geojson()
     
-    def comprehensive_analysis(self, df):
-        """Perform comprehensive data analysis"""
+    def _load_world_geojson(self):
         try:
-            analysis_results = {
-                'descriptive_stats': self.descriptive_statistics(df),
-                'correlation_analysis': self.correlation_analysis(df),
-                'trend_analysis': self.trend_analysis(df),
-                'segmentation_analysis': None,
-                'prediction_analysis': None,
-                'anomaly_detection': None
+            world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+            return world
+        except:
+            return None
+    
+    def get_country_code(self, country_name):
+        try:
+            country = pycountry.countries.get(name=country_name)
+            if country:
+                return country.alpha_3
+            
+            name_mapping = {
+                'USA': 'United States',
+                'UK': 'United Kingdom',
+                'UAE': 'United Arab Emirates',
+                'Russia': 'Russian Federation',
+                'Iran': 'Iran, Islamic Republic of',
+                'South Korea': 'Korea, Republic of',
+                'North Korea': "Korea, Democratic People's Republic of",
+                'Vietnam': 'Viet Nam',
+                'Bolivia': 'Bolivia, Plurinational State of',
+                'Venezuela': 'Venezuela, Bolivarian Republic of',
+                'Syria': 'Syrian Arab Republic',
+                'Tanzania': 'Tanzania, United Republic of',
+                'Laos': "Lao People's Democratic Republic",
+                'Brunei': 'Brunei Darussalam',
+                'Cape Verde': 'Cabo Verde',
+                'Congo': 'Congo',
+                'Congo DR': 'Congo, The Democratic Republic of the',
+                'Ivory Coast': "Côte d'Ivoire",
+                'East Timor': 'Timor-Leste',
+                'Macedonia': 'North Macedonia',
+                'Moldova': 'Moldova, Republic of',
+                'Palestine': 'Palestine, State of',
+                'Taiwan': 'Taiwan, Province of China',
+                'Turkey': 'Türkiye'
             }
             
-            return analysis_results
-            
-        except Exception as e:
-            st.error(f"Analysis error: {str(e)}")
-            return {}
-    
-    def descriptive_statistics(self, df):
-        """Calculate descriptive statistics"""
-        try:
-            stats = {
-                'overall': {
-                    'count': len(df),
-                    'columns': len(df.columns),
-                    'memory_mb': df.memory_usage(deep=True).sum() / 1024**2
-                },
-                'numeric': {},
-                'categorical': {}
-            }
-            
-            # Numeric columns
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            for col in numeric_cols:
-                stats['numeric'][col] = {
-                    'count': int(df[col].count()),
-                    'mean': float(df[col].mean()),
-                    'std': float(df[col].std()),
-                    'min': float(df[col].min()),
-                    '25%': float(df[col].quantile(0.25)),
-                    '50%': float(df[col].quantile(0.50)),
-                    '75%': float(df[col].quantile(0.75)),
-                    'max': float(df[col].max()),
-                    'skew': float(df[col].skew()),
-                    'kurtosis': float(df[col].kurtosis())
-                }
-            
-            # Categorical columns
-            categorical_cols = df.select_dtypes(include=['object', 'category']).columns
-            for col in categorical_cols:
-                value_counts = df[col].value_counts()
-                stats['categorical'][col] = {
-                    'count': int(df[col].count()),
-                    'unique': int(df[col].nunique()),
-                    'top': value_counts.index[0] if len(value_counts) > 0 else None,
-                    'freq': int(value_counts.iloc[0]) if len(value_counts) > 0 else 0,
-                    'missing': int(df[col].isna().sum())
-                }
-            
-            return stats
-            
-        except Exception as e:
-            st.warning(f"Descriptive statistics error: {str(e)}")
-            return {}
-    
-    def correlation_analysis(self, df):
-        """Perform correlation analysis"""
-        try:
-            numeric_df = df.select_dtypes(include=[np.number])
-            
-            if len(numeric_df.columns) < 2:
-                return {}
-            
-            # Calculate correlation matrix
-            corr_matrix = numeric_df.corr()
-            
-            # Find top correlations
-            correlations = []
-            for i in range(len(corr_matrix.columns)):
-                for j in range(i+1, len(corr_matrix.columns)):
-                    col1 = corr_matrix.columns[i]
-                    col2 = corr_matrix.columns[j]
-                    corr_value = corr_matrix.iloc[i, j]
-                    
-                    if abs(corr_value) > 0.3:  # Only show meaningful correlations
-                        correlations.append({
-                            'variable1': col1,
-                            'variable2': col2,
-                            'correlation': float(corr_value),
-                            'strength': 'Strong' if abs(corr_value) > 0.7 else 'Moderate' if abs(corr_value) > 0.5 else 'Weak'
-                        })
-            
-            # Sort by absolute correlation value
-            correlations.sort(key=lambda x: abs(x['correlation']), reverse=True)
-            
-            return {
-                'matrix': corr_matrix.to_dict(),
-                'top_correlations': correlations[:20],  # Top 20 correlations
-                'highly_correlated': [c for c in correlations if abs(c['correlation']) > 0.8]
-            }
-            
-        except Exception as e:
-            st.warning(f"Correlation analysis error: {str(e)}")
-            return {}
-    
-    def trend_analysis(self, df):
-        """Analyze trends in time series data"""
-        try:
-            trends = {}
-            
-            # Find date columns
-            date_cols = df.select_dtypes(include=['datetime64']).columns
-            
-            if len(date_cols) == 0:
-                return trends
-            
-            # Use first date column
-            date_col = date_cols[0]
-            
-            # Find numeric columns for trend analysis
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            
-            for num_col in numeric_cols[:5]:  # Limit to first 5 numeric columns
-                try:
-                    # Resample by month if enough data
-                    temp_df = df[[date_col, num_col]].dropna()
-                    temp_df = temp_df.set_index(date_col)
-                    
-                    if len(temp_df) > 30:  # Enough data for monthly resampling
-                        monthly = temp_df.resample('M').mean()
-                        
-                        if len(monthly) > 3:  # Enough months for trend calculation
-                            # Calculate linear trend
-                            x = np.arange(len(monthly))
-                            y = monthly[num_col].values
-                            
-                            # Remove NaN values
-                            mask = ~np.isnan(y)
-                            x = x[mask]
-                            y = y[mask]
-                            
-                            if len(y) > 2:
-                                slope, intercept = np.polyfit(x, y, 1)
-                                trend_line = slope * x + intercept
-                                
-                                # Calculate R-squared
-                                ss_res = np.sum((y - trend_line) ** 2)
-                                ss_tot = np.sum((y - np.mean(y)) ** 2)
-                                r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
-                                
-                                trends[num_col] = {
-                                    'slope': float(slope),
-                                    'intercept': float(intercept),
-                                    'r_squared': float(r_squared),
-                                    'trend': 'Increasing' if slope > 0 else 'Decreasing' if slope < 0 else 'Stable',
-                                    'data_points': len(monthly),
-                                    'monthly_data': {
-                                        'dates': monthly.index.strftime('%Y-%m').tolist(),
-                                        'values': monthly[num_col].tolist()
-                                    }
-                                }
-                    
-                except Exception as e:
-                    continue  # Skip this column if error occurs
-            
-            return trends
-            
-        except Exception as e:
-            st.warning(f"Trend analysis error: {str(e)}")
-            return {}
-    
-    def market_segmentation(self, df, method='kmeans', n_clusters=4):
-        """Perform market segmentation using clustering"""
-        try:
-            if not SKLEARN_AVAILABLE:
-                st.error("Scikit-learn is required for segmentation")
-                return None
-            
-            # Select features for segmentation
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            
-            if len(numeric_cols) < 2:
-                st.warning("Need at least 2 numeric columns for segmentation")
-                return None
-            
-            # Use top 5 numeric columns or all if less than 5
-            selected_cols = numeric_cols[:5] if len(numeric_cols) > 5 else numeric_cols
-            
-            # Prepare data
-            X = df[selected_cols].fillna(0)
-            
-            # Scale the data
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X)
-            
-            # Apply clustering
-            if method == 'kmeans':
-                model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-            elif method == 'hierarchical':
-                model = AgglomerativeClustering(n_clusters=n_clusters)
-            elif method == 'dbscan':
-                model = DBSCAN(eps=0.5, min_samples=10)
-            else:
-                model = KMeans(n_clusters=n_clusters, random_state=42)
-            
-            clusters = model.fit_predict(X_scaled)
-            
-            # Add clusters to dataframe
-            result_df = df.copy()
-            result_df['Cluster'] = clusters
-            
-            # Calculate cluster statistics
-            cluster_stats = []
-            for cluster_id in np.unique(clusters):
-                cluster_data = result_df[result_df['Cluster'] == cluster_id]
-                
-                stats = {
-                    'cluster': int(cluster_id),
-                    'size': int(len(cluster_data)),
-                    'percentage': float(len(cluster_data) / len(result_df) * 100)
-                }
-                
-                # Add mean values for each feature
-                for col in selected_cols:
-                    stats[f'{col}_mean'] = float(cluster_data[col].mean())
-                    stats[f'{col}_std'] = float(cluster_data[col].std())
-                
-                cluster_stats.append(stats)
-            
-            # Calculate clustering quality metrics
-            quality_metrics = {}
-            if len(np.unique(clusters)) > 1:
-                try:
-                    quality_metrics['silhouette_score'] = float(silhouette_score(X_scaled, clusters))
-                    quality_metrics['calinski_harabasz_score'] = float(calinski_harabasz_score(X_scaled, clusters))
-                    
-                    if hasattr(model, 'inertia_'):
-                        quality_metrics['inertia'] = float(model.inertia_)
-                
-                except Exception:
-                    pass
-            
-            # Name clusters based on characteristics
-            cluster_names = {}
-            for stats in cluster_stats:
-                cluster_id = stats['cluster']
-                
-                # Simple naming based on size and values
-                if stats['size'] < len(result_df) * 0.1:
-                    cluster_names[cluster_id] = f"Niche {cluster_id}"
-                elif stats['size'] > len(result_df) * 0.3:
-                    cluster_names[cluster_id] = f"Mainstream {cluster_id}"
-                else:
-                    cluster_names[cluster_id] = f"Segment {cluster_id}"
-            
-            result_df['Cluster_Name'] = result_df['Cluster'].map(cluster_names)
-            
-            return {
-                'data': result_df,
-                'clusters': clusters,
-                'cluster_stats': cluster_stats,
-                'quality_metrics': quality_metrics,
-                'features_used': selected_cols.tolist(),
-                'model': model,
-                'cluster_names': cluster_names
-            }
-            
-        except Exception as e:
-            st.error(f"Segmentation error: {str(e)}")
-            return None
-    
-    def sales_prediction(self, df, forecast_periods=12):
-        """Predict future sales"""
-        try:
-            # Look for date and sales columns
-            date_cols = df.select_dtypes(include=['datetime64']).columns
-            sales_cols = [col for col in df.columns if 'sale' in col.lower() or 'revenue' in col.lower()]
-            
-            if len(date_cols) == 0 or len(sales_cols) == 0:
-                st.warning("Need date and sales columns for prediction")
-                return None
-            
-            date_col = date_cols[0]
-            sales_col = sales_cols[0]
-            
-            # Prepare time series data
-            ts_data = df[[date_col, sales_col]].copy()
-            ts_data = ts_data.dropna()
-            ts_data = ts_data.set_index(date_col)
-            
-            # Resample to monthly if enough data
-            if len(ts_data) > 60:  # Enough for monthly resampling
-                ts_data = ts_data.resample('M').sum()
-            elif len(ts_data) > 30:
-                ts_data = ts_data.resample('W').sum()
-            else:
-                ts_data = ts_data.resample('D').sum()
-            
-            # Create time features
-            ts_data = ts_data.reset_index()
-            ts_data.columns = ['ds', 'y']
-            
-            # Split data for validation
-            train_size = int(len(ts_data) * 0.8)
-            train_data = ts_data.iloc[:train_size]
-            test_data = ts_data.iloc[train_size:]
-            
-            # Use Prophet if available, otherwise use simple linear regression
-            if PROPHET_AVAILABLE and len(train_data) > 30:
-                # Prophet model
-                model = Prophet(yearly_seasonality=True, weekly_seasonality=False, daily_seasonality=False)
-                model.fit(train_data)
-                
-                # Make future dataframe
-                future = model.make_future_dataframe(periods=forecast_periods, freq='M' if len(ts_data) > 60 else 'W')
-                forecast = model.predict(future)
-                
-                # Calculate metrics on test set
-                if len(test_data) > 0:
-                    test_forecast = model.predict(pd.DataFrame({'ds': test_data['ds']}))
-                    y_true = test_data['y'].values
-                    y_pred = test_forecast['yhat'].values
-                    
-                    from sklearn.metrics import mean_absolute_error, mean_squared_error
-                    
-                    metrics = {
-                        'mae': float(mean_absolute_error(y_true, y_pred)),
-                        'rmse': float(np.sqrt(mean_squared_error(y_true, y_pred))),
-                        'mape': float(np.mean(np.abs((y_true - y_pred) / y_true)) * 100)
-                    }
-                else:
-                    metrics = {}
-                
-                result = {
-                    'method': 'prophet',
-                    'model': model,
-                    'forecast': forecast,
-                    'train_data': train_data,
-                    'test_data': test_data,
-                    'metrics': metrics
-                }
-            
-            else:
-                # Simple linear regression for prediction
-                X = np.arange(len(ts_data)).reshape(-1, 1)
-                y = ts_data['y'].values
-                
-                model = LinearRegression()
-                model.fit(X, y)
-                
-                # Predict future
-                future_X = np.arange(len(ts_data), len(ts_data) + forecast_periods).reshape(-1, 1)
-                future_y = model.predict(future_X)
-                
-                # Create forecast dataframe
-                forecast_dates = pd.date_range(start=ts_data['ds'].iloc[-1], periods=forecast_periods+1, freq='M')[1:]
-                forecast_df = pd.DataFrame({
-                    'ds': forecast_dates,
-                    'yhat': future_y,
-                    'yhat_lower': future_y * 0.8,  # Simple confidence interval
-                    'yhat_upper': future_y * 1.2
-                })
-                
-                result = {
-                    'method': 'linear',
-                    'model': model,
-                    'forecast': forecast_df,
-                    'train_data': ts_data,
-                    'test_data': pd.DataFrame(),
-                    'metrics': {
-                        'r_squared': float(model.score(X, y)),
-                        'coefficient': float(model.coef_[0])
-                    }
-                }
-            
-            return result
-            
-        except Exception as e:
-            st.error(f"Prediction error: {str(e)}")
-            return None
-    
-    def anomaly_detection(self, df):
-        """Detect anomalies in data"""
-        try:
-            if not SKLEARN_AVAILABLE:
-                return None
-            
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            
-            if len(numeric_cols) == 0:
-                return None
-            
-            # Use Isolation Forest for anomaly detection
-            X = df[numeric_cols].fillna(0)
-            
-            # Scale the data
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X)
-            
-            # Fit Isolation Forest
-            iso_forest = IsolationForest(contamination=0.1, random_state=42)
-            anomalies = iso_forest.fit_predict(X_scaled)
-            
-            # -1 indicates anomaly, 1 indicates normal
-            anomaly_mask = anomalies == -1
-            
-            # Calculate anomaly scores
-            anomaly_scores = iso_forest.decision_function(X_scaled)
-            
-            # Create results dataframe
-            result_df = df.copy()
-            result_df['Is_Anomaly'] = anomaly_mask
-            result_df['Anomaly_Score'] = anomaly_scores
-            
-            # Get anomaly statistics
-            anomaly_count = int(anomaly_mask.sum())
-            anomaly_percentage = float(anomaly_count / len(df) * 100)
-            
-            # Get top anomalies
-            top_anomalies = result_df[result_df['Is_Anomaly']].sort_values('Anomaly_Score').head(20)
-            
-            return {
-                'data': result_df,
-                'anomaly_count': anomaly_count,
-                'anomaly_percentage': anomaly_percentage,
-                'top_anomalies': top_anomalies,
-                'model': iso_forest
-            }
-            
-        except Exception as e:
-            st.error(f"Anomaly detection error: {str(e)}")
-            return None
-    
-    def generate_strategic_insights(self, df, analysis_results):
-        """Generate strategic insights from analysis"""
-        try:
-            insights = []
-            
-            # Insight 1: Market opportunity
-            sales_cols = [col for col in df.columns if 'sale' in col.lower()]
-            if sales_cols:
-                latest_sales = sales_cols[-1]
-                avg_sales = df[latest_sales].mean()
-                
-                if avg_sales > 0:
-                    # Find low performing products with high potential
-                    growth_cols = [col for col in df.columns if 'growth' in col.lower()]
-                    if growth_cols:
-                        growth_col = growth_cols[0]
-                        
-                        # Products with below average sales but high growth
-                        high_potential = df[(df[latest_sales] < avg_sales) & (df[growth_col] > 20)]
-                        
-                        if len(high_potential) > 0:
-                            insights.append({
-                                'type': 'opportunity',
-                                'title': 'High Growth Potential',
-                                'description': f'{len(high_potential)} products show high growth (>20%) despite below-average sales',
-                                'action': 'Consider increasing investment in these high-potential products',
-                                'data': high_potential.head(10).to_dict('records')
-                            })
-            
-            # Insight 2: Risk identification
-            if 'anomaly_detection' in analysis_results and analysis_results['anomaly_detection']:
-                anomalies = analysis_results['anomaly_detection']['data']
-                high_risk = anomalies[anomalies['Anomaly_Score'] < -0.5]
-                
-                if len(high_risk) > 0:
-                    insights.append({
-                        'type': 'risk',
-                        'title': 'High Risk Products Detected',
-                        'description': f'{len(high_risk)} products identified as potential outliers/anomalies',
-                        'action': 'Investigate these products for data quality issues or unusual patterns',
-                        'data': high_risk.head(10).to_dict('records')
-                    })
-            
-            # Insight 3: Market segmentation opportunities
-            if 'segmentation_analysis' in analysis_results and analysis_results['segmentation_analysis']:
-                segmentation = analysis_results['segmentation_analysis']
-                cluster_stats = segmentation['cluster_stats']
-                
-                if len(cluster_stats) > 1:
-                    # Find the smallest cluster (potential niche market)
-                    smallest_cluster = min(cluster_stats, key=lambda x: x['size'])
-                    
-                    # Fix: Avoid backslash in f-string
-                    cluster_num = smallest_cluster["cluster"]
-                    cluster_name = segmentation["cluster_names"].get(cluster_num, f"Cluster {cluster_num}")
-                    
-                    insights.append({
-                        'type': 'segmentation',
-                        'title': f'Niche Market Opportunity: {cluster_name}',
-                        'description': f'Cluster with {smallest_cluster["size"]} products ({smallest_cluster["percentage"]:.1f}% of market)',
-                        'action': 'Consider specialized marketing strategies for this segment',
-                        'data': smallest_cluster
-                    })
-            
-            # Insight 4: Correlation opportunities
-            if 'correlation_analysis' in analysis_results:
-                correlations = analysis_results['correlation_analysis'].get('top_correlations', [])
-                
-                if correlations:
-                    strongest = max(correlations, key=lambda x: abs(x['correlation']))
-                    
-                    if abs(strongest['correlation']) > 0.7:
-                        insights.append({
-                            'type': 'correlation',
-                            'title': 'Strong Market Relationship',
-                            'description': f'{strongest["variable1"]} and {strongest["variable2"]} are strongly correlated ({strongest["correlation"]:.2f})',
-                            'action': f'Consider leveraging this relationship in pricing or marketing strategies',
-                            'data': strongest
-                        })
-            
-            return insights[:5]  # Return top 5 insights
-            
-        except Exception as e:
-            st.warning(f"Insight generation error: {str(e)}")
-            return []
-
-# ================================================
-# 5. ENHANCED VISUALIZATION ENGINE - 800+ LINES
-# ================================================
-
-class EnhancedVisualizationEngine:
-    """Enhanced visualization engine"""
-    
-    def __init__(self):
-        self.color_scheme = {
-            'primary': '#2d7dd2',
-            'secondary': '#2acaea',
-            'success': '#2dd2a3',
-            'warning': '#f2c94c',
-            'danger': '#eb5757',
-            'background': 'rgba(0,0,0,0)'
-        }
-    
-    def create_dashboard_metrics(self, df, analysis_results):
-        """Create dashboard metrics display"""
-        try:
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                self.display_metric_card(
-                    "📊 Total Products",
-                    f"{len(df):,}",
-                    "Products in dataset",
-                    "primary"
-                )
-            
-            with col2:
-                numeric_cols = len(df.select_dtypes(include=[np.number]).columns)
-                self.display_metric_card(
-                    "🔢 Numeric Features",
-                    f"{numeric_cols}",
-                    "Analyzable metrics",
-                    "info"
-                )
-            
-            with col3:
-                if 'descriptive_stats' in analysis_results:
-                    stats = analysis_results['descriptive_stats']
-                    if 'numeric' in stats and len(stats['numeric']) > 0:
-                        first_col = list(stats['numeric'].keys())[0]
-                        avg_value = stats['numeric'][first_col]['mean']
-                        self.display_metric_card(
-                            f"💰 Avg {first_col[:15]}",
-                            f"{avg_value:,.0f}",
-                            "Average value",
-                            "success"
-                        )
-            
-            with col4:
-                if 'anomaly_detection' in analysis_results and analysis_results['anomaly_detection']:
-                    anomalies = analysis_results['anomaly_detection']['anomaly_count']
-                    self.display_metric_card(
-                        "⚠️ Anomalies",
-                        f"{anomalies:,}",
-                        "Requires attention",
-                        "warning" if anomalies > 0 else "success"
-                    )
-            
-        except Exception as e:
-            st.warning(f"Metrics display error: {str(e)}")
-    
-    def display_metric_card(self, title, value, subtitle, color_type="primary"):
-        """Display a metric card"""
-        colors = {
-            'primary': self.color_scheme['primary'],
-            'success': self.color_scheme['success'],
-            'warning': self.color_scheme['warning'],
-            'danger': self.color_scheme['danger'],
-            'info': self.color_scheme['secondary']
-        }
-        
-        color = colors.get(color_type, self.color_scheme['primary'])
-        
-        st.markdown(f"""
-        <div class="metric-card" style="border-left: 4px solid {color};">
-            <div class="metric-label">{title}</div>
-            <div class="metric-value">{value}</div>
-            <div style="color: {self.color_scheme['text-secondary']}; font-size: 0.9rem; margin-top: 0.5rem;">
-                {subtitle}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    def plot_correlation_heatmap(self, correlation_matrix):
-        """Plot correlation heatmap"""
-        try:
-            if not correlation_matrix:
-                return None
-            
-            # Convert to dataframe if it's a dict
-            if isinstance(correlation_matrix, dict):
-                corr_df = pd.DataFrame(correlation_matrix)
-            else:
-                corr_df = correlation_matrix
-            
-            fig = px.imshow(
-                corr_df,
-                color_continuous_scale='RdBu',
-                zmin=-1,
-                zmax=1,
-                title="Correlation Heatmap"
-            )
-            
-            fig.update_layout(
-                height=600,
-                plot_bgcolor=self.color_scheme['background'],
-                paper_bgcolor=self.color_scheme['background'],
-                font_color='white'
-            )
-            
-            return fig
-            
-        except Exception as e:
-            st.warning(f"Correlation heatmap error: {str(e)}")
-            return None
-    
-    def plot_trend_analysis(self, trend_data):
-        """Plot trend analysis"""
-        try:
-            if not trend_data:
-                return None
-            
-            # Create subplots for each trend
-            figs = []
-            
-            for col_name, trend_info in list(trend_data.items())[:4]:  # Limit to 4 trends
-                if 'monthly_data' in trend_info:
-                    dates = trend_info['monthly_data']['dates']
-                    values = trend_info['monthly_data']['values']
-                    
-                    fig = go.Figure()
-                    
-                    # Add actual values
-                    fig.add_trace(go.Scatter(
-                        x=dates,
-                        y=values,
-                        mode='lines+markers',
-                        name='Actual',
-                        line=dict(color=self.color_scheme['primary'], width=2),
-                        marker=dict(size=6)
-                    ))
-                    
-                    # Add trend line
-                    if 'slope' in trend_info and 'intercept' in trend_info:
-                        x_numeric = np.arange(len(values))
-                        trend_line = trend_info['slope'] * x_numeric + trend_info['intercept']
-                        
-                        fig.add_trace(go.Scatter(
-                            x=dates,
-                            y=trend_line,
-                            mode='lines',
-                            name=f'Trend (R²={trend_info["r_squared"]:.2f})',
-                            line=dict(color=self.color_scheme['danger'], width=2, dash='dash')
-                        ))
-                    
-                    fig.update_layout(
-                        title=f'{col_name} Trend',
-                        height=300,
-                        plot_bgcolor=self.color_scheme['background'],
-                        paper_bgcolor=self.color_scheme['background'],
-                        font_color='white',
-                        showlegend=True
-                    )
-                    
-                    figs.append(fig)
-            
-            return figs
-            
-        except Exception as e:
-            st.warning(f"Trend plot error: {str(e)}")
-            return []
-    
-    def plot_segmentation_results(self, segmentation_results):
-        """Plot segmentation results"""
-        try:
-            if not segmentation_results:
-                return None
-            
-            df = segmentation_results['data']
-            cluster_col = 'Cluster'
-            
-            if cluster_col not in df.columns:
-                return None
-            
-            # Create scatter plot matrix
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            
-            if len(numeric_cols) >= 2:
-                # Use first two numeric columns for scatter plot
-                x_col = numeric_cols[0]
-                y_col = numeric_cols[1]
-                
-                fig = px.scatter(
-                    df,
-                    x=x_col,
-                    y=y_col,
-                    color=cluster_col,
-                    title=f"Segmentation: {x_col} vs {y_col}",
-                    color_continuous_scale='Viridis',
-                    hover_data=df.columns.tolist()[:5]  # Show first 5 columns in hover
-                )
-                
-                fig.update_layout(
-                    height=500,
-                    plot_bgcolor=self.color_scheme['background'],
-                    paper_bgcolor=self.color_scheme['background'],
-                    font_color='white'
-                )
-                
-                return fig
+            if country_name in name_mapping:
+                country = pycountry.countries.get(name=name_mapping[country_name])
+                if country:
+                    return country.alpha_3
             
             return None
-            
-        except Exception as e:
-            st.warning(f"Segmentation plot error: {str(e)}")
+        except:
             return None
     
-    def plot_prediction_results(self, prediction_results):
-        """Plot prediction results"""
-        try:
-            if not prediction_results:
-                return None
-            
-            forecast = prediction_results['forecast']
-            train_data = prediction_results['train_data']
-            
-            fig = go.Figure()
-            
-            # Plot historical data
-            fig.add_trace(go.Scatter(
-                x=train_data['ds'],
-                y=train_data['y'],
-                mode='lines+markers',
-                name='Historical',
-                line=dict(color=self.color_scheme['primary'], width=2),
-                marker=dict(size=6)
-            ))
-            
-            # Plot forecast
-            fig.add_trace(go.Scatter(
-                x=forecast['ds'],
-                y=forecast['yhat'],
-                mode='lines',
-                name='Forecast',
-                line=dict(color=self.color_scheme['success'], width=3)
-            ))
-            
-            # Add confidence interval if available
-            if 'yhat_lower' in forecast.columns and 'yhat_upper' in forecast.columns:
-                fig.add_trace(go.Scatter(
-                    x=forecast['ds'].tolist() + forecast['ds'].tolist()[::-1],
-                    y=forecast['yhat_upper'].tolist() + forecast['yhat_lower'].tolist()[::-1],
-                    fill='toself',
-                    fillcolor='rgba(45, 210, 163, 0.2)',
-                    line=dict(color='rgba(255,255,255,0)'),
-                    name='Confidence Interval',
-                    showlegend=True
-                ))
-            
-            fig.update_layout(
-                title='Sales Forecast',
-                height=500,
-                plot_bgcolor=self.color_scheme['background'],
-                paper_bgcolor=self.color_scheme['background'],
-                font_color='white',
-                showlegend=True,
-                xaxis_title='Date',
-                yaxis_title='Sales'
-            )
-            
-            return fig
-            
-        except Exception as e:
-            st.warning(f"Prediction plot error: {str(e)}")
-            return None
-    
-    def plot_anomaly_detection(self, anomaly_results):
-        """Plot anomaly detection results"""
-        try:
-            if not anomaly_results:
-                return None
-            
-            df = anomaly_results['data']
-            
-            # Find a numeric column to plot against
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            numeric_cols = [col for col in numeric_cols if col not in ['Anomaly_Score', 'Is_Anomaly']]
-            
-            if len(numeric_cols) == 0:
-                return None
-            
-            plot_col = numeric_cols[0]
-            
-            # Create scatter plot
-            normal_data = df[~df['Is_Anomaly']]
-            anomaly_data = df[df['Is_Anomaly']]
-            
-            fig = go.Figure()
-            
-            # Plot normal points
-            fig.add_trace(go.Scatter(
-                x=normal_data.index,
-                y=normal_data[plot_col],
-                mode='markers',
-                name='Normal',
-                marker=dict(
-                    color=self.color_scheme['primary'],
-                    size=8,
-                    opacity=0.7
-                )
-            ))
-            
-            # Plot anomalies
-            fig.add_trace(go.Scatter(
-                x=anomaly_data.index,
-                y=anomaly_data[plot_col],
-                mode='markers',
-                name='Anomaly',
-                marker=dict(
-                    color=self.color_scheme['danger'],
-                    size=12,
-                    symbol='x'
-                )
-            ))
-            
-            fig.update_layout(
-                title=f'Anomaly Detection: {plot_col}',
-                height=500,
-                plot_bgcolor=self.color_scheme['background'],
-                paper_bgcolor=self.color_scheme['background'],
-                font_color='white',
-                showlegend=True,
-                xaxis_title='Index',
-                yaxis_title=plot_col
-            )
-            
-            return fig
-            
-        except Exception as e:
-            st.warning(f"Anomaly plot error: {str(e)}")
-            return None
-    
-    def plot_distribution(self, df, column):
-        """Plot distribution of a column"""
-        try:
-            if column not in df.columns:
-                return None
-            
-            col_type = df[column].dtype
-            
-            if pd.api.types.is_numeric_dtype(col_type):
-                # Histogram for numeric columns
-                fig = px.histogram(
-                    df,
-                    x=column,
-                    nbins=50,
-                    title=f'Distribution of {column}',
-                    color_discrete_sequence=[self.color_scheme['primary']]
-                )
-                
-                fig.update_layout(
-                    height=400,
-                    plot_bgcolor=self.color_scheme['background'],
-                    paper_bgcolor=self.color_scheme['background'],
-                    font_color='white',
-                    xaxis_title=column,
-                    yaxis_title='Count'
-                )
-                
-            else:
-                # Bar chart for categorical columns (top 20)
-                value_counts = df[column].value_counts().head(20)
-                
-                fig = px.bar(
-                    x=value_counts.index,
-                    y=value_counts.values,
-                    title=f'Top 20 Values in {column}',
-                    color=value_counts.values,
-                    color_continuous_scale='Viridis'
-                )
-                
-                fig.update_layout(
-                    height=400,
-                    plot_bgcolor=self.color_scheme['background'],
-                    paper_bgcolor=self.color_scheme['background'],
-                    font_color='white',
-                    xaxis_title=column,
-                    yaxis_title='Count'
-                )
-            
-            return fig
-            
-        except Exception as e:
-            st.warning(f"Distribution plot error: {str(e)}")
-            return None
-
-# ================================================
-# 6. ENHANCED REPORTING SYSTEM - 400+ LINES
-# ================================================
-
-class EnhancedReportingSystem:
-    """Enhanced reporting system"""
-    
-    def __init__(self):
-        self.report_templates = {
-            'summary': 'Executive Summary',
-            'detailed': 'Detailed Analysis',
-            'technical': 'Technical Report',
-            'dashboard': 'Interactive Dashboard'
-        }
-    
-    def generate_report(self, df, analysis_results, report_type='summary'):
-        """Generate comprehensive report"""
-        try:
-            report = {
-                'metadata': {
-                    'generated_at': datetime.now().isoformat(),
-                    'data_shape': f"{len(df)} rows × {len(df.columns)} columns",
-                    'report_type': report_type,
-                    'analysis_performed': list(analysis_results.keys())
-                },
-                'summary': self.generate_summary(df, analysis_results),
-                'detailed_analysis': self.generate_detailed_analysis(analysis_results),
-                'recommendations': self.generate_recommendations(df, analysis_results),
-                'raw_data_sample': df.head(100).to_dict('records')  # Sample of data
-            }
-            
-            return report
-            
-        except Exception as e:
-            st.error(f"Report generation error: {str(e)}")
-            return {}
-    
-    def generate_summary(self, df, analysis_results):
-        """Generate executive summary"""
-        try:
-            summary = {
-                'key_metrics': {
-                    'total_products': len(df),
-                    'total_features': len(df.columns),
-                    'numeric_features': len(df.select_dtypes(include=[np.number]).columns),
-                    'categorical_features': len(df.select_dtypes(include=['object', 'category']).columns)
-                },
-                'data_quality': {
-                    'missing_values': int(df.isna().sum().sum()),
-                    'missing_percentage': float(df.isna().sum().sum() / (len(df) * len(df.columns)) * 100),
-                    'duplicates': int(df.duplicated().sum())
-                }
-            }
-            
-            # Add insights from analysis
-            if 'descriptive_stats' in analysis_results:
-                stats = analysis_results['descriptive_stats']
-                if 'numeric' in stats and len(stats['numeric']) > 0:
-                    first_col = list(stats['numeric'].keys())[0]
-                    summary['performance'] = {
-                        'average': stats['numeric'][first_col]['mean'],
-                        'variation': stats['numeric'][first_col]['std'],
-                        'range': f"{stats['numeric'][first_col]['min']} to {stats['numeric'][first_col]['max']}"
-                    }
-            
-            if 'anomaly_detection' in analysis_results and analysis_results['anomaly_detection']:
-                summary['anomalies'] = {
-                    'count': analysis_results['anomaly_detection']['anomaly_count'],
-                    'percentage': analysis_results['anomaly_detection']['anomaly_percentage']
-                }
-            
-            return summary
-            
-        except Exception as e:
-            st.warning(f"Summary generation error: {str(e)}")
-            return {}
-    
-    def generate_detailed_analysis(self, analysis_results):
-        """Generate detailed analysis section"""
-        try:
-            detailed = {}
-            
-            # Descriptive statistics
-            if 'descriptive_stats' in analysis_results:
-                stats = analysis_results['descriptive_stats']
-                detailed['statistics'] = {
-                    'numeric_columns': len(stats.get('numeric', {})),
-                    'categorical_columns': len(stats.get('categorical', {})),
-                    'sample_stats': {}
-                }
-                
-                # Add sample statistics for first few columns
-                for col_name, col_stats in list(stats.get('numeric', {}).items())[:3]:
-                    detailed['statistics']['sample_stats'][col_name] = {
-                        'mean': col_stats['mean'],
-                        'std': col_stats['std'],
-                        'min': col_stats['min'],
-                        'max': col_stats['max']
-                    }
-            
-            # Correlation analysis
-            if 'correlation_analysis' in analysis_results:
-                corr = analysis_results['correlation_analysis']
-                detailed['correlations'] = {
-                    'total_correlations': len(corr.get('top_correlations', [])),
-                    'strong_correlations': len(corr.get('highly_correlated', [])),
-                    'top_correlations': corr.get('top_correlations', [])[:5]
-                }
-            
-            # Trend analysis
-            if 'trend_analysis' in analysis_results:
-                trends = analysis_results['trend_analysis']
-                detailed['trends'] = {
-                    'total_trends': len(trends),
-                    'increasing_trends': sum(1 for t in trends.values() if t.get('slope', 0) > 0),
-                    'decreasing_trends': sum(1 for t in trends.values() if t.get('slope', 0) < 0)
-                }
-            
-            return detailed
-            
-        except Exception as e:
-            st.warning(f"Detailed analysis error: {str(e)}")
-            return {}
-    
-    def generate_recommendations(self, df, analysis_results):
-        """Generate actionable recommendations"""
-        try:
-            recommendations = []
-            
-            # Recommendation based on data quality
-            missing_pct = df.isna().sum().sum() / (len(df) * len(df.columns)) * 100
-            if missing_pct > 5:
-                recommendations.append({
-                    'category': 'Data Quality',
-                    'priority': 'High',
-                    'recommendation': f'Address missing values ({missing_pct:.1f}% of data is missing)',
-                    'action': 'Implement data imputation strategies or data collection improvements'
-                })
-            
-            # Recommendation based on anomalies
-            if 'anomaly_detection' in analysis_results and analysis_results['anomaly_detection']:
-                anomaly_pct = analysis_results['anomaly_detection']['anomaly_percentage']
-                if anomaly_pct > 5:
-                    recommendations.append({
-                        'category': 'Risk Management',
-                        'priority': 'Medium',
-                        'recommendation': f'Investigate {anomaly_pct:.1f}% of products flagged as anomalies',
-                        'action': 'Review anomaly detection results and investigate root causes'
-                    })
-            
-            # Recommendation based on segmentation
-            if 'segmentation_analysis' in analysis_results and analysis_results['segmentation_analysis']:
-                segmentation = analysis_results['segmentation_analysis']
-                if 'cluster_stats' in segmentation:
-                    clusters = segmentation['cluster_stats']
-                    if len(clusters) >= 3:
-                        recommendations.append({
-                            'category': 'Market Strategy',
-                            'priority': 'Medium',
-                            'recommendation': f'Leverage {len(clusters)} identified market segments',
-                            'action': 'Develop targeted strategies for each segment based on their characteristics'
-                        })
-            
-            # Recommendation based on trends
-            if 'trend_analysis' in analysis_results:
-                trends = analysis_results['trend_analysis']
-                increasing = sum(1 for t in trends.values() if t.get('slope', 0) > 0.1)
-                decreasing = sum(1 for t in trends.values() if t.get('slope', 0) < -0.1)
-                
-                if decreasing > 0:
-                    recommendations.append({
-                        'category': 'Performance',
-                        'priority': 'High',
-                        'recommendation': f'{decreasing} metrics showing declining trends',
-                        'action': 'Investigate causes of decline and implement corrective actions'
-                    })
-            
-            return recommendations[:5]  # Top 5 recommendations
-            
-        except Exception as e:
-            st.warning(f"Recommendation generation error: {str(e)}")
-            return []
-    
-    def export_to_excel(self, df, analysis_results, report):
-        """Export data and analysis to Excel"""
-        try:
-            output = BytesIO()
-            
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                # Write raw data
-                df.to_excel(writer, sheet_name='Raw Data', index=False)
-                
-                # Write summary statistics
-                if 'descriptive_stats' in analysis_results:
-                    stats = analysis_results['descriptive_stats']
-                    
-                    # Numeric statistics
-                    numeric_stats = []
-                    for col_name, col_stats in stats.get('numeric', {}).items():
-                        numeric_stats.append({
-                            'Column': col_name,
-                            'Count': col_stats['count'],
-                            'Mean': col_stats['mean'],
-                            'Std': col_stats['std'],
-                            'Min': col_stats['min'],
-                            '25%': col_stats['25%'],
-                            '50%': col_stats['50%'],
-                            '75%': col_stats['75%'],
-                            'Max': col_stats['max']
-                        })
-                    
-                    if numeric_stats:
-                        pd.DataFrame(numeric_stats).to_excel(writer, sheet_name='Numeric Stats', index=False)
-                    
-                    # Categorical statistics
-                    categorical_stats = []
-                    for col_name, col_stats in stats.get('categorical', {}).items():
-                        categorical_stats.append({
-                            'Column': col_name,
-                            'Count': col_stats['count'],
-                            'Unique': col_stats['unique'],
-                            'Top': col_stats['top'],
-                            'Frequency': col_stats['freq'],
-                            'Missing': col_stats['missing']
-                        })
-                    
-                    if categorical_stats:
-                        pd.DataFrame(categorical_stats).to_excel(writer, sheet_name='Categorical Stats', index=False)
-                
-                # Write correlation matrix
-                if 'correlation_analysis' in analysis_results:
-                    corr_matrix = analysis_results['correlation_analysis'].get('matrix', {})
-                    if corr_matrix:
-                        pd.DataFrame(corr_matrix).to_excel(writer, sheet_name='Correlation Matrix')
-                
-                # Write report summary
-                report_df = pd.DataFrame([
-                    {'Metric': 'Generated At', 'Value': report['metadata']['generated_at']},
-                    {'Metric': 'Data Shape', 'Value': report['metadata']['data_shape']},
-                    {'Metric': 'Report Type', 'Value': report['metadata']['report_type']},
-                    {'Metric': 'Total Products', 'Value': report['summary']['key_metrics']['total_products']},
-                    {'Metric': 'Total Features', 'Value': report['summary']['key_metrics']['total_features']}
-                ])
-                report_df.to_excel(writer, sheet_name='Report Summary', index=False)
-            
-            output.seek(0)
-            
-            # Download button
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            st.download_button(
-                label="📥 Download Excel Report",
-                data=output,
-                file_name=f"pharma_analysis_{timestamp}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-            
-        except Exception as e:
-            st.error(f"Excel export error: {str(e)}")
-
-# ================================================
-# 7. MAIN APPLICATION - 600+ LINES
-# ================================================
-
-class PharmaIntelligencePro:
-    """Main PharmaIntelligence Pro application"""
-    
-    def __init__(self):
-        self.data_system = EnhancedDataSystem()
-        self.filter_system = EnhancedFilterSystem()
-        self.analytics_engine = EnhancedAnalyticsEngine()
-        self.visualization_engine = EnhancedVisualizationEngine()
-        self.reporting_system = EnhancedReportingSystem()
-        
-        # Initialize session state
-        if 'data' not in st.session_state:
-            st.session_state.data = None
-        if 'filtered_data' not in st.session_state:
-            st.session_state.filtered_data = None
-        if 'analysis_results' not in st.session_state:
-            st.session_state.analysis_results = None
-        if 'active_tab' not in st.session_state:
-            st.session_state.active_tab = 'overview'
-    
-    def run(self):
-        """Run the main application"""
-        try:
-            # Application header
-            self.render_header()
-            
-            # Sidebar
-            with st.sidebar:
-                self.render_sidebar()
-            
-            # Main content based on data availability
-            if st.session_state.data is None:
-                self.render_welcome_screen()
-            else:
-                self.render_main_dashboard()
-            
-        except Exception as e:
-            self.handle_error(e)
-    
-    def render_header(self):
-        """Render application header"""
-        st.markdown("""
-        <div style="text-align: center; padding: 2rem 0;">
-            <h1 class="enterprise-title">🏥 PharmaIntelligence Pro</h1>
-            <p style="color: #cbd5e1; font-size: 1.2rem; max-width: 800px; margin: 0 auto;">
-            Enterprise Pharmaceutical Analytics Platform • Advanced ML • Real-time Insights
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    def render_sidebar(self):
-        """Render sidebar components"""
-        st.markdown('<div class="sidebar-title">🚀 DATA MANAGEMENT</div>', unsafe_allow_html=True)
-        
-        # File uploader
-        uploaded_file = st.file_uploader(
-            "Upload your data file",
-            type=['csv', 'xlsx', 'xls', 'parquet', 'json'],
-            help="Supported formats: CSV, Excel, Parquet, JSON"
-        )
-        
-        if uploaded_file is not None:
-            # Sample data option
-            use_sample = st.checkbox("Use sample data", value=False)
-            sample_size = None
-            
-            if use_sample:
-                sample_size = st.number_input("Sample size:", min_value=1000, max_value=100000, value=10000, step=1000)
-            
-            if st.button("📊 Load & Analyze Data", type="primary", use_container_width=True):
-                with st.spinner("Loading and analyzing data..."):
-                    # Load data
-                    df = self.data_system.load_data(uploaded_file, sample_size)
-                    
-                    if df is not None:
-                        # Store in session state
-                        st.session_state.data = df
-                        st.session_state.filtered_data = df.copy()
-                        
-                        # Perform initial analysis
-                        st.session_state.analysis_results = self.analytics_engine.comprehensive_analysis(df)
-                        
-                        st.success(f"✅ Data loaded successfully! {len(df):,} rows × {len(df.columns)} columns")
-                        st.rerun()
-        
-        # Data management options
-        if st.session_state.data is not None:
-            st.markdown("---")
-            st.markdown("### 🛠️ DATA TOOLS")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("🔄 Reset Data", use_container_width=True):
-                    st.session_state.data = None
-                    st.session_state.filtered_data = None
-                    st.session_state.analysis_results = None
-                    st.rerun()
-            
-            with col2:
-                if st.button("📥 Export Data", use_container_width=True):
-                    if st.session_state.filtered_data is not None:
-                        csv = st.session_state.filtered_data.to_csv(index=False)
-                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                        st.download_button(
-                            label="Download CSV",
-                            data=csv,
-                            file_name=f"pharma_data_{timestamp}.csv",
-                            mime="text/csv"
-                        )
-    
-    def render_welcome_screen(self):
-        """Render welcome screen"""
-        col1, col2, col3 = st.columns([1, 2, 1])
-        
-        with col2:
-            st.markdown("""
-            <div style="text-align: center; padding: 3rem; background: rgba(30, 58, 95, 0.5); 
-                       border-radius: 20px; border: 1px solid #2d4a7a;">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">🏥</div>
-                <h2>Welcome to PharmaIntelligence Pro</h2>
-                <p style="color: #cbd5e1; line-height: 1.6;">
-                The most advanced pharmaceutical analytics platform. 
-                Upload your data to unlock powerful insights, predictive analytics, 
-                and strategic recommendations.
-                </p>
-                
-                <div style="margin-top: 3rem;">
-                    <h4>📋 Getting Started:</h4>
-                    <ol style="text-align: left; color: #94a3b8;">
-                        <li>Upload your pharmaceutical data file (CSV, Excel, etc.)</li>
-                        <li>Use the sidebar to load and analyze your data</li>
-                        <li>Explore insights through the interactive dashboard</li>
-                        <li>Generate reports and export your analysis</li>
-                    </ol>
-                </div>
-                
-                <div style="margin-top: 3rem; padding: 1.5rem; background: rgba(45, 125, 210, 0.1); 
-                           border-radius: 10px; border-left: 4px solid #2d7dd2;">
-                    <h4>💡 Tip:</h4>
-                    <p>For best results, ensure your data includes columns for products, 
-                    sales, dates, and other relevant pharmaceutical metrics.</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    def render_main_dashboard(self):
-        """Render main dashboard"""
-        # Create tabs
-        tabs = st.tabs([
-            "📊 Overview",
-            "🔍 Data Explorer",
-            "📈 Analytics",
-            "🤖 Machine Learning",
-            "⚠️ Risk Analysis",
-            "📋 Reports"
-        ])
-        
-        with tabs[0]:
-            self.render_overview_tab()
-        
-        with tabs[1]:
-            self.render_explorer_tab()
-        
-        with tabs[2]:
-            self.render_analytics_tab()
-        
-        with tabs[3]:
-            self.render_ml_tab()
-        
-        with tabs[4]:
-            self.render_risk_tab()
-        
-        with tabs[5]:
-            self.render_reports_tab()
-    
-    def render_overview_tab(self):
-        """Render overview tab"""
-        st.markdown("## 📊 Dashboard Overview")
-        
-        if st.session_state.filtered_data is not None and st.session_state.analysis_results is not None:
-            # Display metrics
-            self.visualization_engine.create_dashboard_metrics(
-                st.session_state.filtered_data,
-                st.session_state.analysis_results
-            )
-            
-            st.markdown("---")
-            
-            # Data preview
-            col1, col2 = st.columns([1, 3])
-            
-            with col1:
-                preview_rows = st.slider("Preview rows:", 10, 100, 20)
-                show_all_cols = st.checkbox("Show all columns", value=False)
-            
-            with col2:
-                preview_df = st.session_state.filtered_data
-                if not show_all_cols:
-                    # Show only key columns
-                    key_cols = []
-                    for col in preview_df.columns:
-                        if any(keyword in col.lower() for keyword in ['product', 'sale', 'price', 'growth', 'date']):
-                            key_cols.append(col)
-                    
-                    if len(key_cols) < 5:  # If not enough key columns, show first 8 columns
-                        key_cols = preview_df.columns[:8].tolist()
-                    
-                    preview_df = preview_df[key_cols]
-                
-                st.dataframe(preview_df.head(preview_rows), use_container_width=True)
-            
-            st.markdown("---")
-            
-            # Quick insights
-            st.markdown("### 💡 Quick Insights")
-            
-            if 'descriptive_stats' in st.session_state.analysis_results:
-                stats = st.session_state.analysis_results['descriptive_stats']
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    if 'numeric' in stats and len(stats['numeric']) > 0:
-                        first_col = list(stats['numeric'].keys())[0]
-                        avg_value = stats['numeric'][first_col]['mean']
-                        st.metric(f"Avg {first_col[:15]}", f"{avg_value:,.0f}")
-                
-                with col2:
-                    st.metric("Total Products", f"{len(st.session_state.filtered_data):,}")
-                
-                with col3:
-                    missing_pct = st.session_state.filtered_data.isna().sum().sum() / (
-                        len(st.session_state.filtered_data) * len(st.session_state.filtered_data.columns)
-                    ) * 100
-                    st.metric("Data Completeness", f"{(100 - missing_pct):.1f}%")
-    
-    def render_explorer_tab(self):
-        """Render data explorer tab"""
-        st.markdown("## 🔍 Data Explorer")
-        
-        if st.session_state.filtered_data is None:
-            st.info("No data available. Please load data first.")
-            return
-        
-        df = st.session_state.filtered_data
-        
-        # Filter panel
-        st.markdown("### 🎯 Apply Filters")
-        
-        filter_applied = self.filter_system.create_filter_panel(df)
-        
-        if filter_applied:
-            # Apply filters
-            filtered_df = self.filter_system.apply_filters(df, self.filter_system.active_filters)
-            st.session_state.filtered_data = filtered_df
-            
-            # Update analysis with filtered data
-            st.session_state.analysis_results = self.analytics_engine.comprehensive_analysis(filtered_df)
-            
-            st.rerun()
-        
-        st.markdown("---")
-        
-        # Data statistics
-        st.markdown("### 📈 Data Statistics")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("Rows", f"{len(df):,}")
-        
-        with col2:
-            st.metric("Columns", f"{len(df.columns)}")
-        
-        with col3:
-            numeric_cols = len(df.select_dtypes(include=[np.number]).columns)
-            st.metric("Numeric Columns", f"{numeric_cols}")
-        
-        with col4:
-            memory_mb = df.memory_usage(deep=True).sum() / 1024**2
-            st.metric("Memory Usage", f"{memory_mb:.1f} MB")
-        
-        st.markdown("---")
-        
-        # Column explorer
-        st.markdown("### 📋 Column Explorer")
-        
-        selected_col = st.selectbox("Select column to explore:", df.columns)
-        
-        if selected_col:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Column statistics
-                st.markdown("#### Statistics")
-                
-                if pd.api.types.is_numeric_dtype(df[selected_col].dtype):
-                    stats = df[selected_col].describe()
-                    
-                    for stat_name, stat_value in stats.items():
-                        st.write(f"**{stat_name}:** {stat_value:,.2f}")
-                    
-                    # Distribution plot
-                    fig = self.visualization_engine.plot_distribution(df, selected_col)
-                    if fig:
-                        st.plotly_chart(fig, use_container_width=True)
-                
-                else:
-                    # Categorical statistics
-                    value_counts = df[selected_col].value_counts()
-                    st.write(f"**Unique values:** {df[selected_col].nunique()}")
-                    st.write(f"**Most common:** {value_counts.index[0] if len(value_counts) > 0 else 'N/A'}")
-                    st.write(f"**Frequency:** {value_counts.iloc[0] if len(value_counts) > 0 else 0}")
-                    
-                    # Top values
-                    st.markdown("#### Top 10 Values")
-                    st.dataframe(value_counts.head(10), use_container_width=True)
-            
-            with col2:
-                # Sample values
-                st.markdown("#### Sample Values")
-                unique_values = df[selected_col].dropna().unique()
-                
-                if len(unique_values) <= 20:
-                    for val in unique_values[:20]:
-                        st.write(f"• {val}")
-                else:
-                    for val in unique_values[:10]:
-                        st.write(f"• {val}")
-                    st.write(f"• ... and {len(unique_values) - 10} more")
-                
-                # Missing values info
-                missing = df[selected_col].isna().sum()
-                if missing > 0:
-                    st.warning(f"⚠️ {missing:,} missing values ({missing/len(df)*100:.1f}%)")
-    
-    def render_analytics_tab(self):
-        """Render analytics tab"""
-        st.markdown("## 📈 Advanced Analytics")
-        
-        if st.session_state.filtered_data is None or st.session_state.analysis_results is None:
-            st.info("No data available. Please load data first.")
-            return
-        
-        df = st.session_state.filtered_data
-        analysis = st.session_state.analysis_results
-        
-        # Correlation analysis
-        st.markdown("### 🔗 Correlation Analysis")
-        
-        if 'correlation_analysis' in analysis:
-            corr_matrix = analysis['correlation_analysis'].get('matrix')
-            
-            if corr_matrix:
-                fig = self.visualization_engine.plot_correlation_heatmap(corr_matrix)
-                if fig:
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Top correlations
-                top_correlations = analysis['correlation_analysis'].get('top_correlations', [])
-                
-                if top_correlations:
-                    st.markdown("#### Top Correlations")
-                    
-                    cols = st.columns(3)
-                    for idx, corr in enumerate(top_correlations[:6]):
-                        with cols[idx % 3]:
-                            color = "🟢" if corr['correlation'] > 0 else "🔴"
-                            st.metric(
-                                f"{color} {corr['variable1'][:10]} & {corr['variable2'][:10]}",
-                                f"{corr['correlation']:.2f}",
-                                corr['strength']
-                            )
-        
-        st.markdown("---")
-        
-        # Trend analysis
-        st.markdown("### 📊 Trend Analysis")
-        
-        if 'trend_analysis' in analysis and analysis['trend_analysis']:
-            trend_figs = self.visualization_engine.plot_trend_analysis(analysis['trend_analysis'])
-            
-            if trend_figs:
-                cols = st.columns(2)
-                for idx, fig in enumerate(trend_figs):
-                    with cols[idx % 2]:
-                        st.plotly_chart(fig, use_container_width=True)
-        
-        st.markdown("---")
-        
-        # Descriptive statistics
-        st.markdown("### 📋 Descriptive Statistics")
-        
-        if 'descriptive_stats' in analysis:
-            stats = analysis['descriptive_stats']
-            
-            # Select a column for detailed statistics
-            numeric_cols = list(stats.get('numeric', {}).keys())
-            
-            if numeric_cols:
-                selected_stat_col = st.selectbox("Select column for detailed stats:", numeric_cols)
-                
-                if selected_stat_col and selected_stat_col in stats['numeric']:
-                    col_stats = stats['numeric'][selected_stat_col]
-                    
-                    # Display statistics in columns
-                    cols = st.columns(4)
-                    
-                    with cols[0]:
-                        st.metric("Mean", f"{col_stats['mean']:,.2f}")
-                    
-                    with cols[1]:
-                        st.metric("Std Dev", f"{col_stats['std']:,.2f}")
-                    
-                    with cols[2]:
-                        st.metric("Min", f"{col_stats['min']:,.2f}")
-                    
-                    with cols[3]:
-                        st.metric("Max", f"{col_stats['max']:,.2f}")
-                    
-                    # Additional statistics
-                    cols2 = st.columns(3)
-                    
-                    with cols2[0]:
-                        st.metric("25% Percentile", f"{col_stats['25%']:,.2f}")
-                    
-                    with cols2[1]:
-                        st.metric("Median", f"{col_stats['50%']:,.2f}")
-                    
-                    with cols2[2]:
-                        st.metric("75% Percentile", f"{col_stats['75%']:,.2f}")
-    
-    def render_ml_tab(self):
-        """Render machine learning tab"""
-        st.markdown("## 🤖 Machine Learning")
-        
-        if st.session_state.filtered_data is None:
-            st.info("No data available. Please load data first.")
-            return
-        
-        df = st.session_state.filtered_data
-        
-        # ML analysis options
-        ml_option = st.selectbox(
-            "Select ML Analysis:",
-            ["Market Segmentation", "Sales Prediction", "Anomaly Detection"]
-        )
-        
-        if ml_option == "Market Segmentation":
-            self.render_segmentation_analysis(df)
-        
-        elif ml_option == "Sales Prediction":
-            self.render_prediction_analysis(df)
-        
-        elif ml_option == "Anomaly Detection":
-            self.render_anomaly_detection(df)
-    
-    def render_segmentation_analysis(self, df):
-        """Render segmentation analysis"""
-        st.markdown("### 🔬 Market Segmentation")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            method = st.selectbox("Clustering method:", ["kmeans", "hierarchical"])
-        
-        with col2:
-            n_clusters = st.slider("Number of clusters:", 2, 10, 4)
-        
-        if st.button("🔍 Perform Segmentation", type="primary"):
-            with st.spinner("Performing market segmentation..."):
-                segmentation_results = self.analytics_engine.market_segmentation(df, method, n_clusters)
-                
-                if segmentation_results:
-                    st.session_state.analysis_results['segmentation_analysis'] = segmentation_results
-                    
-                    # Display results
-                    st.success(f"✅ Segmentation complete! {len(np.unique(segmentation_results['clusters']))} clusters identified.")
-                    
-                    # Plot results
-                    fig = self.visualization_engine.plot_segmentation_results(segmentation_results)
-                    if fig:
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Cluster statistics
-                    st.markdown("#### 📊 Cluster Statistics")
-                    
-                    cluster_stats = segmentation_results['cluster_stats']
-                    cluster_df = pd.DataFrame(cluster_stats)
-                    
-                    # Select columns to display
-                    display_cols = ['cluster', 'size', 'percentage']
-                    for col in cluster_df.columns:
-                        if '_mean' in col:
-                            display_cols.append(col)
-                    
-                    st.dataframe(cluster_df[display_cols], use_container_width=True)
-                    
-                    # Quality metrics
-                    if 'quality_metrics' in segmentation_results:
-                        metrics = segmentation_results['quality_metrics']
-                        
-                        st.markdown("#### 🎯 Segmentation Quality")
-                        
-                        col1, col2, col3 = st.columns(3)
-                        
-                        with col1:
-                            if 'silhouette_score' in metrics:
-                                score = metrics['silhouette_score']
-                                color = "🟢" if score > 0.5 else "🟡" if score > 0.3 else "🔴"
-                                st.metric("Silhouette Score", f"{score:.3f}", color)
-                        
-                        with col2:
-                            if 'calinski_harabasz_score' in metrics:
-                                st.metric("Calinski Score", f"{metrics['calinski_harabasz_score']:,.0f}")
-                        
-                        with col3:
-                            if 'inertia' in metrics:
-                                st.metric("Inertia", f"{metrics['inertia']:,.0f}")
-    
-    def render_prediction_analysis(self, df):
-        """Render prediction analysis"""
-        st.markdown("### 🔮 Sales Prediction")
-        
-        forecast_periods = st.slider("Forecast periods:", 3, 24, 12)
-        
-        if st.button("📈 Generate Forecast", type="primary"):
-            with st.spinner("Generating sales forecast..."):
-                prediction_results = self.analytics_engine.sales_prediction(df, forecast_periods)
-                
-                if prediction_results:
-                    st.session_state.analysis_results['prediction_analysis'] = prediction_results
-                    
-                    # Display results
-                    st.success(f"✅ Forecast generated for {forecast_periods} periods!")
-                    
-                    # Plot forecast
-                    fig = self.visualization_engine.plot_prediction_results(prediction_results)
-                    if fig:
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Display metrics
-                    if 'metrics' in prediction_results:
-                        metrics = prediction_results['metrics']
-                        
-                        st.markdown("#### 📊 Forecast Accuracy")
-                        
-                        col1, col2, col3 = st.columns(3)
-                        
-                        with col1:
-                            if 'mae' in metrics:
-                                st.metric("MAE", f"{metrics['mae']:.2f}")
-                        
-                        with col2:
-                            if 'rmse' in metrics:
-                                st.metric("RMSE", f"{metrics['rmse']:.2f}")
-                        
-                        with col3:
-                            if 'mape' in metrics:
-                                st.metric("MAPE", f"{metrics['mape']:.1f}%")
-                    
-                    # Show forecast data
-                    st.markdown("#### 📋 Forecast Data")
-                    forecast_df = prediction_results['forecast'][['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(forecast_periods)
-                    st.dataframe(forecast_df, use_container_width=True)
-    
-    def render_anomaly_detection(self, df):
-        """Render anomaly detection"""
-        st.markdown("### ⚠️ Anomaly Detection")
-        
-        if st.button("🔍 Detect Anomalies", type="primary"):
-            with st.spinner("Detecting anomalies..."):
-                anomaly_results = self.analytics_engine.anomaly_detection(df)
-                
-                if anomaly_results:
-                    st.session_state.analysis_results['anomaly_detection'] = anomaly_results
-                    
-                    # Display results
-                    anomaly_count = anomaly_results['anomaly_count']
-                    anomaly_pct = anomaly_results['anomaly_percentage']
-                    
-                    st.warning(f"⚠️ Detected {anomaly_count:,} anomalies ({anomaly_pct:.1f}% of data)")
-                    
-                    # Plot anomalies
-                    fig = self.visualization_engine.plot_anomaly_detection(anomaly_results)
-                    if fig:
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Show top anomalies
-                    st.markdown("#### 📋 Top Anomalies")
-                    
-                    top_anomalies = anomaly_results.get('top_anomalies', pd.DataFrame())
-                    if len(top_anomalies) > 0:
-                        st.dataframe(top_anomalies, use_container_width=True)
-    
-    def render_risk_tab(self):
-        """Render risk analysis tab"""
-        st.markdown("## ⚠️ Risk & Opportunity Analysis")
-        
-        if st.session_state.filtered_data is None or st.session_state.analysis_results is None:
-            st.info("No data available. Please load data first.")
-            return
-        
-        # Generate strategic insights
-        insights = self.analytics_engine.generate_strategic_insights(
-            st.session_state.filtered_data,
-            st.session_state.analysis_results
-        )
-        
-        if insights:
-            st.markdown("### 💡 Strategic Insights")
-            
-            for insight in insights:
-                insight_type = insight.get('type', 'info')
-                
-                if insight_type == 'opportunity':
-                    icon = "🎯"
-                    color = "success"
-                elif insight_type == 'risk':
-                    icon = "⚠️"
-                    color = "danger"
-                elif insight_type == 'segmentation':
-                    icon = "🔬"
-                    color = "info"
-                else:
-                    icon = "💡"
-                    color = "primary"
-                
-                st.markdown(f"""
-                <div class="insight-card {color}">
-                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.5rem; margin-right: 0.5rem;">{icon}</span>
-                        <h4 style="margin: 0;">{insight['title']}</h4>
-                    </div>
-                    <p style="color: #cbd5e1; margin-bottom: 0.5rem;">{insight['description']}</p>
-                    <div style="background: rgba(255,255,255,0.1); padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;">
-                        <strong>📋 Recommended Action:</strong> {insight['action']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        
+    def prepare_map_data(self, df, year):
+        if year == 2022:
+            usd_col = 'MAT Q3 2022\nUSD MNF'
+            units_col = 'MAT Q3 2022\nUnits'
+            su_col = 'MAT Q3 2022\nStandard Units'
+        elif year == 2023:
+            usd_col = 'MAT Q3 2023\nUSD MNF'
+            units_col = 'MAT Q3 2023\nUnits'
+            su_col = 'MAT Q3 2023\nStandard Units'
+        elif year == 2024:
+            usd_col = 'MAT Q3 2024\nUSD MNF'
+            units_col = 'MAT Q3 2024\nUnits'
+            su_col = 'MAT Q3 2024\nStandard Units'
         else:
-            st.info("Run ML analyses first to generate strategic insights.")
+            return pd.DataFrame()
         
-        st.markdown("---")
+        country_data = df.groupby('Country').agg({
+            usd_col: 'sum',
+            units_col: 'sum',
+            su_col: 'sum'
+        }).reset_index()
         
-        # Risk metrics dashboard
-        st.markdown("### 📊 Risk Metrics Dashboard")
+        total_usd = country_data[usd_col].sum()
+        if total_usd > 0:
+            country_data['Global_Pay_Pct'] = (country_data[usd_col] / total_usd) * 100
+        else:
+            country_data['Global_Pay_Pct'] = 0
         
-        df = st.session_state.filtered_data
+        country_data['ISO_A3'] = country_data['Country'].apply(self.get_country_code)
+        country_data = country_data.dropna(subset=['ISO_A3'])
         
-        # Calculate various risk metrics
-        col1, col2, col3, col4 = st.columns(4)
+        return country_data
+
+# ============================================
+# ANALİTİK MOTORLARI
+# ============================================
+class AnalyticsEngine:
+    @staticmethod
+    def calculate_growth(df, start_year, end_year):
+        if start_year == 2022 and end_year == 2023:
+            start_col = 'MAT Q3 2022\nUSD MNF'
+            end_col = 'MAT Q3 2023\nUSD MNF'
+        elif start_year == 2023 and end_year == 2024:
+            start_col = 'MAT Q3 2023\nUSD MNF'
+            end_col = 'MAT Q3 2024\nUSD MNF'
+        elif start_year == 2022 and end_year == 2024:
+            start_col = 'MAT Q3 2022\nUSD MNF'
+            end_col = 'MAT Q3 2024\nUSD MNF'
+        else:
+            return 0, 0
         
-        with col1:
-            # Data quality risk
-            missing_pct = df.isna().sum().sum() / (len(df) * len(df.columns)) * 100
-            risk_level = "🟢 Low" if missing_pct < 5 else "🟡 Medium" if missing_pct < 20 else "🔴 High"
-            st.metric("Data Quality Risk", risk_level, f"{missing_pct:.1f}% missing")
+        start_total = df[start_col].sum()
+        end_total = df[end_col].sum()
         
-        with col2:
-            # Outlier risk (if anomaly detection was run)
-            if 'anomaly_detection' in st.session_state.analysis_results:
-                anomalies = st.session_state.analysis_results['anomaly_detection']
-                anomaly_pct = anomalies['anomaly_percentage']
-                risk_level = "🟢 Low" if anomaly_pct < 5 else "🟡 Medium" if anomaly_pct < 15 else "🔴 High"
-                st.metric("Anomaly Risk", risk_level, f"{anomaly_pct:.1f}% anomalies")
-            else:
-                st.metric("Anomaly Risk", "⚪ Not Analyzed", "Run anomaly detection")
+        if start_total == 0:
+            return 0, end_total
         
-        with col3:
-            # Concentration risk
-            if 'Product' in df.columns or 'product' in [col.lower() for col in df.columns]:
-                product_col = next((col for col in df.columns if 'product' in col.lower()), None)
-                if product_col:
-                    top_product_pct = (df[product_col].value_counts().iloc[0] / len(df)) * 100
-                    risk_level = "🟢 Low" if top_product_pct < 20 else "🟡 Medium" if top_product_pct < 40 else "🔴 High"
-                    st.metric("Concentration Risk", risk_level, f"Top product: {top_product_pct:.1f}%")
-                else:
-                    st.metric("Concentration Risk", "⚪ N/A", "No product column")
-            else:
-                st.metric("Concentration Risk", "⚪ N/A", "No product column")
+        growth_pct = ((end_total - start_total) / start_total) * 100
+        growth_abs = end_total - start_total
         
-        with col4:
-            # Volatility risk
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            if len(numeric_cols) > 0:
-                # Calculate average coefficient of variation
-                cv_values = []
-                for col in numeric_cols[:5]:  # First 5 numeric columns
-                    if df[col].std() > 0 and df[col].mean() > 0:
-                        cv = (df[col].std() / df[col].mean()) * 100
-                        cv_values.append(cv)
-                
-                if cv_values:
-                    avg_cv = np.mean(cv_values)
-                    risk_level = "🟢 Low" if avg_cv < 30 else "🟡 Medium" if avg_cv < 60 else "🔴 High"
-                    st.metric("Volatility Risk", risk_level, f"Avg CV: {avg_cv:.1f}%")
-                else:
-                    st.metric("Volatility Risk", "⚪ N/A", "Insufficient data")
-            else:
-                st.metric("Volatility Risk", "⚪ N/A", "No numeric columns")
+        return growth_pct, growth_abs
     
-    def render_reports_tab(self):
-        """Render reports tab"""
-        st.markdown("## 📋 Reports & Exports")
+    @staticmethod
+    def price_volume_mix_analysis(df, start_year, end_year):
+        if start_year == 2022 and end_year == 2023:
+            usd_start = 'MAT Q3 2022\nUSD MNF'
+            usd_end = 'MAT Q3 2023\nUSD MNF'
+            units_start = 'MAT Q3 2022\nUnits'
+            units_end = 'MAT Q3 2023\nUnits'
+            price_start = 'MAT Q3 2022\nUnit Avg Price USD MNF'
+            price_end = 'MAT Q3 2023\nUnit Avg Price USD MNF'
+        elif start_year == 2023 and end_year == 2024:
+            usd_start = 'MAT Q3 2023\nUSD MNF'
+            usd_end = 'MAT Q3 2024\nUSD MNF'
+            units_start = 'MAT Q3 2023\nUnits'
+            units_end = 'MAT Q3 2024\nUnits'
+            price_start = 'MAT Q3 2023\nUnit Avg Price USD MNF'
+            price_end = 'MAT Q3 2024\nUnit Avg Price USD MNF'
+        else:
+            return {}
         
-        if st.session_state.filtered_data is None or st.session_state.analysis_results is None:
-            st.info("No data available. Please load data first.")
-            return
+        total_start_usd = df[usd_start].sum()
+        total_end_usd = df[usd_end].sum()
+        total_start_units = df[units_start].sum()
+        total_end_units = df[units_end].sum()
         
-        df = st.session_state.filtered_data
-        analysis = st.session_state.analysis_results
+        if total_start_usd == 0 or total_start_units == 0:
+            return {
+                'price_effect': 0,
+                'volume_effect': 0,
+                'mix_effect': 0,
+                'total_growth': 0
+            }
         
-        # Report generation options
-        col1, col2 = st.columns(2)
+        weighted_price_start = total_start_usd / total_start_units
+        weighted_price_end = total_end_usd / total_end_units
         
-        with col1:
-            report_type = st.selectbox(
-                "Report Type:",
-                ["Executive Summary", "Detailed Analysis", "Technical Report"]
-            )
+        price_effect = (weighted_price_end - weighted_price_start) * total_start_units
+        volume_effect = weighted_price_start * (total_end_units - total_start_units)
+        mix_effect = total_end_usd - (weighted_price_start * total_end_units)
         
-        with col2:
-            include_data = st.checkbox("Include raw data", value=True)
-            include_charts = st.checkbox("Include charts", value=True)
+        total_growth = total_end_usd - total_start_usd
         
-        # Generate report
-        if st.button("📄 Generate Report", type="primary", use_container_width=True):
-            with st.spinner("Generating report..."):
-                # Map report type to template
-                report_type_map = {
-                    "Executive Summary": "summary",
-                    "Detailed Analysis": "detailed",
-                    "Technical Report": "technical"
-                }
-                
-                template = report_type_map.get(report_type, "summary")
-                report = self.reporting_system.generate_report(df, analysis, template)
-                
-                # Display report preview
-                st.markdown("### 📊 Report Preview")
-                
-                # Metadata
-                with st.expander("Report Metadata", expanded=False):
-                    st.json(report['metadata'])
-                
-                # Summary
-                st.markdown("#### Executive Summary")
-                
-                summary = report['summary']
-                
-                cols = st.columns(4)
-                with cols[0]:
-                    st.metric("Products", summary['key_metrics']['total_products'])
-                
-                with cols[1]:
-                    st.metric("Features", summary['key_metrics']['total_features'])
-                
-                with cols[2]:
-                    st.metric("Numeric Features", summary['key_metrics']['numeric_features'])
-                
-                with cols[3]:
-                    missing_pct = summary['data_quality']['missing_percentage']
-                    st.metric("Data Quality", f"{(100 - missing_pct):.1f}%")
-                
-                # Detailed analysis
-                with st.expander("Detailed Analysis", expanded=False):
-                    detailed = report['detailed_analysis']
-                    
-                    if 'statistics' in detailed:
-                        st.markdown("##### Statistics")
-                        st.write(f"**Numeric columns:** {detailed['statistics']['numeric_columns']}")
-                        st.write(f"**Categorical columns:** {detailed['statistics']['categorical_columns']}")
-                    
-                    if 'correlations' in detailed:
-                        st.markdown("##### Correlation Analysis")
-                        st.write(f"**Total correlations analyzed:** {detailed['correlations']['total_correlations']}")
-                        st.write(f"**Strong correlations:** {detailed['correlations']['strong_correlations']}")
-                
-                # Recommendations
-                st.markdown("#### 🎯 Recommendations")
-                
-                recommendations = report['recommendations']
-                for rec in recommendations:
-                    priority_color = {
-                        'High': '🔴',
-                        'Medium': '🟡',
-                        'Low': '🟢'
-                    }.get(rec['priority'], '⚪')
-                    
-                    st.markdown(f"""
-                    <div class="insight-card" style="margin-bottom: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h5 style="margin: 0;">{rec['category']}</h5>
-                            <span style="font-size: 1.2rem;">{priority_color} {rec['priority']} Priority</span>
-                        </div>
-                        <p style="margin: 0.5rem 0;"><strong>Recommendation:</strong> {rec['recommendation']}</p>
-                        <p style="margin: 0;"><strong>Action:</strong> {rec['action']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+        price_effect_pct = (price_effect / total_start_usd) * 100 if total_start_usd != 0 else 0
+        volume_effect_pct = (volume_effect / total_start_usd) * 100 if total_start_usd != 0 else 0
+        mix_effect_pct = (mix_effect / total_start_usd) * 100 if total_start_usd != 0 else 0
         
-        st.markdown("---")
+        return {
+            'price_effect': price_effect,
+            'volume_effect': volume_effect,
+            'mix_effect': mix_effect,
+            'total_growth': total_growth,
+            'price_effect_pct': price_effect_pct,
+            'volume_effect_pct': volume_effect_pct,
+            'mix_effect_pct': mix_effect_pct,
+            'weighted_price_start': weighted_price_start,
+            'weighted_price_end': weighted_price_end,
+            'unit_growth_pct': ((total_end_units - total_start_units) / total_start_units * 100) if total_start_units != 0 else 0
+        }
+    
+    @staticmethod
+    def calculate_market_share(df, year, group_by='Corporation'):
+        if year == 2022:
+            usd_col = 'MAT Q3 2022\nUSD MNF'
+        elif year == 2023:
+            usd_col = 'MAT Q3 2023\nUSD MNF'
+        elif year == 2024:
+            usd_col = 'MAT Q3 2024\nUSD MNF'
+        else:
+            return pd.DataFrame()
         
-        # Export options
-        st.markdown("### 📥 Export Options")
+        share_df = df.groupby(group_by).agg({
+            usd_col: 'sum'
+        }).reset_index()
+        
+        total_usd = share_df[usd_col].sum()
+        if total_usd > 0:
+            share_df['Market_Share_Pct'] = (share_df[usd_col] / total_usd) * 100
+        else:
+            share_df['Market_Share_Pct'] = 0
+        
+        share_df = share_df.sort_values('Market_Share_Pct', ascending=False)
+        share_df['Cumulative_Share'] = share_df['Market_Share_Pct'].cumsum()
+        
+        return share_df
+    
+    @staticmethod
+    def calculate_specialty_metrics(df):
+        metrics = {}
+        
+        for year in [2022, 2023, 2024]:
+            if year == 2022:
+                usd_col = 'MAT Q3 2022\nUSD MNF'
+            elif year == 2023:
+                usd_col = 'MAT Q3 2023\nUSD MNF'
+            else:
+                usd_col = 'MAT Q3 2024\nUSD MNF'
+            
+            specialty_total = df[df['Specialty Product'] == 'Specialty'][usd_col].sum()
+            non_specialty_total = df[df['Specialty Product'] != 'Specialty'][usd_col].sum()
+            total_usd = specialty_total + non_specialty_total
+            
+            if total_usd > 0:
+                specialty_pct = (specialty_total / total_usd) * 100
+            else:
+                specialty_pct = 0
+            
+            metrics[f'specialty_total_{year}'] = specialty_total
+            metrics[f'non_specialty_total_{year}'] = non_specialty_total
+            metrics[f'specialty_pct_{year}'] = specialty_pct
+        
+        return metrics
+
+# ============================================
+# OTOMATİK İÇGÖRÜ MOTORU
+# ============================================
+class InsightEngine:
+    def __init__(self, df):
+        self.df = df
+    
+    def generate_country_insights(self, country):
+        country_df = self.df[self.df['Country'] == country]
+        
+        if len(country_df) == 0:
+            return []
+        
+        insights = []
+        
+        # Büyüme analizi
+        growth_22_23, _ = AnalyticsEngine.calculate_growth(country_df, 2022, 2023)
+        growth_23_24, _ = AnalyticsEngine.calculate_growth(country_df, 2023, 2024)
+        growth_22_24, _ = AnalyticsEngine.calculate_growth(country_df, 2022, 2024)
+        
+        if growth_22_23 > 20:
+            insights.append(f"🇹🇷 **{country}**, 2022'den 2023'e **%{growth_22_23:.1f}** büyüme ile çok güçlü performans sergiledi.")
+        elif growth_22_23 < -10:
+            insights.append(f"⚠️ **{country}**, 2022'den 2023'e **%{growth_22_23:.1f}** küçülme yaşadı. Dikkat gerektiriyor.")
+        
+        if growth_23_24 > growth_22_23:
+            insights.append(f"📈 **{country}**, büyüme hızını artırdı: 2023-2024 (%{growth_23_24:.1f}) > 2022-2023 (%{growth_22_23:.1f})")
+        
+        # Global pay analizi
+        global_share_2024 = (country_df['MAT Q3 2024\nUSD MNF'].sum() / self.df['MAT Q3 2024\nUSD MNF'].sum() * 100)
+        
+        if global_share_2024 > 5:
+            insights.append(f"🌍 **{country}**, %{global_share_2024:.2f} global pay ile kilit pazarlardan biri.")
+        elif global_share_2024 < 0.5:
+            insights.append(f"🔍 **{country}**, sadece %{global_share_2024:.2f} global paya sahip. Büyüme potansiyeli incelenmeli.")
+        
+        # Molekül bazlı analiz
+        mol_share = country_df.groupby('Molecule').agg({
+            'MAT Q3 2024\nUSD MNF': 'sum'
+        }).reset_index()
+        mol_share['Share'] = (mol_share['MAT Q3 2024\nUSD MNF'] / mol_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
+        top_molecule = mol_share.nlargest(1, 'Share')
+        
+        if not top_molecule.empty:
+            mol_name = top_molecule.iloc[0]['Molecule']
+            mol_pct = top_molecule.iloc[0]['Share']
+            insights.append(f"💊 En büyük molekül: **{mol_name}** (%{mol_pct:.1f} pay)")
+        
+        # Fiyat-Volume ayrıştırma
+        pvm_22_23 = AnalyticsEngine.price_volume_mix_analysis(country_df, 2022, 2023)
+        price_effect_pct = pvm_22_23.get('price_effect_pct', 0)
+        
+        if price_effect_pct > 10:
+            insights.append(f"💰 Fiyat etkisi baskın: 2022-2023 büyümesinin %{price_effect_pct:.1f}'i fiyattan geldi.")
+        elif price_effect_pct < -5:
+            insights.append(f"📉 Fiyat erozyonu: 2022-2023'te fiyatlar %{abs(price_effect_pct):.1f} düştü.")
+        
+        return insights[:5]
+    
+    def generate_molecule_insights(self, molecule):
+        mol_df = self.df[self.df['Molecule'] == molecule]
+        
+        if len(mol_df) == 0:
+            return []
+        
+        insights = []
+        
+        # Global büyüme
+        growth_22_23, _ = AnalyticsEngine.calculate_growth(mol_df, 2022, 2023)
+        growth_23_24, _ = AnalyticsEngine.calculate_growth(mol_df, 2023, 2024)
+        
+        if growth_22_23 > 0 and growth_23_24 > 0:
+            insights.append(f"🚀 **{molecule}** molekülü iki yıl üst üste büyüdü: %{growth_22_23:.1f} → %{growth_23_24:.1f}")
+        
+        # Ülke dağılımı
+        country_share = mol_df.groupby('Country').agg({
+            'MAT Q3 2024\nUSD MNF': 'sum'
+        }).reset_index()
+        country_share['Share'] = (country_share['MAT Q3 2024\nUSD MNF'] / country_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
+        top_countries = country_share.nlargest(3, 'Share')
+        
+        if len(top_countries) > 0:
+            country_list = ", ".join([f"{row['Country']} (%{row['Share']:.1f})" for _, row in top_countries.iterrows()])
+            insights.append(f"📍 En büyük pazarlar: {country_list}")
+        
+        # Üretici konsantrasyonu
+        mfg_share = mol_df.groupby('Manufacturer').agg({
+            'MAT Q3 2024\nUSD MNF': 'sum'
+        }).reset_index()
+        mfg_share['Share'] = (mfg_share['MAT Q3 2024\nUSD MNF'] / mfg_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
+        top_mfg = mfg_share.nlargest(1, 'Share')
+        
+        if not top_mfg.empty:
+            mfg_name = top_mfg.iloc[0]['Manufacturer']
+            mfg_pct = top_mfg.iloc[0]['Share']
+            if mfg_pct > 50:
+                insights.append(f"🏭 **{mfg_name}**, %{mfg_pct:.1f} pay ile pazara hakim.")
+        
+        return insights[:5]
+    
+    def generate_corporation_insights(self, corporation):
+        corp_df = self.df[self.df['Corporation'] == corporation]
+        
+        if len(corp_df) == 0:
+            return []
+        
+        insights = []
+        
+        # Pazar payı trendi
+        share_2022 = (corp_df['MAT Q3 2022\nUSD MNF'].sum() / self.df['MAT Q3 2022\nUSD MNF'].sum() * 100)
+        share_2023 = (corp_df['MAT Q3 2023\nUSD MNF'].sum() / self.df['MAT Q3 2023\nUSD MNF'].sum() * 100)
+        share_2024 = (corp_df['MAT Q3 2024\nUSD MNF'].sum() / self.df['MAT Q3 2024\nUSD MNF'].sum() * 100)
+        
+        share_change_22_24 = share_2024 - share_2022
+        
+        if share_change_22_24 > 1:
+            insights.append(f"📊 **{corporation}**, pazar payını %{share_change_22_24:.2f} artırdı (2022: %{share_2022:.2f} → 2024: %{share_2024:.2f})")
+        elif share_change_22_24 < -1:
+            insights.append(f"⚠️ **{corporation}**, pazar payını %{abs(share_change_22_24):.2f} kaybetti (2022: %{share_2022:.2f} → 2024: %{share_2024:.2f})")
+        
+        # Coğrafi çeşitlilik
+        country_count = corp_df['Country'].nunique()
+        if country_count > 20:
+            insights.append(f"🌐 **{country_count} ülkede** varlık gösteriyor. Yüksek coğrafi çeşitlilik.")
+        
+        # Molekül konsantrasyonu
+        top_mol = corp_df.groupby('Molecule').agg({
+            'MAT Q3 2024\nUSD MNF': 'sum'
+        }).reset_index().nlargest(1, 'MAT Q3 2024\nUSD MNF')
+        
+        if not top_mol.empty:
+            mol_name = top_mol.iloc[0]['Molecule']
+            mol_value = top_mol.iloc[0]['MAT Q3 2024\nUSD MNF']
+            total_value = corp_df['MAT Q3 2024\nUSD MNF'].sum()
+            mol_pct = (mol_value / total_value * 100) if total_value > 0 else 0
+            
+            if mol_pct > 30:
+                insights.append(f"💡 En büyük molekül **{mol_name}**, toplamın %{mol_pct:.1f}'ini oluşturuyor.")
+        
+        return insights[:5]
+
+# ============================================
+# ANA UYGULAMA
+# ============================================
+def main():
+    st.markdown('<h1 class="main-header">💊 Pharma Commercial Analytics Suite</h1>', unsafe_allow_html=True)
+    st.markdown("### Üç Yıllık Zincir Analiz ve Global Ticari İstihbarat Platformu")
+    
+    # Veri yükleme
+    uploaded_file = st.file_uploader("📂 Excel dosyasını yükleyin (.xlsx formatında)", type=["xlsx"])
+    
+    if not uploaded_file:
+        st.warning("🔍 Lütfen analiz için Excel dosyasını yükleyin.")
+        st.stop()
+    
+    # Veri yükleme ve validasyon
+    with st.spinner("📊 Veri yükleniyor ve doğrulanıyor..."):
+        df = load_and_validate_data(uploaded_file)
+    
+    st.success(f"✅ Veri başarıyla yüklendi: {len(df)} satır, {len(df.columns)} sütun")
+    
+    # Global filtreleri başlat
+    filters = GlobalFilters(df)
+    filtered_df = filters.apply_filters(df)
+    
+    st.sidebar.info(f"🔍 {len(filtered_df):,} satır filtrelendi")
+    
+    # Analytics Engine
+    analytics = AnalyticsEngine()
+    insight_engine = InsightEngine(filtered_df)
+    map_handler = WorldMapHandler()
+    
+    # Sekmeler
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+        "📊 Yönetici Özeti",
+        "🌍 Global Harita Analizi",
+        "🇹🇷 Ülke Derinlemesine",
+        "💊 Molekül & Ürün",
+        "🏢 Corporation & Rekabet",
+        "⭐ Specialty vs Non-Specialty",
+        "📈 Fiyat – Volume – Mix",
+        "🤖 Otomatik İçgörü Motoru"
+    ])
+    
+    # ============================================
+    # TAB 1: Yönetici Özeti
+    # ============================================
+    with tab1:
+        st.markdown('<h2 class="sub-header">📊 Yönetici Özeti</h2>', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("📊 Excel Export", use_container_width=True):
-                self.reporting_system.export_to_excel(df, analysis, {})
+            total_2022 = filtered_df['MAT Q3 2022\nUSD MNF'].sum()
+            total_2023 = filtered_df['MAT Q3 2023\nUSD MNF'].sum()
+            total_2024 = filtered_df['MAT Q3 2024\nUSD MNF'].sum()
+            
+            growth_22_23, abs_22_23 = analytics.calculate_growth(filtered_df, 2022, 2023)
+            growth_23_24, abs_23_24 = analytics.calculate_growth(filtered_df, 2023, 2024)
+            
+            st.markdown(f'''
+            <div class="metric-card">
+                <h3>🌍 Global USD MNF</h3>
+                <p style="font-size: 2rem; font-weight: 800; color: #1E3A8A;">${total_2024:,.0f}M</p>
+                <p>2022: ${total_2022:,.0f}M</p>
+                <p>2023: ${total_2023:,.0f}M</p>
+                <p style="color: {'#10B981' if growth_23_24 > 0 else '#DC2626'}; font-weight: 600;">
+                    2023→2024: {'+' if growth_23_24 >= 0 else ''}{growth_23_24:.1f}%
+                </p>
+            </div>
+            ''', unsafe_allow_html=True)
         
         with col2:
-            # CSV export
-            csv = df.to_csv(index=False)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            st.download_button(
-                label="📋 CSV Export",
-                data=csv,
-                file_name=f"pharma_data_{timestamp}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+            units_2024 = filtered_df['MAT Q3 2024\nUnits'].sum()
+            su_2024 = filtered_df['MAT Q3 2024\nStandard Units'].sum()
+            
+            units_growth = ((filtered_df['MAT Q3 2024\nUnits'].sum() - filtered_df['MAT Q3 2023\nUnits'].sum()) / 
+                           filtered_df['MAT Q3 2023\nUnits'].sum() * 100) if filtered_df['MAT Q3 2023\nUnits'].sum() > 0 else 0
+            
+            st.markdown(f'''
+            <div class="metric-card">
+                <h3>📦 Volume Metrikleri</h3>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #1E3A8A;">{units_2024:,.0f}</p>
+                <p>Units (2024)</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #1E3A8A;">{su_2024:,.0f}</p>
+                <p>Standard Units (2024)</p>
+                <p style="color: {'#10B981' if units_growth > 0 else '#DC2626'}; font-weight: 600;">
+                    Units Büyüme: {'+' if units_growth >= 0 else ''}{units_growth:.1f}%
+                </p>
+            </div>
+            ''', unsafe_allow_html=True)
         
         with col3:
-            # JSON export
-            json_data = df.head(1000).to_json(orient='records', indent=2)  # Limit to 1000 rows
-            st.download_button(
-                label="📄 JSON Export",
-                data=json_data,
-                file_name=f"pharma_data_{timestamp}.json",
-                mime="application/json",
-                use_container_width=True
+            top_countries = filtered_df.groupby('Country').agg({
+                'MAT Q3 2024\nUSD MNF': 'sum'
+            }).reset_index().nlargest(3, 'MAT Q3 2024\nUSD MNF')
+            
+            country_list = ""
+            for idx, row in top_countries.iterrows():
+                share = (row['MAT Q3 2024\nUSD MNF'] / total_2024 * 100) if total_2024 > 0 else 0
+                country_list += f"• {row['Country']}: %{share:.1f}<br>"
+            
+            st.markdown(f'''
+            <div class="metric-card">
+                <h3>🏆 Top 3 Ülke</h3>
+                <div style="font-size: 1.1rem;">
+                    {country_list}
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        # Detaylı analiz
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("##### 📈 Üç Yıllık Trend")
+            
+            trend_data = pd.DataFrame({
+                'Yıl': [2022, 2023, 2024],
+                'USD MNF': [total_2022, total_2023, total_2024],
+                'Units': [
+                    filtered_df['MAT Q3 2022\nUnits'].sum(),
+                    filtered_df['MAT Q3 2023\nUnits'].sum(),
+                    filtered_df['MAT Q3 2024\nUnits'].sum()
+                ]
+            })
+            
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            
+            fig.add_trace(
+                go.Bar(x=trend_data['Yıl'], y=trend_data['USD MNF'],
+                      name='USD MNF', marker_color='#3B82F6'),
+                secondary_y=False,
             )
+            
+            fig.add_trace(
+                go.Scatter(x=trend_data['Yıl'], y=trend_data['Units'],
+                          name='Units', mode='lines+markers',
+                          line=dict(color='#10B981', width=3)),
+                secondary_y=True,
+            )
+            
+            fig.update_layout(
+                title="USD MNF ve Units Trendi (2022-2024)",
+                height=400,
+                showlegend=True,
+                template="plotly_white"
+            )
+            
+            fig.update_yaxes(title_text="USD MNF", secondary_y=False)
+            fig.update_yaxes(title_text="Units", secondary_y=True)
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.markdown("##### 📊 Büyüme Zinciri")
+            
+            growth_data = pd.DataFrame({
+                'Dönem': ['2022→2023', '2023→2024'],
+                'Büyüme (%)': [growth_22_23, growth_23_24],
+                'Mutlak Büyüme ($M)': [abs_22_23, abs_23_24]
+            })
+            
+            fig = go.Figure(data=[
+                go.Bar(name='Büyüme %', x=growth_data['Dönem'], y=growth_data['Büyüme (%)'],
+                      marker_color=['#60A5FA', '#3B82F6']),
+                go.Scatter(name='Mutlak Büyüme', x=growth_data['Dönem'], y=growth_data['Mutlak Büyüme ($M)'],
+                          mode='lines+markers', line=dict(color='#EF4444', width=3),
+                          yaxis='y2')
+            ])
+            
+            fig.update_layout(
+                title="Zincir Büyüme Analizi",
+                height=400,
+                yaxis=dict(title="Büyüme (%)"),
+                yaxis2=dict(title="Mutlak Büyüme ($M)", overlaying='y', side='right'),
+                template="plotly_white"
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Otomatik içgörüler
+        st.markdown("---")
+        st.markdown("##### 🧠 Otomatik İçgörüler")
+        
+        # Global içgörüler
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if growth_22_23 > 0 and growth_23_24 > 0:
+                st.markdown('<div class="insight-card">✅ İki yıl üst üste pozitif büyüme</div>', unsafe_allow_html=True)
+            elif growth_23_24 < 0:
+                st.markdown(f'<div class="warning-card">⚠️ Son dönem küçülme: %{growth_23_24:.1f}</div>', unsafe_allow_html=True)
+        
+        with col2:
+            avg_price_2024 = total_2024 / filtered_df['MAT Q3 2024\nUnits'].sum() if filtered_df['MAT Q3 2024\nUnits'].sum() > 0 else 0
+            avg_price_2023 = total_2023 / filtered_df['MAT Q3 2023\nUnits'].sum() if filtered_df['MAT Q3 2023\nUnits'].sum() > 0 else 0
+            
+            price_change = ((avg_price_2024 - avg_price_2023) / avg_price_2023 * 100) if avg_price_2023 > 0 else 0
+            
+            if price_change > 5:
+                st.markdown(f'<div class="insight-card">💰 Ortalama fiyat %{price_change:.1f} arttı</div>', unsafe_allow_html=True)
+            elif price_change < -5:
+                st.markdown(f'<div class="warning-card">📉 Ortalama fiyat %{abs(price_change):.1f} düştü</div>', unsafe_allow_html=True)
+        
+        with col3:
+            country_concentration = (top_countries['MAT Q3 2024\nUSD MNF'].sum() / total_2024 * 100) if total_2024 > 0 else 0
+            
+            if country_concentration > 60:
+                st.markdown(f'<div class="warning-card">🌍 Yüksek konsantrasyon: Top 3 ülke %{country_concentration:.1f} pay</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="insight-card">🌐 Sağlıklı dağılım: Top 3 ülke %{country_concentration:.1f} pay</div>', unsafe_allow_html=True)
     
-    def handle_error(self, error):
-        """Handle application errors"""
-        st.error("### 🚨 Application Error")
-        st.error(f"**Error:** {str(error)}")
+    # ============================================
+    # TAB 2: Global Harita Analizi
+    # ============================================
+    with tab2:
+        st.markdown('<h2 class="sub-header">🌍 Global Harita Analizi</h2>', unsafe_allow_html=True)
         
-        with st.expander("Error Details", expanded=False):
-            st.code(traceback.format_exc())
+        map_tab1, map_tab2, map_tab3 = st.tabs([
+            "🗺️ USD MNF Dağılımı",
+            "📊 Global Pay (%)",
+            "📈 Büyüme Analizi"
+        ])
         
-        if st.button("🔄 Restart Application", type="primary"):
-            # Clear session state
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+        with map_tab1:
+            year_select = st.selectbox("Harita Yılı", [2024, 2023, 2022], key="map_usd_year")
+            
+            map_data = map_handler.prepare_map_data(filtered_df, year_select)
+            
+            if not map_data.empty and map_handler.world is not None:
+                merged_data = map_handler.world.merge(map_data, how='left', left_on='iso_a3', right_on='ISO_A3')
+                
+                fig = px.choropleth(
+                    merged_data,
+                    geojson=merged_data.geometry,
+                    locations=merged_data.index,
+                    color=f'MAT Q3 {year_select}\nUSD MNF',
+                    hover_name='name',
+                    hover_data={
+                        f'MAT Q3 {year_select}\nUSD MNF': ':.2f',
+                        f'MAT Q3 {year_select}\nUnits': True,
+                        f'MAT Q3 {year_select}\nStandard Units': True,
+                        'Global_Pay_Pct': ':.2f%'
+                    },
+                    color_continuous_scale="Viridis",
+                    labels={f'MAT Q3 {year_select}\nUSD MNF': f'USD MNF ({year_select})'},
+                    title=f"Dünya Haritası - USD MNF Dağılımı ({year_select})"
+                )
+                
+                fig.update_geos(fitbounds="locations", visible=False)
+                fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Ülke sıralaması
+                st.markdown("##### 🏆 Ülke Sıralaması")
+                top_countries_map = map_data.nlargest(10, f'MAT Q3 {year_select}\nUSD MNF')
+                
+                fig_bar = go.Figure(data=[
+                    go.Bar(x=top_countries_map['Country'],
+                          y=top_countries_map[f'MAT Q3 {year_select}\nUSD MNF'],
+                          marker_color='#3B82F6',
+                          text=top_countries_map[f'MAT Q3 {year_select}\nUSD MNF'].apply(lambda x: f'${x:,.0f}M'),
+                          textposition='auto')
+                ])
+                
+                fig_bar.update_layout(
+                    title=f"Top 10 Ülke - USD MNF ({year_select})",
+                    height=400,
+                    xaxis_tickangle=-45
+                )
+                
+                st.plotly_chart(fig_bar, use_container_width=True)
+            else:
+                st.warning("Harita verisi bulunamadı veya ülke kodları eşleştirilemedi.")
+        
+        with map_tab2:
+            year_select_share = st.selectbox("Harita Yılı", [2024, 2023, 2022], key="map_share_year")
+            
+            share_data = map_handler.prepare_map_data(filtered_df, year_select_share)
+            
+            if not share_data.empty and map_handler.world is not None:
+                merged_share = map_handler.world.merge(share_data, how='left', left_on='iso_a3', right_on='ISO_A3')
+                
+                fig = px.choropleth(
+                    merged_share,
+                    geojson=merged_share.geometry,
+                    locations=merged_share.index,
+                    color='Global_Pay_Pct',
+                    hover_name='name',
+                    hover_data={
+                        f'MAT Q3 {year_select_share}\nUSD MNF': ':.2f',
+                        'Global_Pay_Pct': ':.2f%'
+                    },
+                    color_continuous_scale="Plasma",
+                    labels={'Global_Pay_Pct': 'Global Pay (%)'},
+                    title=f"Dünya Haritası - Global Pay Dağılımı ({year_select_share})"
+                )
+                
+                fig.update_geos(fitbounds="locations", visible=False)
+                fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Pay değişimi analizi
+                st.markdown("##### 📊 Global Pay Değişimi (2022 → 2024)")
+                
+                share_2022 = map_handler.prepare_map_data(filtered_df, 2022)
+                share_2024 = map_handler.prepare_map_data(filtered_df, 2024)
+                
+                if not share_2022.empty and not share_2024.empty:
+                    share_comparison = pd.merge(
+                        share_2022[['Country', 'Global_Pay_Pct']],
+                        share_2024[['Country', 'Global_Pay_Pct']],
+                        on='Country',
+                        suffixes=('_2022', '_2024')
+                    )
+                    
+                    share_comparison['Change'] = share_comparison['Global_Pay_Pct_2024'] - share_comparison['Global_Pay_Pct_2022']
+                    top_gainers = share_comparison.nlargest(5, 'Change')
+                    top_losers = share_comparison.nsmallest(5, 'Change')
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**⬆️ En Çok Kazananlar**")
+                        for _, row in top_gainers.iterrows():
+                            st.write(f"{row['Country']}: +{row['Change']:.2f}%")
+                    
+                    with col2:
+                        st.markdown("**⬇️ En Çok Kaybedenler**")
+                        for _, row in top_losers.iterrows():
+                            st.write(f"{row['Country']}: {row['Change']:.2f}%")
+        
+        with map_tab3:
+            growth_type = st.radio("Büyüme Dönemi", ["2022 → 2023", "2023 → 2024"], horizontal=True)
+            
+            if growth_type == "2022 → 2023":
+                start_year, end_year = 2022, 2023
+            else:
+                start_year, end_year = 2023, 2024
+            
+            # Ülke bazlı büyüme hesapla
+            country_growth = []
+            
+            for country in filtered_df['Country'].unique():
+                country_df = filtered_df[filtered_df['Country'] == country]
+                growth_pct, _ = analytics.calculate_growth(country_df, start_year, end_year)
+                country_growth.append({
+                    'Country': country,
+                    'Growth_Pct': growth_pct
+                })
+            
+            growth_df = pd.DataFrame(country_growth)
+            
+            if not growth_df.empty and map_handler.world is not None:
+                growth_df['ISO_A3'] = growth_df['Country'].apply(map_handler.get_country_code)
+                growth_df = growth_df.dropna(subset=['ISO_A3'])
+                
+                merged_growth = map_handler.world.merge(growth_df, how='left', left_on='iso_a3', right_on='ISO_A3')
+                
+                # Büyüme kategorileri
+                def growth_category(x):
+                    if pd.isna(x):
+                        return 'Veri Yok'
+                    elif x > 20:
+                        return 'Çok Yüksek Büyüme (>20%)'
+                    elif x > 10:
+                        return 'Yüksek Büyüme (10-20%)'
+                    elif x > 0:
+                        return 'Orta Büyüme (0-10%)'
+                    elif x > -10:
+                        return 'Hafif Düşüş (0- -10%)'
+                    else:
+                        return 'Keskin Düşüş (<-10%)'
+                
+                merged_growth['Growth_Category'] = merged_growth['Growth_Pct'].apply(growth_category)
+                
+                color_discrete_map = {
+                    'Çok Yüksek Büyüme (>20%)': '#10B981',
+                    'Yüksek Büyüme (10-20%)': '#34D399',
+                    'Orta Büyüme (0-10%)': '#60A5FA',
+                    'Hafif Düşüş (0- -10%)': '#FBBF24',
+                    'Keskin Düşüş (<-10%)': '#DC2626',
+                    'Veri Yok': '#9CA3AF'
+                }
+                
+                fig = px.choropleth(
+                    merged_growth,
+                    geojson=merged_growth.geometry,
+                    locations=merged_growth.index,
+                    color='Growth_Category',
+                    hover_name='name',
+                    hover_data={
+                        'Growth_Pct': ':.1f%',
+                        'Country': True
+                    },
+                    color_discrete_map=color_discrete_map,
+                    category_orders={
+                        'Growth_Category': [
+                            'Çok Yüksek Büyüme (>20%)',
+                            'Yüksek Büyüme (10-20%)',
+                            'Orta Büyüme (0-10%)',
+                            'Hafif Düşüş (0- -10%)',
+                            'Keskin Düşüş (<-10%)',
+                            'Veri Yok'
+                        ]
+                    },
+                    title=f"Dünya Haritası - Büyüme Oranları ({start_year} → {end_year})"
+                )
+                
+                fig.update_geos(fitbounds="locations", visible=False)
+                fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Büyüme istatistikleri
+                st.markdown("##### 📈 Büyüme Dağılımı")
+                
+                growth_stats = growth_df['Growth_Pct'].describe()
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Ortalama Büyüme", f"{growth_stats['mean']:.1f}%")
+                with col2:
+                    st.metric("Medyan Büyüme", f"{growth_stats['50%']:.1f}%")
+                with col3:
+                    st.metric("Maksimum", f"{growth_stats['max']:.1f}%")
+                with col4:
+                    st.metric("Minimum", f"{growth_stats['min']:.1f}%")
+    
+    # ============================================
+    # TAB 3: Ülke Derinlemesine
+    # ============================================
+    with tab3:
+        st.markdown('<h2 class="sub-header">🇹🇷 Ülke Derinlemesine Analiz</h2>', unsafe_allow_html=True)
+        
+        available_countries = sorted(filtered_df['Country'].unique())
+        selected_country = st.selectbox("Analiz Edilecek Ülke Seçin", available_countries)
+        
+        if selected_country:
+            country_df = filtered_df[filtered_df['Country'] == selected_country]
+            
+            if len(country_df) > 0:
+                # Özet metrikler
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    usd_2024 = country_df['MAT Q3 2024\nUSD MNF'].sum()
+                    st.metric("2024 USD MNF", f"${usd_2024:,.0f}M")
+                
+                with col2:
+                    global_share = (usd_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
+                    st.metric("Global Pay", f"{global_share:.2f}%")
+                
+                with col3:
+                    growth_22_23, _ = analytics.calculate_growth(country_df, 2022, 2023)
+                    st.metric("2022→2023 Büyüme", f"{growth_22_23:.1f}%")
+                
+                with col4:
+                    growth_23_24, _ = analytics.calculate_growth(country_df, 2023, 2024)
+                    st.metric("2023→2024 Büyüme", f"{growth_23_24:.1f}%")
+                
+                st.markdown("---")
+                
+                # Trend analizi
+                st.markdown("##### 📈 Üç Yıllık Trend")
+                
+                trend_country = pd.DataFrame({
+                    'Yıl': [2022, 2023, 2024],
+                    'USD MNF': [
+                        country_df['MAT Q3 2022\nUSD MNF'].sum(),
+                        country_df['MAT Q3 2023\nUSD MNF'].sum(),
+                        country_df['MAT Q3 2024\nUSD MNF'].sum()
+                    ],
+                    'Units': [
+                        country_df['MAT Q3 2022\nUnits'].sum(),
+                        country_df['MAT Q3 2023\nUnits'].sum(),
+                        country_df['MAT Q3 2024\nUnits'].sum()
+                    ],
+                    'Standard Units': [
+                        country_df['MAT Q3 2022\nStandard Units'].sum(),
+                        country_df['MAT Q3 2023\nStandard Units'].sum(),
+                        country_df['MAT Q3 2024\nStandard Units'].sum()
+                    ]
+                })
+                
+                fig = make_subplots(rows=2, cols=2, subplot_titles=("USD MNF Trendi", "Units Trendi", "Standard Units Trendi", "Büyüme Zinciri"))
+                
+                # USD MNF
+                fig.add_trace(
+                    go.Bar(x=trend_country['Yıl'], y=trend_country['USD MNF'],
+                          name='USD MNF', marker_color='#3B82F6'),
+                    row=1, col=1
+                )
+                
+                # Units
+                fig.add_trace(
+                    go.Bar(x=trend_country['Yıl'], y=trend_country['Units'],
+                          name='Units', marker_color='#10B981'),
+                    row=1, col=2
+                )
+                
+                # Standard Units
+                fig.add_trace(
+                    go.Bar(x=trend_country['Yıl'], y=trend_country['Standard Units'],
+                          name='Standard Units', marker_color='#F59E0B'),
+                    row=2, col=1
+                )
+                
+                # Büyüme zinciri
+                growth_values = [
+                    ((trend_country.loc[1, 'USD MNF'] - trend_country.loc[0, 'USD MNF']) / trend_country.loc[0, 'USD MNF'] * 100) if trend_country.loc[0, 'USD MNF'] > 0 else 0,
+                    ((trend_country.loc[2, 'USD MNF'] - trend_country.loc[1, 'USD MNF']) / trend_country.loc[1, 'USD MNF'] * 100) if trend_country.loc[1, 'USD MNF'] > 0 else 0
+                ]
+                
+                fig.add_trace(
+                    go.Scatter(x=['2022→2023', '2023→2024'], y=growth_values,
+                              mode='lines+markers', name='Büyüme %',
+                              line=dict(color='#EF4444', width=3)),
+                    row=2, col=2
+                )
+                
+                fig.update_layout(height=600, showlegend=False, template="plotly_white")
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Price-Volume-Mix analizi
+                st.markdown("---")
+                st.markdown("##### 📊 Price-Volume-Mix Ayrıştırması")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**2022 → 2023**")
+                    pvm_22_23 = analytics.price_volume_mix_analysis(country_df, 2022, 2023)
+                    
+                    if pvm_22_23:
+                        fig_pvm1 = go.Figure(data=[
+                            go.Bar(name='Fiyat Etkisi', x=['Fiyat'], y=[pvm_22_23['price_effect_pct']],
+                                  marker_color='#3B82F6'),
+                            go.Bar(name='Volume Etkisi', x=['Volume'], y=[pvm_22_23['volume_effect_pct']],
+                                  marker_color='#10B981'),
+                            go.Bar(name='Mix Etkisi', x=['Mix'], y=[pvm_22_23['mix_effect_pct']],
+                                  marker_color='#F59E0B')
+                        ])
+                        
+                        fig_pvm1.update_layout(
+                            title="Ayrıştırma Katkıları (%)",
+                            yaxis_title="Katkı (%)",
+                            barmode='group',
+                            height=400
+                        )
+                        
+                        st.plotly_chart(fig_pvm1, use_container_width=True)
+                        
+                        # Detaylı bilgiler
+                        st.write(f"**Toplam Büyüme:** %{((pvm_22_23['total_growth'] / country_df['MAT Q3 2022\nUSD MNF'].sum()) * 100) if country_df['MAT Q3 2022\nUSD MNF'].sum() > 0 else 0:.1f}")
+                        st.write(f"**Ortalama Fiyat Değişimi:** %{((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / pvm_22_23['weighted_price_start'] * 100) if pvm_22_23['weighted_price_start'] > 0 else 0:.1f}")
+                        st.write(f"**Volume Büyümesi:** %{pvm_22_23['unit_growth_pct']:.1f}")
+                
+                with col2:
+                    st.markdown("**2023 → 2024**")
+                    pvm_23_24 = analytics.price_volume_mix_analysis(country_df, 2023, 2024)
+                    
+                    if pvm_23_24:
+                        fig_pvm2 = go.Figure(data=[
+                            go.Bar(name='Fiyat Etkisi', x=['Fiyat'], y=[pvm_23_24['price_effect_pct']],
+                                  marker_color='#3B82F6'),
+                            go.Bar(name='Volume Etkisi', x=['Volume'], y=[pvm_23_24['volume_effect_pct']],
+                                  marker_color='#10B981'),
+                            go.Bar(name='Mix Etkisi', x=['Mix'], y=[pvm_23_24['mix_effect_pct']],
+                                  marker_color='#F59E0B')
+                        ])
+                        
+                        fig_pvm2.update_layout(
+                            title="Ayrıştırma Katkıları (%)",
+                            yaxis_title="Katkı (%)",
+                            barmode='group',
+                            height=400
+                        )
+                        
+                        st.plotly_chart(fig_pvm2, use_container_width=True)
+                        
+                        # Detaylı bilgiler
+                        st.write(f"**Toplam Büyüme:** %{((pvm_23_24['total_growth'] / country_df['MAT Q3 2023\nUSD MNF'].sum()) * 100) if country_df['MAT Q3 2023\nUSD MNF'].sum() > 0 else 0:.1f}")
+                        st.write(f"**Ortalama Fiyat Değişimi:** %{((pvm_23_24['weighted_price_end'] - pvm_23_24['weighted_price_start']) / pvm_23_24['weighted_price_start'] * 100) if pvm_23_24['weighted_price_start'] > 0 else 0:.1f}")
+                        st.write(f"**Volume Büyümesi:** %{pvm_23_24['unit_growth_pct']:.1f}")
+                
+                # Molekül analizi
+                st.markdown("---")
+                st.markdown("##### 💊 Molekül Bazlı Analiz")
+                
+                mol_analysis = country_df.groupby('Molecule').agg({
+                    'MAT Q3 2024\nUSD MNF': 'sum',
+                    'MAT Q3 2023\nUSD MNF': 'sum',
+                    'MAT Q3 2022\nUSD MNF': 'sum'
+                }).reset_index()
+                
+                mol_analysis['Share_2024'] = (mol_analysis['MAT Q3 2024\nUSD MNF'] / mol_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
+                mol_analysis = mol_analysis.sort_values('Share_2024', ascending=False).head(10)
+                
+                fig_mol = go.Figure()
+                
+                fig_mol.add_trace(go.Bar(
+                    x=mol_analysis['Molecule'],
+                    y=mol_analysis['MAT Q3 2024\nUSD MNF'],
+                    name='2024',
+                    marker_color='#3B82F6'
+                ))
+                
+                fig_mol.add_trace(go.Bar(
+                    x=mol_analysis['Molecule'],
+                    y=mol_analysis['MAT Q3 2023\nUSD MNF'],
+                    name='2023',
+                    marker_color='#60A5FA'
+                ))
+                
+                fig_mol.add_trace(go.Bar(
+                    x=mol_analysis['Molecule'],
+                    y=mol_analysis['MAT Q3 2022\nUSD MNF'],
+                    name='2022',
+                    marker_color='#93C5FD'
+                ))
+                
+                fig_mol.update_layout(
+                    title="Top 10 Molekül - Üç Yıllık Karşılaştırma",
+                    barmode='group',
+                    height=500,
+                    xaxis_tickangle=-45,
+                    yaxis_title="USD MNF"
+                )
+                
+                st.plotly_chart(fig_mol, use_container_width=True)
+                
+                # Üretici analizi
+                st.markdown("##### 🏭 Üretici Dağılımı")
+                
+                mfg_analysis = country_df.groupby('Manufacturer').agg({
+                    'MAT Q3 2024\nUSD MNF': 'sum'
+                }).reset_index()
+                
+                mfg_analysis['Share'] = (mfg_analysis['MAT Q3 2024\nUSD MNF'] / mfg_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
+                mfg_analysis = mfg_analysis.sort_values('Share', ascending=False)
+                
+                fig_mfg = px.pie(
+                    mfg_analysis.head(8),
+                    values='MAT Q3 2024\nUSD MNF',
+                    names='Manufacturer',
+                    title="Üretici Pay Dağılımı (2024)",
+                    hole=0.4
+                )
+                
+                fig_mfg.update_traces(textposition='inside', textinfo='percent+label')
+                fig_mfg.update_layout(height=500)
+                
+                st.plotly_chart(fig_mfg, use_container_width=True)
+    
+    # ============================================
+    # TAB 4: Molekül & Ürün
+    # ============================================
+    with tab4:
+        st.markdown('<h2 class="sub-header">💊 Molekül & Ürün Analizi</h2>', unsafe_allow_html=True)
+        
+        mol_tab1, mol_tab2, mol_tab3 = st.tabs([
+            "📊 Molekül Performansı",
+            "🌍 Coğrafi Dağılım",
+            "📈 Trend Analizi"
+        ])
+        
+        with mol_tab1:
+            # Molekül seçimi
+            available_molecules = sorted(filtered_df['Molecule'].unique())
+            selected_molecules = st.multiselect(
+                "Analiz Edilecek Moleküller (Çoklu Seçim)",
+                options=available_molecules,
+                default=available_molecules[:3] if len(available_molecules) >= 3 else available_molecules
+            )
+            
+            if selected_molecules:
+                # Performans özeti
+                st.markdown("##### 📈 Performans Özeti")
+                
+                perf_data = []
+                
+                for molecule in selected_molecules:
+                    mol_df = filtered_df[filtered_df['Molecule'] == molecule]
+                    
+                    if len(mol_df) > 0:
+                        usd_2022 = mol_df['MAT Q3 2022\nUSD MNF'].sum()
+                        usd_2023 = mol_df['MAT Q3 2023\nUSD MNF'].sum()
+                        usd_2024 = mol_df['MAT Q3 2024\nUSD MNF'].sum()
+                        
+                        growth_22_23 = ((usd_2023 - usd_2022) / usd_2022 * 100) if usd_2022 > 0 else 0
+                        growth_23_24 = ((usd_2024 - usd_2023) / usd_2023 * 100) if usd_2023 > 0 else 0
+                        
+                        global_share_2024 = (usd_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
+                        
+                        perf_data.append({
+                            'Molecule': molecule,
+                            'USD_2022': usd_2022,
+                            'USD_2023': usd_2023,
+                            'USD_2024': usd_2024,
+                            'Growth_22_23': growth_22_23,
+                            'Growth_23_24': growth_23_24,
+                            'Global_Share_2024': global_share_2024
+                        })
+                
+                if perf_data:
+                    perf_df = pd.DataFrame(perf_data)
+                    
+                    # Metrikler
+                    cols = st.columns(len(selected_molecules))
+                    
+                    for idx, molecule in enumerate(selected_molecules):
+                        with cols[idx]:
+                            mol_row = perf_df[perf_df['Molecule'] == molecule].iloc[0]
+                            st.metric(
+                                molecule,
+                                f"${mol_row['USD_2024']:,.0f}M",
+                                f"{mol_row['Growth_23_24']:.1f}%"
+                            )
+                    
+                    # Detaylı tablo
+                    st.markdown("##### 📋 Detaylı Performans Tablosu")
+                    
+                    display_df = perf_df.copy()
+                    display_df['USD_2022'] = display_df['USD_2022'].apply(lambda x: f"${x:,.0f}M")
+                    display_df['USD_2023'] = display_df['USD_2023'].apply(lambda x: f"${x:,.0f}M")
+                    display_df['USD_2024'] = display_df['USD_2024'].apply(lambda x: f"${x:,.0f}M")
+                    display_df['Growth_22_23'] = display_df['Growth_22_23'].apply(lambda x: f"{x:.1f}%")
+                    display_df['Growth_23_24'] = display_df['Growth_23_24'].apply(lambda x: f"{x:.1f}%")
+                    display_df['Global_Share_2024'] = display_df['Global_Share_2024'].apply(lambda x: f"{x:.2f}%")
+                    
+                    st.dataframe(display_df, use_container_width=True)
+                    
+                    # Trend grafiği
+                    st.markdown("##### 📊 Üç Yıllık Trend")
+                    
+                    trend_mol = pd.melt(
+                        perf_df[['Molecule', 'USD_2022', 'USD_2023', 'USD_2024']],
+                        id_vars=['Molecule'],
+                        value_vars=['USD_2022', 'USD_2023', 'USD_2024'],
+                        var_name='Year',
+                        value_name='USD_MNF'
+                    )
+                    
+                    trend_mol['Year'] = trend_mol['Year'].str.replace('USD_', '')
+                    
+                    fig = px.line(
+                        trend_mol,
+                        x='Year',
+                        y='USD_MNF',
+                        color='Molecule',
+                        markers=True,
+                        title="Moleküller - Üç Yıllık Trend"
+                    )
+                    
+                    fig.update_layout(height=500, yaxis_title="USD MNF")
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Büyüme karşılaştırması
+                    st.markdown("##### ⚡ Büyüme Karşılaştırması")
+                    
+                    growth_comparison = perf_df[['Molecule', 'Growth_22_23', 'Growth_23_24']].copy()
+                    growth_comparison['Growth_22_24'] = growth_comparison.apply(
+                        lambda row: ((row['Growth_22_23']/100 + 1) * (row['Growth_23_24']/100 + 1) - 1) * 100,
+                        axis=1
+                    )
+                    
+                    fig_growth = go.Figure()
+                    
+                    for molecule in growth_comparison['Molecule']:
+                        row = growth_comparison[growth_comparison['Molecule'] == molecule].iloc[0]
+                        fig_growth.add_trace(go.Scatter(
+                            x=['2022→2023', '2023→2024', '2022→2024'],
+                            y=[row['Growth_22_23'], row['Growth_23_24'], row['Growth_22_24']],
+                            mode='lines+markers',
+                            name=molecule
+                        ))
+                    
+                    fig_growth.update_layout(
+                        title="Büyüme Oranları Karşılaştırması",
+                        height=500,
+                        yaxis_title="Büyüme (%)",
+                        xaxis_title="Dönem"
+                    )
+                    
+                    st.plotly_chart(fig_growth, use_container_width=True)
+        
+        with mol_tab2:
+            # Molekül seçimi
+            mol_for_map = st.selectbox(
+                "Haritalandırılacak Molekül",
+                options=sorted(filtered_df['Molecule'].unique())
+            )
+            
+            if mol_for_map:
+                mol_map_df = filtered_df[filtered_df['Molecule'] == mol_for_map]
+                
+                if not mol_map_df.empty:
+                    # Coğrafi dağılım
+                    country_dist = mol_map_df.groupby('Country').agg({
+                        'MAT Q3 2024\nUSD MNF': 'sum',
+                        'MAT Q3 2023\nUSD MNF': 'sum',
+                        'MAT Q3 2022\nUSD MNF': 'sum'
+                    }).reset_index()
+                    
+                    total_mol_2024 = country_dist['MAT Q3 2024\nUSD MNF'].sum()
+                    country_dist['Share_2024'] = (country_dist['MAT Q3 2024\nUSD MNF'] / total_mol_2024 * 100) if total_mol_2024 > 0 else 0
+                    
+                    # Harita hazırlığı
+                    country_dist['ISO_A3'] = country_dist['Country'].apply(map_handler.get_country_code)
+                    country_dist = country_dist.dropna(subset=['ISO_A3'])
+                    
+                    if not country_dist.empty and map_handler.world is not None:
+                        merged_mol = map_handler.world.merge(country_dist, how='left', left_on='iso_a3', right_on='ISO_A3')
+                        
+                        fig = px.choropleth(
+                            merged_mol,
+                            geojson=merged_mol.geometry,
+                            locations=merged_mol.index,
+                            color='MAT Q3 2024\nUSD MNF',
+                            hover_name='name',
+                            hover_data={
+                                'MAT Q3 2024\nUSD MNF': ':.2f',
+                                'Share_2024': ':.2f%',
+                                'MAT Q3 2023\nUSD MNF': ':.2f',
+                                'MAT Q3 2022\nUSD MNF': ':.2f'
+                            },
+                            color_continuous_scale="Viridis",
+                            title=f"{mol_for_map} - Coğrafi Dağılım (2024)"
+                        )
+                        
+                        fig.update_geos(fitbounds="locations", visible=False)
+                        fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Ülke sıralaması
+                    st.markdown("##### 🏆 Ülke Sıralaması")
+                    
+                    top_countries_mol = country_dist.nlargest(10, 'MAT Q3 2024\nUSD MNF')
+                    
+                    fig_bar = go.Figure()
+                    
+                    fig_bar.add_trace(go.Bar(
+                        x=top_countries_mol['Country'],
+                        y=top_countries_mol['MAT Q3 2024\nUSD MNF'],
+                        name='2024',
+                        marker_color='#3B82F6',
+                        text=top_countries_mol['Share_2024'].apply(lambda x: f'{x:.1f}%'),
+                        textposition='auto'
+                    ))
+                    
+                    fig_bar.add_trace(go.Bar(
+                        x=top_countries_mol['Country'],
+                        y=top_countries_mol['MAT Q3 2023\nUSD MNF'],
+                        name='2023',
+                        marker_color='#60A5FA'
+                    ))
+                    
+                    fig_bar.update_layout(
+                        title=f"{mol_for_map} - Top 10 Ülke",
+                        barmode='group',
+                        height=500,
+                        xaxis_tickangle=-45,
+                        yaxis_title="USD MNF"
+                    )
+                    
+                    st.plotly_chart(fig_bar, use_container_width=True)
+                    
+                    # Konsantrasyon analizi
+                    st.markdown("##### 🎯 Pazar Konsantrasyonu")
+                    
+                    top5_share = top_countries_mol.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100 if total_mol_2024 > 0 else 0
+                    top3_share = top_countries_mol.head(3)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100 if total_mol_2024 > 0 else 0
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Top 5 Ülke Payı", f"{top5_share:.1f}%")
+                    
+                    with col2:
+                        st.metric("Top 3 Ülke Payı", f"{top3_share:.1f}%")
+                    
+                    with col3:
+                        country_count = len(country_dist)
+                        st.metric("Toplam Ülke Sayısı", country_count)
+        
+        with mol_tab3:
+            # Trend analizi için molekül seçimi
+            trend_molecules = st.multiselect(
+                "Trend Analizi için Moleküller",
+                options=sorted(filtered_df['Molecule'].unique()),
+                default=sorted(filtered_df['Molecule'].unique())[:5] if len(filtered_df['Molecule'].unique()) >= 5 else sorted(filtered_df['Molecule'].unique())
+            )
+            
+            if trend_molecules:
+                # Trend verisi hazırlama
+                trend_data_all = []
+                
+                for molecule in trend_molecules:
+                    mol_trend_df = filtered_df[filtered_df['Molecule'] == molecule]
+                    
+                    if len(mol_trend_df) > 0:
+                        for year in [2022, 2023, 2024]:
+                            if year == 2022:
+                                usd_col = 'MAT Q3 2022\nUSD MNF'
+                            elif year == 2023:
+                                usd_col = 'MAT Q3 2023\nUSD MNF'
+                            else:
+                                usd_col = 'MAT Q3 2024\nUSD MNF'
+                            
+                            total_usd = mol_trend_df[usd_col].sum()
+                            global_share = (total_usd / filtered_df[usd_col].sum() * 100) if filtered_df[usd_col].sum() > 0 else 0
+                            
+                            trend_data_all.append({
+                                'Molecule': molecule,
+                                'Year': year,
+                                'USD_MNF': total_usd,
+                                'Global_Share': global_share
+                            })
+                
+                if trend_data_all:
+                    trend_df = pd.DataFrame(trend_data_all)
+                    
+                    # USD MNF trendi
+                    st.markdown("##### 📈 USD MNF Trendi")
+                    
+                    fig_trend = px.line(
+                        trend_df,
+                        x='Year',
+                        y='USD_MNF',
+                        color='Molecule',
+                        markers=True,
+                        title="Moleküller - USD MNF Trendi (2022-2024)"
+                    )
+                    
+                    fig_trend.update_layout(height=500, yaxis_title="USD MNF")
+                    st.plotly_chart(fig_trend, use_container_width=True)
+                    
+                    # Global pay trendi
+                    st.markdown("##### 📊 Global Pay Trendi")
+                    
+                    fig_share = px.line(
+                        trend_df,
+                        x='Year',
+                        y='Global_Share',
+                        color='Molecule',
+                        markers=True,
+                        title="Moleküller - Global Pay Trendi (2022-2024)"
+                    )
+                    
+                    fig_share.update_layout(height=500, yaxis_title="Global Pay (%)")
+                    st.plotly_chart(fig_share, use_container_width=True)
+                    
+                    # Büyüme matrisi
+                    st.markdown("##### ⚡ Büyüme Matrisi")
+                    
+                    growth_matrix = []
+                    
+                    for molecule in trend_molecules:
+                        mol_data = trend_df[trend_df['Molecule'] == molecule]
+                        
+                        if len(mol_data) == 3:
+                            usd_2022 = mol_data[mol_data['Year'] == 2022]['USD_MNF'].values[0]
+                            usd_2023 = mol_data[mol_data['Year'] == 2023]['USD_MNF'].values[0]
+                            usd_2024 = mol_data[mol_data['Year'] == 2024]['USD_MNF'].values[0]
+                            
+                            growth_22_23 = ((usd_2023 - usd_2022) / usd_2022 * 100) if usd_2022 > 0 else 0
+                            growth_23_24 = ((usd_2024 - usd_2023) / usd_2023 * 100) if usd_2023 > 0 else 0
+                            
+                            growth_matrix.append({
+                                'Molecule': molecule,
+                                'USD_2022': usd_2022,
+                                'USD_2023': usd_2023,
+                                'USD_2024': usd_2024,
+                                'Growth_22_23': growth_22_23,
+                                'Growth_23_24': growth_23_24,
+                                'Growth_22_24': ((usd_2024 - usd_2022) / usd_2022 * 100) if usd_2022 > 0 else 0
+                            })
+                    
+                    if growth_matrix:
+                        growth_df = pd.DataFrame(growth_matrix)
+                        
+                        # Heatmap için veri hazırlama
+                        heatmap_data = growth_df[['Molecule', 'Growth_22_23', 'Growth_23_24']].copy()
+                        heatmap_data = heatmap_data.set_index('Molecule')
+                        
+                        fig_heatmap = go.Figure(data=go.Heatmap(
+                            z=heatmap_data.values,
+                            x=['2022→2023', '2023→2024'],
+                            y=heatmap_data.index,
+                            colorscale='RdYlGn',
+                            zmid=0,
+                            text=[[f'{val:.1f}%' for val in row] for row in heatmap_data.values],
+                            texttemplate='%{text}',
+                            textfont={"size": 12}
+                        ))
+                        
+                        fig_heatmap.update_layout(
+                            title="Büyüme Oranları Heatmap",
+                            height=400,
+                            xaxis_title="Dönem",
+                            yaxis_title="Molekül"
+                        )
+                        
+                        st.plotly_chart(fig_heatmap, use_container_width=True)
+    
+    # ============================================
+    # TAB 5: Corporation & Rekabet
+    # ============================================
+    with tab5:
+        st.markdown('<h2 class="sub-header">🏢 Corporation & Rekabet Analizi</h2>', unsafe_allow_html=True)
+        
+        corp_tab1, corp_tab2, corp_tab3 = st.tabs([
+            "📊 Pazar Payı Analizi",
+            "📈 Pay Değişimi",
+            "🌍 Coğrafi Varlık"
+        ])
+        
+        with corp_tab1:
+            # Pazar payı analizi
+            year_for_share = st.selectbox("Pazar Payı Yılı", [2024, 2023, 2022], key="corp_share_year")
+            
+            share_df = analytics.calculate_market_share(filtered_df, year_for_share, 'Corporation')
+            
+            if not share_df.empty:
+                # Top 10 corporation
+                top_corps = share_df.head(10)
+                
+                st.markdown(f"##### 🏆 Top 10 Corporation - {year_for_share}")
+                
+                fig = go.Figure()
+                
+                fig.add_trace(go.Bar(
+                    x=top_corps['Corporation'],
+                    y=top_corps['Market_Share_Pct'],
+                    marker_color='#3B82F6',
+                    text=top_corps['Market_Share_Pct'].apply(lambda x: f'{x:.1f}%'),
+                    textposition='auto'
+                ))
+                
+                fig.update_layout(
+                    title=f"Pazar Payı Dağılımı ({year_for_share})",
+                    height=500,
+                    xaxis_tickangle=-45,
+                    yaxis_title="Pazar Payı (%)"
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Cumulative share
+                st.markdown("##### 📈 Kümülatif Pazar Payı")
+                
+                fig_cum = go.Figure()
+                
+                fig_cum.add_trace(go.Scatter(
+                    x=top_corps['Corporation'],
+                    y=top_corps['Cumulative_Share'],
+                    mode='lines+markers',
+                    line=dict(color='#10B981', width=3),
+                    marker=dict(size=10),
+                    name='Kümülatif Pay'
+                ))
+                
+                fig_cum.add_trace(go.Bar(
+                    x=top_corps['Corporation'],
+                    y=top_corps['Market_Share_Pct'],
+                    name='Bireysel Pay',
+                    marker_color='rgba(59, 130, 246, 0.5)'
+                ))
+                
+                fig_cum.update_layout(
+                    title="Kümülatif Pazar Payı",
+                    height=500,
+                    xaxis_tickangle=-45,
+                    yaxis_title="Pay (%)",
+                    barmode='overlay'
+                )
+                
+                st.plotly_chart(fig_cum, use_container_width=True)
+                
+                # Pazar konsantrasyonu
+                st.markdown("##### 🎯 Pazar Konsantrasyonu")
+                
+                top3_share = top_corps.head(3)['Market_Share_Pct'].sum()
+                top5_share = top_corps.head(5)['Market_Share_Pct'].sum()
+                top10_share = top_corps['Market_Share_Pct'].sum()
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Top 3 Payı", f"{top3_share:.1f}%")
+                
+                with col2:
+                    st.metric("Top 5 Payı", f"{top5_share:.1f}%")
+                
+                with col3:
+                    st.metric("Top 10 Payı", f"{top10_share:.1f}%")
+                
+                # Herfindahl-Hirschman Index (HHI)
+                hhi = (share_df['Market_Share_Pct'] ** 2).sum()
+                
+                if hhi < 1500:
+                    concentration_level = "Düşük Konsantrasyon"
+                    concentration_color = "#10B981"
+                elif hhi < 2500:
+                    concentration_level = "Orta Konsantrasyon"
+                    concentration_color = "#F59E0B"
+                else:
+                    concentration_level = "Yüksek Konsantrasyon"
+                    concentration_color = "#DC2626"
+                
+                st.markdown(f'''
+                <div class="metric-card">
+                    <h3>📊 Herfindahl-Hirschman Index (HHI)</h3>
+                    <p style="font-size: 2rem; font-weight: 800; color: {concentration_color};">{hhi:.0f}</p>
+                    <p>{concentration_level}</p>
+                    <p style="font-size: 0.9rem; color: #6B7280;">
+                        HHI < 1,500: Düşük konsantrasyon<br>
+                        HHI 1,500-2,500: Orta konsantrasyon<br>
+                        HHI > 2,500: Yüksek konsantrasyon
+                    </p>
+                </div>
+                ''', unsafe_allow_html=True)
+        
+        with corp_tab2:
+            # Pay değişimi analizi
+            st.markdown("##### 📈 Pazar Payı Değişimi (2022 → 2024)")
+            
+            share_2022 = analytics.calculate_market_share(filtered_df, 2022, 'Corporation')
+            share_2023 = analytics.calculate_market_share(filtered_df, 2023, 'Corporation')
+            share_2024 = analytics.calculate_market_share(filtered_df, 2024, 'Corporation')
+            
+            if not share_2022.empty and not share_2023.empty and not share_2024.empty:
+                # Pay değişimi tablosu
+                share_comparison = pd.merge(
+                    share_2022[['Corporation', 'Market_Share_Pct']],
+                    share_2023[['Corporation', 'Market_Share_Pct']],
+                    on='Corporation',
+                    suffixes=('_2022', '_2023')
+                )
+                
+                share_comparison = pd.merge(
+                    share_comparison,
+                    share_2024[['Corporation', 'Market_Share_Pct']],
+                    on='Corporation'
+                )
+                
+                share_comparison = share_comparison.rename(columns={'Market_Share_Pct': 'Market_Share_Pct_2024'})
+                
+                share_comparison['Change_22_23'] = share_comparison['Market_Share_Pct_2023'] - share_comparison['Market_Share_Pct_2022']
+                share_comparison['Change_23_24'] = share_comparison['Market_Share_Pct_2024'] - share_comparison['Market_Share_Pct_2023']
+                share_comparison['Change_22_24'] = share_comparison['Market_Share_Pct_2024'] - share_comparison['Market_Share_Pct_2022']
+                
+                # Top 20 corporation filtrele
+                top_corps_all = share_comparison.nlargest(20, 'Market_Share_Pct_2024')
+                
+                # Pay trend grafiği
+                trend_corp_data = []
+                
+                for _, row in top_corps_all.iterrows():
+                    trend_corp_data.append({
+                        'Corporation': row['Corporation'],
+                        'Year': 2022,
+                        'Market_Share': row['Market_Share_Pct_2022']
+                    })
+                    trend_corp_data.append({
+                        'Corporation': row['Corporation'],
+                        'Year': 2023,
+                        'Market_Share': row['Market_Share_Pct_2023']
+                    })
+                    trend_corp_data.append({
+                        'Corporation': row['Corporation'],
+                        'Year': 2024,
+                        'Market_Share': row['Market_Share_Pct_2024']
+                    })
+                
+                trend_corp_df = pd.DataFrame(trend_corp_data)
+                
+                fig_trend = px.line(
+                    trend_corp_df,
+                    x='Year',
+                    y='Market_Share',
+                    color='Corporation',
+                    markers=True,
+                    title="Top 20 Corporation - Pazar Payı Trendi"
+                )
+                
+                fig_trend.update_layout(height=600, yaxis_title="Pazar Payı (%)")
+                st.plotly_chart(fig_trend, use_container_width=True)
+                
+                # En çok kazanan ve kaybedenler
+                st.markdown("##### 🏆 En Çok Kazananlar & Kaybedenler")
+                
+                top_gainers_corp = share_comparison.nlargest(5, 'Change_22_24')
+                top_losers_corp = share_comparison.nsmallest(5, 'Change_22_24')
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**⬆️ En Çok Kazananlar (2022→2024)**")
+                    
+                    for _, row in top_gainers_corp.iterrows():
+                        st.write(f"**{row['Corporation']}**: +{row['Change_22_24']:.2f}%")
+                        st.progress(min(row['Change_22_24'] / 10, 1.0))
+                
+                with col2:
+                    st.markdown("**⬇️ En Çok Kaybedenler (2022→2024)**")
+                    
+                    for _, row in top_losers_corp.iterrows():
+                        st.write(f"**{row['Corporation']}**: {row['Change_22_24']:.2f}%")
+                        st.progress(min(abs(row['Change_22_24']) / 10, 1.0))
+                
+                # Pay değişimi heatmap
+                st.markdown("##### 🔥 Pay Değişimi Heatmap")
+                
+                heatmap_corp_data = top_corps_all[['Corporation', 'Change_22_23', 'Change_23_24']].copy()
+                heatmap_corp_data = heatmap_corp_data.set_index('Corporation')
+                
+                fig_heatmap_corp = go.Figure(data=go.Heatmap(
+                    z=heatmap_corp_data.values,
+                    x=['2022→2023', '2023→2024'],
+                    y=heatmap_corp_data.index,
+                    colorscale='RdYlGn',
+                    zmid=0,
+                    text=[[f'{val:+.2f}%' for val in row] for row in heatmap_corp_data.values],
+                    texttemplate='%{text}',
+                    textfont={"size": 10}
+                ))
+                
+                fig_heatmap_corp.update_layout(
+                    title="Pazar Payı Değişimi Heatmap",
+                    height=500,
+                    xaxis_title="Dönem",
+                    yaxis_title="Corporation"
+                )
+                
+                st.plotly_chart(fig_heatmap_corp, use_container_width=True)
+        
+        with corp_tab3:
+            # Corporation seçimi
+            selected_corp = st.selectbox(
+                "Analiz Edilecek Corporation",
+                options=sorted(filtered_df['Corporation'].unique())
+            )
+            
+            if selected_corp:
+                corp_df = filtered_df[filtered_df['Corporation'] == selected_corp]
+                
+                if len(corp_df) > 0:
+                    # Coğrafi dağılım
+                    country_dist_corp = corp_df.groupby('Country').agg({
+                        'MAT Q3 2024\nUSD MNF': 'sum',
+                        'MAT Q3 2023\nUSD MNF': 'sum',
+                        'MAT Q3 2022\nUSD MNF': 'sum'
+                    }).reset_index()
+                    
+                    total_corp_2024 = country_dist_corp['MAT Q3 2024\nUSD MNF'].sum()
+                    country_dist_corp['Share_2024'] = (country_dist_corp['MAT Q3 2024\nUSD MNF'] / total_corp_2024 * 100) if total_corp_2024 > 0 else 0
+                    
+                    # Harita
+                    country_dist_corp['ISO_A3'] = country_dist_corp['Country'].apply(map_handler.get_country_code)
+                    country_dist_corp = country_dist_corp.dropna(subset=['ISO_A3'])
+                    
+                    if not country_dist_corp.empty and map_handler.world is not None:
+                        merged_corp = map_handler.world.merge(country_dist_corp, how='left', left_on='iso_a3', right_on='ISO_A3')
+                        
+                        fig = px.choropleth(
+                            merged_corp,
+                            geojson=merged_corp.geometry,
+                            locations=merged_corp.index,
+                            color='MAT Q3 2024\nUSD MNF',
+                            hover_name='name',
+                            hover_data={
+                                'MAT Q3 2024\nUSD MNF': ':.2f',
+                                'Share_2024': ':.2f%',
+                                'MAT Q3 2023\nUSD MNF': ':.2f'
+                            },
+                            color_continuous_scale="Viridis",
+                            title=f"{selected_corp} - Coğrafi Dağılım (2024)"
+                        )
+                        
+                        fig.update_geos(fitbounds="locations", visible=False)
+                        fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Ülke sıralaması
+                    st.markdown("##### 🌍 Ülke Dağılımı")
+                    
+                    top_countries_corp = country_dist_corp.nlargest(10, 'MAT Q3 2024\nUSD MNF')
+                    
+                    fig_bar_corp = go.Figure()
+                    
+                    fig_bar_corp.add_trace(go.Bar(
+                        x=top_countries_corp['Country'],
+                        y=top_countries_corp['MAT Q3 2024\nUSD MNF'],
+                        name='2024',
+                        marker_color='#3B82F6',
+                        text=top_countries_corp['Share_2024'].apply(lambda x: f'{x:.1f}%'),
+                        textposition='auto'
+                    ))
+                    
+                    fig_bar_corp.add_trace(go.Bar(
+                        x=top_countries_corp['Country'],
+                        y=top_countries_corp['MAT Q3 2023\nUSD MNF'],
+                        name='2023',
+                        marker_color='#60A5FA'
+                    ))
+                    
+                    fig_bar_corp.add_trace(go.Bar(
+                        x=top_countries_corp['Country'],
+                        y=top_countries_corp['MAT Q3 2022\nUSD MNF'],
+                        name='2022',
+                        marker_color='#93C5FD'
+                    ))
+                    
+                    fig_bar_corp.update_layout(
+                        title=f"{selected_corp} - Top 10 Ülke",
+                        barmode='group',
+                        height=500,
+                        xaxis_tickangle=-45,
+                        yaxis_title="USD MNF"
+                    )
+                    
+                    st.plotly_chart(fig_bar_corp, use_container_width=True)
+                    
+                    # Coğrafi çeşitlilik metrikleri
+                    st.markdown("##### 📊 Coğrafi Çeşitlilik Metrikleri")
+                    
+                    total_countries = len(country_dist_corp)
+                    top5_share_corp = top_countries_corp.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_corp_2024 * 100 if total_corp_2024 > 0 else 0
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Toplam Ülke Sayısı", total_countries)
+                    
+                    with col2:
+                        st.metric("Top 5 Ülke Payı", f"{top5_share_corp:.1f}%")
+                    
+                    with col3:
+                        region_count = corp_df['Region'].nunique()
+                        st.metric("Bölge Sayısı", region_count)
+                    
+                    # Molekül dağılımı
+                    st.markdown("##### 💊 Molekül Dağılımı")
+                    
+                    mol_dist_corp = corp_df.groupby('Molecule').agg({
+                        'MAT Q3 2024\nUSD MNF': 'sum'
+                    }).reset_index()
+                    
+                    mol_dist_corp['Share'] = (mol_dist_corp['MAT Q3 2024\nUSD MNF'] / mol_dist_corp['MAT Q3 2024\nUSD MNF'].sum() * 100)
+                    mol_dist_corp = mol_dist_corp.sort_values('Share', ascending=False).head(10)
+                    
+                    fig_pie_corp = px.pie(
+                        mol_dist_corp,
+                        values='MAT Q3 2024\nUSD MNF',
+                        names='Molecule',
+                        title=f"{selected_corp} - Molekül Dağılımı (2024)",
+                        hole=0.4
+                    )
+                    
+                    fig_pie_corp.update_traces(textposition='inside', textinfo='percent+label')
+                    fig_pie_corp.update_layout(height=500)
+                    
+                    st.plotly_chart(fig_pie_corp, use_container_width=True)
+    
+    # ============================================
+    # TAB 6: Specialty vs Non-Specialty
+    # ============================================
+    with tab6:
+        st.markdown('<h2 class="sub-header">⭐ Specialty vs Non-Specialty Analizi</h2>', unsafe_allow_html=True)
+        
+        spec_tab1, spec_tab2, spec_tab3 = st.tabs([
+            "📊 Premium Pay Analizi",
+            "📈 Premiumlaşma Trendi",
+            "🌍 Coğrafi Dağılım"
+        ])
+        
+        with spec_tab1:
+            # Specialty metrikleri
+            spec_metrics = analytics.calculate_specialty_metrics(filtered_df)
+            
+            if spec_metrics:
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    specialty_pct_2024 = spec_metrics.get('specialty_pct_2024', 0)
+                    st.metric(
+                        "2024 Specialty Payı",
+                        f"{specialty_pct_2024:.1f}%",
+                        delta=f"{specialty_pct_2024 - spec_metrics.get('specialty_pct_2023', 0):.1f}%"
+                    )
+                
+                with col2:
+                    specialty_total_2024 = spec_metrics.get('specialty_total_2024', 0)
+                    st.metric(
+                        "2024 Specialty USD MNF",
+                        f"${specialty_total_2024:,.0f}M"
+                    )
+                
+                with col3:
+                    non_specialty_total_2024 = spec_metrics.get('non_specialty_total_2024', 0)
+                    st.metric(
+                        "2024 Non-Specialty USD MNF",
+                        f"${non_specialty_total_2024:,.0f}M"
+                    )
+                
+                # Pay dağılımı
+                st.markdown("##### 📊 Pay Dağılımı (2024)")
+                
+                fig_pie = px.pie(
+                    values=[spec_metrics['specialty_total_2024'], spec_metrics['non_specialty_total_2024']],
+                    names=['Specialty', 'Non-Specialty'],
+                    title="Specialty vs Non-Specialty Pay Dağılımı (2024)",
+                    color=['Specialty', 'Non-Specialty'],
+                    color_discrete_map={'Specialty': '#3B82F6', 'Non-Specialty': '#10B981'}
+                )
+                
+                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_pie.update_layout(height=400)
+                
+                st.plotly_chart(fig_pie, use_container_width=True)
+                
+                # Üç yıllık karşılaştırma
+                st.markdown("##### 📈 Üç Yıllık Karşılaştırma")
+                
+                years = [2022, 2023, 2024]
+                specialty_values = [spec_metrics[f'specialty_total_{year}'] for year in years]
+                non_specialty_values = [spec_metrics[f'non_specialty_total_{year}'] for year in years]
+                specialty_pcts = [spec_metrics[f'specialty_pct_{year}'] for year in years]
+                
+                fig_bar = go.Figure()
+                
+                fig_bar.add_trace(go.Bar(
+                    x=years,
+                    y=specialty_values,
+                    name='Specialty',
+                    marker_color='#3B82F6',
+                    text=[f'{pct:.1f}%' for pct in specialty_pcts],
+                    textposition='auto'
+                ))
+                
+                fig_bar.add_trace(go.Bar(
+                    x=years,
+                    y=non_specialty_values,
+                    name='Non-Specialty',
+                    marker_color='#10B981'
+                ))
+                
+                fig_bar.update_layout(
+                    title="Specialty vs Non-Specialty - Üç Yıllık Trend",
+                    barmode='stack',
+                    height=500,
+                    xaxis_title="Yıl",
+                    yaxis_title="USD MNF"
+                )
+                
+                st.plotly_chart(fig_bar, use_container_width=True)
+                
+                # Specialty büyüme analizi
+                st.markdown("##### ⚡ Specialty Büyüme Analizi")
+                
+                specialty_growth_22_23 = ((spec_metrics['specialty_total_2023'] - spec_metrics['specialty_total_2022']) / 
+                                         spec_metrics['specialty_total_2022'] * 100) if spec_metrics['specialty_total_2022'] > 0 else 0
+                
+                specialty_growth_23_24 = ((spec_metrics['specialty_total_2024'] - spec_metrics['specialty_total_2023']) / 
+                                         spec_metrics['specialty_total_2023'] * 100) if spec_metrics['specialty_total_2023'] > 0 else 0
+                
+                non_specialty_growth_22_23 = ((spec_metrics['non_specialty_total_2023'] - spec_metrics['non_specialty_total_2022']) / 
+                                             spec_metrics['non_specialty_total_2022'] * 100) if spec_metrics['non_specialty_total_2022'] > 0 else 0
+                
+                non_specialty_growth_23_24 = ((spec_metrics['non_specialty_total_2024'] - spec_metrics['non_specialty_total_2023']) / 
+                                             spec_metrics['non_specialty_total_2023'] * 100) if spec_metrics['non_specialty_total_2023'] > 0 else 0
+                
+                growth_data = pd.DataFrame({
+                    'Segment': ['Specialty', 'Specialty', 'Non-Specialty', 'Non-Specialty'],
+                    'Dönem': ['2022→2023', '2023→2024', '2022→2023', '2023→2024'],
+                    'Büyüme (%)': [specialty_growth_22_23, specialty_growth_23_24, 
+                                  non_specialty_growth_22_23, non_specialty_growth_23_24]
+                })
+                
+                fig_growth = px.bar(
+                    growth_data,
+                    x='Segment',
+                    y='Büyüme (%)',
+                    color='Dönem',
+                    barmode='group',
+                    title="Segment Büyüme Karşılaştırması",
+                    color_discrete_sequence=['#3B82F6', '#10B981']
+                )
+                
+                fig_growth.update_layout(height=500)
+                st.plotly_chart(fig_growth, use_container_width=True)
+        
+        with spec_tab2:
+            # Premiumlaşma trendi
+            st.markdown("##### 📈 Premiumlaşma Trendi (2022 → 2024)")
+            
+            # Ülke bazlı premiumlaşma analizi
+            country_premium = []
+            
+            for country in filtered_df['Country'].unique():
+                country_df_spec = filtered_df[filtered_df['Country'] == country]
+                
+                spec_metrics_country = analytics.calculate_specialty_metrics(country_df_spec)
+                
+                if spec_metrics_country:
+                    premium_change = spec_metrics_country.get('specialty_pct_2024', 0) - spec_metrics_country.get('specialty_pct_2022', 0)
+                    
+                    country_premium.append({
+                        'Country': country,
+                        'Specialty_Pct_2022': spec_metrics_country.get('specialty_pct_2022', 0),
+                        'Specialty_Pct_2023': spec_metrics_country.get('specialty_pct_2023', 0),
+                        'Specialty_Pct_2024': spec_metrics_country.get('specialty_pct_2024', 0),
+                        'Premium_Change_22_24': premium_change
+                    })
+            
+            if country_premium:
+                premium_df = pd.DataFrame(country_premium)
+                
+                # En çok premiumlaşan ülkeler
+                top_premium_gainers = premium_df.nlargest(10, 'Premium_Change_22_24')
+                top_premium_losers = premium_df.nsmallest(10, 'Premium_Change_22_24')
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**⬆️ En Çok Premiumlaşan Ülkeler**")
+                    
+                    for _, row in top_premium_gainers.iterrows():
+                        st.write(f"**{row['Country']}**: +{row['Premium_Change_22_24']:.1f}% (2022: {row['Specialty_Pct_2022']:.1f}% → 2024: {row['Specialty_Pct_2024']:.1f}%)")
+                
+                with col2:
+                    st.markdown("**⬇️ En Çok Premium Kaybeden Ülkeler**")
+                    
+                    for _, row in top_premium_losers.iterrows():
+                        st.write(f"**{row['Country']}**: {row['Premium_Change_22_24']:.1f}% (2022: {row['Specialty_Pct_2022']:.1f}% → 2024: {row['Specialty_Pct_2024']:.1f}%)")
+                
+                # Premiumlaşma haritası
+                st.markdown("##### 🌍 Premiumlaşma Haritası (2022 → 2024)")
+                
+                premium_df['ISO_A3'] = premium_df['Country'].apply(map_handler.get_country_code)
+                premium_df = premium_df.dropna(subset=['ISO_A3'])
+                
+                if not premium_df.empty and map_handler.world is not None:
+                    merged_premium = map_handler.world.merge(premium_df, how='left', left_on='iso_a3', right_on='ISO_A3')
+                    
+                    def premium_category(x):
+                        if pd.isna(x):
+                            return 'Veri Yok'
+                        elif x > 10:
+                            return 'Çok Yüksek Artış (>10%)'
+                        elif x > 5:
+                            return 'Yüksek Artış (5-10%)'
+                        elif x > 0:
+                            return 'Orta Artış (0-5%)'
+                        elif x > -5:
+                            return 'Hafif Düşüş (0- -5%)'
+                        else:
+                            return 'Keskin Düşüş (<-5%)'
+                    
+                    merged_premium['Premium_Category'] = merged_premium['Premium_Change_22_24'].apply(premium_category)
+                    
+                    color_discrete_map_premium = {
+                        'Çok Yüksek Artış (>10%)': '#10B981',
+                        'Yüksek Artış (5-10%)': '#34D399',
+                        'Orta Artış (0-5%)': '#60A5FA',
+                        'Hafif Düşüş (0- -5%)': '#FBBF24',
+                        'Keskin Düşüş (<-5%)': '#DC2626',
+                        'Veri Yok': '#9CA3AF'
+                    }
+                    
+                    fig = px.choropleth(
+                        merged_premium,
+                        geojson=merged_premium.geometry,
+                        locations=merged_premium.index,
+                        color='Premium_Category',
+                        hover_name='name',
+                        hover_data={
+                            'Premium_Change_22_24': ':.1f%',
+                            'Specialty_Pct_2022': ':.1f%',
+                            'Specialty_Pct_2024': ':.1f%'
+                        },
+                        color_discrete_map=color_discrete_map_premium,
+                        category_orders={
+                            'Premium_Category': [
+                                'Çok Yüksek Artış (>10%)',
+                                'Yüksek Artış (5-10%)',
+                                'Orta Artış (0-5%)',
+                                'Hafif Düşüş (0- -5%)',
+                                'Keskin Düşüş (<-5%)',
+                                'Veri Yok'
+                            ]
+                        },
+                        title="Premiumlaşma Değişimi (2022 → 2024)"
+                    )
+                    
+                    fig.update_geos(fitbounds="locations", visible=False)
+                    fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Premiumlaşma trend grafiği
+                st.markdown("##### 📊 Global Premiumlaşma Trendi")
+                
+                global_premium_trend = pd.DataFrame({
+                    'Yıl': [2022, 2023, 2024],
+                    'Specialty_Payı': [
+                        spec_metrics['specialty_pct_2022'],
+                        spec_metrics['specialty_pct_2023'],
+                        spec_metrics['specialty_pct_2024']
+                    ]
+                })
+                
+                fig_trend = px.line(
+                    global_premium_trend,
+                    x='Yıl',
+                    y='Specialty_Payı',
+                    markers=True,
+                    title="Global Specialty Payı Trendi"
+                )
+                
+                fig_trend.update_layout(
+                    height=400,
+                    yaxis_title="Specialty Payı (%)",
+                    yaxis_range=[0, max(global_premium_trend['Specialty_Payı']) * 1.2]
+                )
+                
+                # Trend çizgisi ekle
+                fig_trend.add_trace(go.Scatter(
+                    x=global_premium_trend['Yıl'],
+                    y=global_premium_trend['Specialty_Payı'],
+                    mode='lines',
+                    line=dict(color='#EF4444', width=3, dash='dash'),
+                    showlegend=False
+                ))
+                
+                st.plotly_chart(fig_trend, use_container_width=True)
+        
+        with spec_tab3:
+            # Coğrafi dağılım
+            year_for_spec_map = st.selectbox("Harita Yılı", [2024, 2023, 2022], key="spec_map_year")
+            
+            # Ülke bazlı specialty payı
+            country_spec_data = []
+            
+            for country in filtered_df['Country'].unique():
+                country_df_spec_map = filtered_df[filtered_df['Country'] == country]
+                
+                spec_metrics_country_map = analytics.calculate_specialty_metrics(country_df_spec_map)
+                
+                if spec_metrics_country_map:
+                    specialty_pct = spec_metrics_country_map.get(f'specialty_pct_{year_for_spec_map}', 0)
+                    
+                    country_spec_data.append({
+                        'Country': country,
+                        'Specialty_Pct': specialty_pct,
+                        'Specialty_USD': spec_metrics_country_map.get(f'specialty_total_{year_for_spec_map}', 0),
+                        'Non_Specialty_USD': spec_metrics_country_map.get(f'non_specialty_total_{year_for_spec_map}', 0)
+                    })
+            
+            if country_spec_data:
+                spec_map_df = pd.DataFrame(country_spec_data)
+                
+                # Harita
+                spec_map_df['ISO_A3'] = spec_map_df['Country'].apply(map_handler.get_country_code)
+                spec_map_df = spec_map_df.dropna(subset=['ISO_A3'])
+                
+                if not spec_map_df.empty and map_handler.world is not None:
+                    merged_spec_map = map_handler.world.merge(spec_map_df, how='left', left_on='iso_a3', right_on='ISO_A3')
+                    
+                    def spec_category(x):
+                        if pd.isna(x):
+                            return 'Veri Yok'
+                        elif x > 30:
+                            return 'Çok Yüksek (>30%)'
+                        elif x > 20:
+                            return 'Yüksek (20-30%)'
+                        elif x > 10:
+                            return 'Orta (10-20%)'
+                        elif x > 0:
+                            return 'Düşük (0-10%)'
+                        else:
+                            return 'Yok'
+                    
+                    merged_spec_map['Spec_Category'] = merged_spec_map['Specialty_Pct'].apply(spec_category)
+                    
+                    color_discrete_map_spec = {
+                        'Çok Yüksek (>30%)': '#1E3A8A',
+                        'Yüksek (20-30%)': '#3B82F6',
+                        'Orta (10-20%)': '#60A5FA',
+                        'Düşük (0-10%)': '#93C5FD',
+                        'Yok': '#E5E7EB',
+                        'Veri Yok': '#9CA3AF'
+                    }
+                    
+                    fig = px.choropleth(
+                        merged_spec_map,
+                        geojson=merged_spec_map.geometry,
+                        locations=merged_spec_map.index,
+                        color='Spec_Category',
+                        hover_name='name',
+                        hover_data={
+                            'Specialty_Pct': ':.1f%',
+                            'Specialty_USD': ':.2f',
+                            'Non_Specialty_USD': ':.2f'
+                        },
+                        color_discrete_map=color_discrete_map_spec,
+                        category_orders={
+                            'Spec_Category': [
+                                'Çok Yüksek (>30%)',
+                                'Yüksek (20-30%)',
+                                'Orta (10-20%)',
+                                'Düşük (0-10%)',
+                                'Yok',
+                                'Veri Yok'
+                            ]
+                        },
+                        title=f"Specialty Payı Coğrafi Dağılımı ({year_for_spec_map})"
+                    )
+                    
+                    fig.update_geos(fitbounds="locations", visible=False)
+                    fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Ülke sıralaması
+                st.markdown(f"##### 🏆 En Yüksek Specialty Payı - {year_for_spec_map}")
+                
+                top_spec_countries = spec_map_df.nlargest(10, 'Specialty_Pct')
+                
+                fig_bar_spec = go.Figure()
+                
+                fig_bar_spec.add_trace(go.Bar(
+                    x=top_spec_countries['Country'],
+                    y=top_spec_countries['Specialty_Pct'],
+                    marker_color='#3B82F6',
+                    text=top_spec_countries['Specialty_Pct'].apply(lambda x: f'{x:.1f}%'),
+                    textposition='auto'
+                ))
+                
+                fig_bar_spec.update_layout(
+                    title=f"Top 10 Ülke - Specialty Payı ({year_for_spec_map})",
+                    height=500,
+                    xaxis_tickangle=-45,
+                    yaxis_title="Specialty Payı (%)"
+                )
+                
+                st.plotly_chart(fig_bar_spec, use_container_width=True)
+                
+                # Molekül bazlı specialty analizi
+                st.markdown("##### 💊 Molekül Bazlı Specialty Analizi")
+                
+                # Specialty molekülleri
+                specialty_molecules = filtered_df[filtered_df['Specialty Product'] == 'Specialty']['Molecule'].unique()
+                
+                if len(specialty_molecules) > 0:
+                    mol_spec_data = []
+                    
+                    for molecule in specialty_molecules[:10]:  # İlk 10 molekül
+                        mol_df_spec = filtered_df[filtered_df['Molecule'] == molecule]
+                        
+                        if len(mol_df_spec) > 0:
+                            if year_for_spec_map == 2022:
+                                usd_col = 'MAT Q3 2022\nUSD MNF'
+                            elif year_for_spec_map == 2023:
+                                usd_col = 'MAT Q3 2023\nUSD MNF'
+                            else:
+                                usd_col = 'MAT Q3 2024\nUSD MNF'
+                            
+                            total_usd = mol_df_spec[usd_col].sum()
+                            
+                            mol_spec_data.append({
+                                'Molecule': molecule,
+                                'USD_MNF': total_usd
+                            })
+                    
+                    if mol_spec_data:
+                        mol_spec_df = pd.DataFrame(mol_spec_data)
+                        mol_spec_df = mol_spec_df.sort_values('USD_MNF', ascending=False)
+                        
+                        fig_mol_spec = px.bar(
+                            mol_spec_df,
+                            x='Molecule',
+                            y='USD_MNF',
+                            title=f"Top Specialty Moleküller ({year_for_spec_map})",
+                            color_discrete_sequence=['#3B82F6']
+                        )
+                        
+                        fig_mol_spec.update_layout(
+                            height=500,
+                            xaxis_tickangle=-45,
+                            yaxis_title="USD MNF"
+                        )
+                        
+                        st.plotly_chart(fig_mol_spec, use_container_width=True)
+    
+    # ============================================
+    # TAB 7: Fiyat – Volume – Mix
+    # ============================================
+    with tab7:
+        st.markdown('<h2 class="sub-header">📈 Fiyat – Volume – Mix Ayrıştırması</h2>', unsafe_allow_html=True)
+        
+        pvm_tab1, pvm_tab2, pvm_tab3 = st.tabs([
+            "2022 → 2023 Ayrıştırma",
+            "2023 → 2024 Ayrıştırma",
+            "Zincir Özet"
+        ])
+        
+        with pvm_tab1:
+            st.markdown("##### 📊 2022 → 2023 Price-Volume-Mix Ayrıştırması")
+            
+            pvm_22_23 = analytics.price_volume_mix_analysis(filtered_df, 2022, 2023)
+            
+            if pvm_22_23:
+                # Ayrıştırma grafiği
+                effects = ['Fiyat Etkisi', 'Volume Etkisi', 'Mix Etkisi']
+                values_pct = [pvm_22_23['price_effect_pct'], pvm_22_23['volume_effect_pct'], pvm_22_23['mix_effect_pct']]
+                values_abs = [pvm_22_23['price_effect'], pvm_22_23['volume_effect'], pvm_22_23['mix_effect']]
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    fig_pie = px.pie(
+                        values=values_pct,
+                        names=effects,
+                        title="Katkı Payları (%)",
+                        color=effects,
+                        color_discrete_map={
+                            'Fiyat Etkisi': '#3B82F6',
+                            'Volume Etkisi': '#10B981',
+                            'Mix Etkisi': '#F59E0B'
+                        }
+                    )
+                    
+                    fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                    fig_pie.update_layout(height=400)
+                    
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                
+                with col2:
+                    fig_bar = go.Figure()
+                    
+                    colors = ['#3B82F6', '#10B981', '#F59E0B']
+                    
+                    for i, (effect, value_pct, value_abs, color) in enumerate(zip(effects, values_pct, values_abs, colors)):
+                        fig_bar.add_trace(go.Bar(
+                            x=[effect],
+                            y=[value_pct],
+                            name=effect,
+                            marker_color=color,
+                            text=[f'{value_pct:.1f}%<br>${value_abs:,.0f}M'],
+                            textposition='auto'
+                        ))
+                    
+                    fig_bar.update_layout(
+                        title="Ayrıştırma Katkıları",
+                        height=400,
+                        yaxis_title="Katkı (%)",
+                        showlegend=False
+                    )
+                    
+                    st.plotly_chart(fig_bar, use_container_width=True)
+                
+                # Detaylı metrikler
+                st.markdown("##### 📈 Detaylı Metrikler")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    total_growth_pct = ((pvm_22_23['total_growth'] / filtered_df['MAT Q3 2022\nUSD MNF'].sum()) * 100) if filtered_df['MAT Q3 2022\nUSD MNF'].sum() > 0 else 0
+                    st.metric("Toplam Büyüme", f"{total_growth_pct:.1f}%", f"${pvm_22_23['total_growth']:,.0f}M")
+                
+                with col2:
+                    st.metric("Fiyat Etkisi", f"{pvm_22_23['price_effect_pct']:.1f}%", f"${pvm_22_23['price_effect']:,.0f}M")
+                
+                with col3:
+                    st.metric("Volume Etkisi", f"{pvm_22_23['volume_effect_pct']:.1f}%", f"${pvm_22_23['volume_effect']:,.0f}M")
+                
+                with col4:
+                    st.metric("Mix Etkisi", f"{pvm_22_23['mix_effect_pct']:.1f}%", f"${pvm_22_23['mix_effect']:,.0f}M")
+                
+                # Fiyat ve volume trendi
+                st.markdown("##### 📊 Fiyat ve Volume Trendi")
+                
+                price_change = ((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / 
+                               pvm_22_23['weighted_price_start'] * 100) if pvm_22_23['weighted_price_start'] > 0 else 0
+                
+                volume_change = pvm_22_23['unit_growth_pct']
+                
+                fig_trend = go.Figure()
+                
+                fig_trend.add_trace(go.Indicator(
+                    mode="gauge+number+delta",
+                    value=price_change,
+                    title={'text': "Ortalama Fiyat Değişimi"},
+                    delta={'reference': 0},
+                    gauge={
+                        'axis': {'range': [min(price_change, 0) - 10, max(price_change, 0) + 10]},
+                        'bar': {'color': "#3B82F6"},
+                        'steps': [
+                            {'range': [-100, 0], 'color': "#FEE2E2"},
+                            {'range': [0, 100], 'color': "#DCFCE7"}
+                        ]
+                    },
+                    domain={'row': 0, 'column': 0}
+                ))
+                
+                fig_trend.add_trace(go.Indicator(
+                    mode="gauge+number+delta",
+                    value=volume_change,
+                    title={'text': "Volume Değişimi"},
+                    delta={'reference': 0},
+                    gauge={
+                        'axis': {'range': [min(volume_change, 0) - 10, max(volume_change, 0) + 10]},
+                        'bar': {'color': "#10B981"},
+                        'steps': [
+                            {'range': [-100, 0], 'color': "#FEE2E2"},
+                            {'range': [0, 100], 'color': "#DCFCE7"}
+                        ]
+                    },
+                    domain={'row': 0, 'column': 1}
+                ))
+                
+                fig_trend.update_layout(
+                    grid={'rows': 1, 'columns': 2, 'pattern': "independent"},
+                    height=300
+                )
+                
+                st.plotly_chart(fig_trend, use_container_width=True)
+                
+                # Ülke bazlı ayrıştırma
+                st.markdown("##### 🌍 Ülke Bazlı Ayrıştırma")
+                
+                country_pvm_data = []
+                
+                for country in filtered_df['Country'].unique()[:10]:  # İlk 10 ülke
+                    country_df_pvm = filtered_df[filtered_df['Country'] == country]
+                    pvm_country = analytics.price_volume_mix_analysis(country_df_pvm, 2022, 2023)
+                    
+                    if pvm_country:
+                        country_pvm_data.append({
+                            'Country': country,
+                            'Price_Effect': pvm_country.get('price_effect_pct', 0),
+                            'Volume_Effect': pvm_country.get('volume_effect_pct', 0),
+                            'Mix_Effect': pvm_country.get('mix_effect_pct', 0),
+                            'Total_Growth': ((pvm_country.get('total_growth', 0) / country_df_pvm['MAT Q3 2022\nUSD MNF'].sum()) * 100) if country_df_pvm['MAT Q3 2022\nUSD MNF'].sum() > 0 else 0
+                        })
+                
+                if country_pvm_data:
+                    country_pvm_df = pd.DataFrame(country_pvm_data)
+                    
+                    fig_country = go.Figure()
+                    
+                    fig_country.add_trace(go.Bar(
+                        name='Fiyat',
+                        x=country_pvm_df['Country'],
+                        y=country_pvm_df['Price_Effect'],
+                        marker_color='#3B82F6'
+                    ))
+                    
+                    fig_country.add_trace(go.Bar(
+                        name='Volume',
+                        x=country_pvm_df['Country'],
+                        y=country_pvm_df['Volume_Effect'],
+                        marker_color='#10B981'
+                    ))
+                    
+                    fig_country.add_trace(go.Bar(
+                        name='Mix',
+                        x=country_pvm_df['Country'],
+                        y=country_pvm_df['Mix_Effect'],
+                        marker_color='#F59E0B'
+                    ))
+                    
+                    fig_country.add_trace(go.Scatter(
+                        name='Toplam Büyüme',
+                        x=country_pvm_df['Country'],
+                        y=country_pvm_df['Total_Growth'],
+                        mode='lines+markers',
+                        line=dict(color='#EF4444', width=3),
+                        yaxis='y2'
+                    ))
+                    
+                    fig_country.update_layout(
+                        title="Ülke Bazlı Ayrıştırma (2022 → 2023)",
+                        barmode='relative',
+                        height=600,
+                        xaxis_tickangle=-45,
+                        yaxis_title="Katkı (%)",
+                        yaxis2=dict(
+                            title="Toplam Büyüme (%)",
+                            overlaying='y',
+                            side='right'
+                        )
+                    )
+                    
+                    st.plotly_chart(fig_country, use_container_width=True)
+        
+        with pvm_tab2:
+            st.markdown("##### 📊 2023 → 2024 Price-Volume-Mix Ayrıştırması")
+            
+            pvm_23_24 = analytics.price_volume_mix_analysis(filtered_df, 2023, 2024)
+            
+            if pvm_23_24:
+                # Ayrıştırma grafiği
+                effects = ['Fiyat Etkisi', 'Volume Etkisi', 'Mix Etkisi']
+                values_pct = [pvm_23_24['price_effect_pct'], pvm_23_24['volume_effect_pct'], pvm_23_24['mix_effect_pct']]
+                values_abs = [pvm_23_24['price_effect'], pvm_23_24['volume_effect'], pvm_23_24['mix_effect']]
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    fig_pie = px.pie(
+                        values=values_pct,
+                        names=effects,
+                        title="Katkı Payları (%)",
+                        color=effects,
+                        color_discrete_map={
+                            'Fiyat Etkisi': '#3B82F6',
+                            'Volume Etkisi': '#10B981',
+                            'Mix Etkisi': '#F59E0B'
+                        }
+                    )
+                    
+                    fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                    fig_pie.update_layout(height=400)
+                    
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                
+                with col2:
+                    fig_bar = go.Figure()
+                    
+                    colors = ['#3B82F6', '#10B981', '#F59E0B']
+                    
+                    for i, (effect, value_pct, value_abs, color) in enumerate(zip(effects, values_pct, values_abs, colors)):
+                        fig_bar.add_trace(go.Bar(
+                            x=[effect],
+                            y=[value_pct],
+                            name=effect,
+                            marker_color=color,
+                            text=[f'{value_pct:.1f}%<br>${value_abs:,.0f}M'],
+                            textposition='auto'
+                        ))
+                    
+                    fig_bar.update_layout(
+                        title="Ayrıştırma Katkıları",
+                        height=400,
+                        yaxis_title="Katkı (%)",
+                        showlegend=False
+                    )
+                    
+                    st.plotly_chart(fig_bar, use_container_width=True)
+                
+                # Detaylı metrikler
+                st.markdown("##### 📈 Detaylı Metrikler")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    total_growth_pct = ((pvm_23_24['total_growth'] / filtered_df['MAT Q3 2023\nUSD MNF'].sum()) * 100) if filtered_df['MAT Q3 2023\nUSD MNF'].sum() > 0 else 0
+                    st.metric("Toplam Büyüme", f"{total_growth_pct:.1f}%", f"${pvm_23_24['total_growth']:,.0f}M")
+                
+                with col2:
+                    st.metric("Fiyat Etkisi", f"{pvm_23_24['price_effect_pct']:.1f}%", f"${pvm_23_24['price_effect']:,.0f}M")
+                
+                with col3:
+                    st.metric("Volume Etkisi", f"{pvm_23_24['volume_effect_pct']:.1f}%", f"${pvm_23_24['volume_effect']:,.0f}M")
+                
+                with col4:
+                    st.metric("Mix Etkisi", f"{pvm_23_24['mix_effect_pct']:.1f}%", f"${pvm_23_24['mix_effect']:,.0f}M")
+                
+                # Trend karşılaştırması
+                st.markdown("##### 📊 2022→2023 vs 2023→2024 Karşılaştırması")
+                
+                comparison_data = pd.DataFrame({
+                    'Dönem': ['2022→2023', '2023→2024'],
+                    'Fiyat Etkisi': [pvm_22_23.get('price_effect_pct', 0), pvm_23_24.get('price_effect_pct', 0)],
+                    'Volume Etkisi': [pvm_22_23.get('volume_effect_pct', 0), pvm_23_24.get('volume_effect_pct', 0)],
+                    'Mix Etkisi': [pvm_22_23.get('mix_effect_pct', 0), pvm_23_24.get('mix_effect_pct', 0)]
+                })
+                
+                fig_comp = go.Figure()
+                
+                fig_comp.add_trace(go.Bar(
+                    name='Fiyat Etkisi',
+                    x=comparison_data['Dönem'],
+                    y=comparison_data['Fiyat Etkisi'],
+                    marker_color='#3B82F6'
+                ))
+                
+                fig_comp.add_trace(go.Bar(
+                    name='Volume Etkisi',
+                    x=comparison_data['Dönem'],
+                    y=comparison_data['Volume Etkisi'],
+                    marker_color='#10B981'
+                ))
+                
+                fig_comp.add_trace(go.Bar(
+                    name='Mix Etkisi',
+                    x=comparison_data['Dönem'],
+                    y=comparison_data['Mix Etkisi'],
+                    marker_color='#F59E0B'
+                ))
+                
+                fig_comp.update_layout(
+                    title="Ayrıştırma Karşılaştırması",
+                    barmode='group',
+                    height=500,
+                    yaxis_title="Katkı (%)"
+                )
+                
+                st.plotly_chart(fig_comp, use_container_width=True)
+                
+                # Büyüme kaynakları analizi
+                st.markdown("##### 🔍 Büyüme Kaynakları Analizi")
+                
+                if pvm_22_23 and pvm_23_24:
+                    price_contribution_change = pvm_23_24['price_effect_pct'] - pvm_22_23['price_effect_pct']
+                    volume_contribution_change = pvm_23_24['volume_effect_pct'] - pvm_22_23['volume_effect_pct']
+                    mix_contribution_change = pvm_23_24['mix_effect_pct'] - pvm_22_23['mix_effect_pct']
+                    
+                    insights = []
+                    
+                    if price_contribution_change > 5:
+                        insights.append("💰 **Fiyat katkısı arttı:** Son dönemde fiyat etkisi daha belirleyici oldu.")
+                    elif price_contribution_change < -5:
+                        insights.append("📉 **Fiyat katkısı azaldı:** Fiyat artışları yavaşladı.")
+                    
+                    if volume_contribution_change > 5:
+                        insights.append("📦 **Volume katkısı arttı:** Satış hacmi büyümede daha etkili.")
+                    elif volume_contribution_change < -5:
+                        insights.append("🚫 **Volume katkısı azaldı:** Hacim büyümesi yavaşladı.")
+                    
+                    if mix_contribution_change > 5:
+                        insights.append("🔄 **Mix katkısı arttı:** Ürün mix değişiklikleri büyümeye daha çok katkı sağladı.")
+                    elif mix_contribution_change < -5:
+                        insights.append("⚖️ **Mix katkısı azaldı:** Ürün mix stabil hale geldi.")
+                    
+                    if insights:
+                        for insight in insights:
+                            st.info(insight)
+        
+        with pvm_tab3:
+            st.markdown("##### 📊 Zincir Özet (2022 → 2024)")
+            
+            # Zincir büyüme hesaplama
+            growth_22_24_pct, growth_22_24_abs = analytics.calculate_growth(filtered_df, 2022, 2024)
+            
+            # Zincir ayrıştırma (22→23 + 23→24)
+            if pvm_22_23 and pvm_23_24:
+                chain_price = pvm_22_23['price_effect'] + pvm_23_24['price_effect']
+                chain_volume = pvm_22_23['volume_effect'] + pvm_23_24['volume_effect']
+                chain_mix = pvm_22_23['mix_effect'] + pvm_23_24['mix_effect']
+                
+                total_start = filtered_df['MAT Q3 2022\nUSD MNF'].sum()
+                
+                chain_price_pct = (chain_price / total_start * 100) if total_start > 0 else 0
+                chain_volume_pct = (chain_volume / total_start * 100) if total_start > 0 else 0
+                chain_mix_pct = (chain_mix / total_start * 100) if total_start > 0 else 0
+            
+            st.markdown("##### 📈 Zincir Büyüme Özeti")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "2022→2024 Büyüme",
+                    f"{growth_22_24_pct:.1f}%",
+                    f"${growth_22_24_abs:,.0f}M"
+                )
+            
+            with col2:
+                st.metric(
+                    "Zincir Fiyat Etkisi",
+                    f"{chain_price_pct:.1f}%",
+                    f"${chain_price:,.0f}M"
+                )
+            
+            with col3:
+                st.metric(
+                    "Zincir Volume Etkisi",
+                    f"{chain_volume_pct:.1f}%",
+                    f"${chain_volume:,.0f}M"
+                )
+            
+            with col4:
+                st.metric(
+                    "Zincir Mix Etkisi",
+                    f"{chain_mix_pct:.1f}%",
+                    f"${chain_mix:,.0f}M"
+                )
+            
+            # Zincir ayrıştırma grafiği
+            st.markdown("##### 📊 Zincir Ayrıştırma")
+            
+            chain_effects = ['Fiyat Etkisi', 'Volume Etkisi', 'Mix Etkisi']
+            chain_values_pct = [chain_price_pct, chain_volume_pct, chain_mix_pct]
+            chain_values_abs = [chain_price, chain_volume, chain_mix]
+            
+            fig_chain = go.Figure()
+            
+            fig_chain.add_trace(go.Bar(
+                x=chain_effects,
+                y=chain_values_pct,
+                marker_color=['#3B82F6', '#10B981', '#F59E0B'],
+                text=[f'{pct:.1f}%<br>${abs:,.0f}M' for pct, abs in zip(chain_values_pct, chain_values_abs)],
+                textposition='auto'
+            ))
+            
+            fig_chain.update_layout(
+                title="Zincir Ayrıştırma Katkıları (2022 → 2024)",
+                height=500,
+                yaxis_title="Katkı (%)"
+            )
+            
+            st.plotly_chart(fig_chain, use_container_width=True)
+            
+            # Dönemsel katkılar
+            st.markdown("##### 📅 Dönemsel Katkılar")
+            
+            period_data = pd.DataFrame({
+                'Dönem': ['2022→2023', '2023→2024'],
+                'Fiyat Katkısı': [pvm_22_23.get('price_effect_pct', 0), pvm_23_24.get('price_effect_pct', 0)],
+                'Volume Katkısı': [pvm_22_23.get('volume_effect_pct', 0), pvm_23_24.get('volume_effect_pct', 0)],
+                'Mix Katkısı': [pvm_22_23.get('mix_effect_pct', 0), pvm_23_24.get('mix_effect_pct', 0)]
+            })
+            
+            fig_period = go.Figure()
+            
+            for col in ['Fiyat Katkısı', 'Volume Katkısı', 'Mix Katkısı']:
+                fig_period.add_trace(go.Scatter(
+                    x=period_data['Dönem'],
+                    y=period_data[col],
+                    mode='lines+markers',
+                    name=col,
+                    line=dict(width=3)
+                ))
+            
+            fig_period.update_layout(
+                title="Dönemsel Katkı Trendleri",
+                height=500,
+                yaxis_title="Katkı (%)",
+                xaxis_title="Dönem"
+            )
+            
+            st.plotly_chart(fig_period, use_container_width=True)
+            
+            # Zincir içgörüler
+            st.markdown("##### 🧠 Zincir İçgörüler")
+            
+            insights_chain = []
+            
+            if chain_price_pct > chain_volume_pct and chain_price_pct > chain_mix_pct:
+                insights_chain.append("💰 **Fiyat odaklı büyüme:** İki yıllık dönemde büyümenin ana kaynağı fiyat artışları oldu.")
+            
+            if chain_volume_pct > chain_price_pct and chain_volume_pct > chain_mix_pct:
+                insights_chain.append("📦 **Volume odaklı büyüme:** İki yıllık dönemde büyümenin ana kaynağı satış hacmi artışı oldu.")
+            
+            if chain_mix_pct > chain_price_pct and chain_mix_pct > chain_volume_pct:
+                insights_chain.append("🔄 **Mix odaklı büyüme:** İki yıllık dönemde büyümenin ana kaynağı ürün mix değişiklikleri oldu.")
+            
+            if chain_price_pct < 0:
+                insights_chain.append("⚠️ **Fiyat erozyonu:** İki yıllık dönemde fiyatlar genel olarak düştü.")
+            
+            if chain_volume_pct < 0:
+                insights_chain.append("⚠️ **Volume kaybı:** İki yıllık dönemde satış hacmi azaldı.")
+            
+            if growth_22_24_pct > 20:
+                insights_chain.append(f"🚀 **Güçlü büyüme:** İki yılda %{growth_22_24_pct:.1f} büyüme kaydedildi.")
+            elif growth_22_24_pct < 0:
+                insights_chain.append(f"📉 **Küçülme:** İki yılda %{abs(growth_22_24_pct):.1f} küçülme yaşandı.")
+            
+            if insights_chain:
+                for insight in insights_chain:
+                    st.info(insight)
+    
+    # ============================================
+    # TAB 8: Otomatik İçgörü Motoru
+    # ============================================
+    with tab8:
+        st.markdown('<h2 class="sub-header">🤖 Otomatik İçgörü Motoru</h2>', unsafe_allow_html=True)
+        
+        insight_tab1, insight_tab2, insight_tab3 = st.tabs([
+            "🇹🇷 Ülke İçgörüleri",
+            "💊 Molekül İçgörüleri",
+            "🏢 Corporation İçgörüleri"
+        ])
+        
+        with insight_tab1:
+            st.markdown("##### 🌍 Ülke Bazlı Otomatik İçgörüler")
+            
+            country_for_insights = st.selectbox(
+                "İçgörü Alınacak Ülke",
+                options=sorted(filtered_df['Country'].unique())
+            )
+            
+            if country_for_insights:
+                insights = insight_engine.generate_country_insights(country_for_insights)
+                
+                if insights:
+                    st.markdown(f"### {country_for_insights} - Ana İçgörüler")
+                    
+                    for i, insight in enumerate(insights):
+                        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
+                    
+                    # Ek metrikler
+                    st.markdown("##### 📊 Ek Metrikler")
+                    
+                    country_insight_df = filtered_df[filtered_df['Country'] == country_for_insights]
+                    
+                    if len(country_insight_df) > 0:
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            total_2024 = country_insight_df['MAT Q3 2024\nUSD MNF'].sum()
+                            st.metric("2024 Toplam", f"${total_2024:,.0f}M")
+                        
+                        with col2:
+                            global_share = (total_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
+                            st.metric("Global Pay", f"{global_share:.2f}%")
+                        
+                        with col3:
+                            molecule_count = country_insight_df['Molecule'].nunique()
+                            st.metric("Molekül Çeşidi", molecule_count)
+                        
+                        with col4:
+                            manufacturer_count = country_insight_df['Manufacturer'].nunique()
+                            st.metric("Üretici Sayısı", manufacturer_count)
+                        
+                        # Trend özeti
+                        st.markdown("##### 📈 Trend Özeti")
+                        
+                        trend_summary = pd.DataFrame({
+                            'Yıl': [2022, 2023, 2024],
+                            'USD MNF': [
+                                country_insight_df['MAT Q3 2022\nUSD MNF'].sum(),
+                                country_insight_df['MAT Q3 2023\nUSD MNF'].sum(),
+                                country_insight_df['MAT Q3 2024\nUSD MNF'].sum()
+                            ],
+                            'Units': [
+                                country_insight_df['MAT Q3 2022\nUnits'].sum(),
+                                country_insight_df['MAT Q3 2023\nUnits'].sum(),
+                                country_insight_df['MAT Q3 2024\nUnits'].sum()
+                            ]
+                        })
+                        
+                        fig_trend_summary = make_subplots(specs=[[{"secondary_y": True}]])
+                        
+                        fig_trend_summary.add_trace(
+                            go.Bar(x=trend_summary['Yıl'], y=trend_summary['USD MNF'],
+                                  name='USD MNF', marker_color='#3B82F6'),
+                            secondary_y=False,
+                        )
+                        
+                        fig_trend_summary.add_trace(
+                            go.Scatter(x=trend_summary['Yıl'], y=trend_summary['Units'],
+                                      name='Units', mode='lines+markers',
+                                      line=dict(color='#10B981', width=3)),
+                            secondary_y=True,
+                        )
+                        
+                        fig_trend_summary.update_layout(
+                            title=f"{country_for_insights} - Üç Yıllık Trend",
+                            height=400,
+                            showlegend=True
+                        )
+                        
+                        fig_trend_summary.update_yaxes(title_text="USD MNF", secondary_y=False)
+                        fig_trend_summary.update_yaxes(title_text="Units", secondary_y=True)
+                        
+                        st.plotly_chart(fig_trend_summary, use_container_width=True)
+                else:
+                    st.warning(f"{country_for_insights} için yeterli veri bulunamadı.")
+        
+        with insight_tab2:
+            st.markdown("##### 💊 Molekül Bazlı Otomatik İçgörüler")
+            
+            molecule_for_insights = st.selectbox(
+                "İçgörü Alınacak Molekül",
+                options=sorted(filtered_df['Molecule'].unique())
+            )
+            
+            if molecule_for_insights:
+                insights = insight_engine.generate_molecule_insights(molecule_for_insights)
+                
+                if insights:
+                    st.markdown(f"### {molecule_for_insights} - Ana İçgörüler")
+                    
+                    for i, insight in enumerate(insights):
+                        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
+                    
+                    # Ek metrikler
+                    st.markdown("##### 📊 Ek Metrikler")
+                    
+                    mol_insight_df = filtered_df[filtered_df['Molecule'] == molecule_for_insights]
+                    
+                    if len(mol_insight_df) > 0:
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            total_2024 = mol_insight_df['MAT Q3 2024\nUSD MNF'].sum()
+                            st.metric("2024 Toplam", f"${total_2024:,.0f}M")
+                        
+                        with col2:
+                            global_share = (total_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
+                            st.metric("Global Pay", f"{global_share:.2f}%")
+                        
+                        with col3:
+                            country_count = mol_insight_df['Country'].nunique()
+                            st.metric("Ülke Sayısı", country_count)
+                        
+                        with col4:
+                            manufacturer_count = mol_insight_df['Manufacturer'].nunique()
+                            st.metric("Üretici Sayısı", manufacturer_count)
+                        
+                        # Coğrafi dağılım
+                        st.markdown("##### 🌍 Coğrafi Dağılım")
+                        
+                        country_dist_insight = mol_insight_df.groupby('Country').agg({
+                            'MAT Q3 2024\nUSD MNF': 'sum'
+                        }).reset_index()
+                        
+                        country_dist_insight = country_dist_insight.sort_values('MAT Q3 2024\nUSD MNF', ascending=False).head(10)
+                        
+                        fig_country_insight = px.bar(
+                            country_dist_insight,
+                            x='Country',
+                            y='MAT Q3 2024\nUSD MNF',
+                            title=f"{molecule_for_insights} - Top 10 Ülke (2024)",
+                            color_discrete_sequence=['#3B82F6']
+                        )
+                        
+                        fig_country_insight.update_layout(
+                            height=400,
+                            xaxis_tickangle=-45,
+                            yaxis_title="USD MNF"
+                        )
+                        
+                        st.plotly_chart(fig_country_insight, use_container_width=True)
+                else:
+                    st.warning(f"{molecule_for_insights} için yeterli veri bulunamadı.")
+        
+        with insight_tab3:
+            st.markdown("##### 🏢 Corporation Bazlı Otomatik İçgörüler")
+            
+            corp_for_insights = st.selectbox(
+                "İçgörü Alınacak Corporation",
+                options=sorted(filtered_df['Corporation'].unique())
+            )
+            
+            if corp_for_insights:
+                insights = insight_engine.generate_corporation_insights(corp_for_insights)
+                
+                if insights:
+                    st.markdown(f"### {corp_for_insights} - Ana İçgörüler")
+                    
+                    for i, insight in enumerate(insights):
+                        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
+                    
+                    # Ek metrikler
+                    st.markdown("##### 📊 Ek Metrikler")
+                    
+                    corp_insight_df = filtered_df[filtered_df['Corporation'] == corp_for_insights]
+                    
+                    if len(corp_insight_df) > 0:
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            total_2024 = corp_insight_df['MAT Q3 2024\nUSD MNF'].sum()
+                            st.metric("2024 Toplam", f"${total_2024:,.0f}M")
+                        
+                        with col2:
+                            global_share = (total_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
+                            st.metric("Global Pay", f"{global_share:.2f}%")
+                        
+                        with col3:
+                            country_count = corp_insight_df['Country'].nunique()
+                            st.metric("Ülke Sayısı", country_count)
+                        
+                        with col4:
+                            molecule_count = corp_insight_df['Molecule'].nunique()
+                            st.metric("Molekül Çeşidi", molecule_count)
+                        
+                        # Pazar payı trendi
+                        st.markdown("##### 📈 Pazar Payı Trendi")
+                        
+                        share_trend = []
+                        for year in [2022, 2023, 2024]:
+                            if year == 2022:
+                                usd_col = 'MAT Q3 2022\nUSD MNF'
+                            elif year == 2023:
+                                usd_col = 'MAT Q3 2023\nUSD MNF'
+                            else:
+                                usd_col = 'MAT Q3 2024\nUSD MNF'
+                            
+                            corp_total = corp_insight_df[usd_col].sum()
+                            global_total = filtered_df[usd_col].sum()
+                            share = (corp_total / global_total * 100) if global_total > 0 else 0
+                            
+                            share_trend.append({
+                                'Yıl': year,
+                                'Pazar Payı': share
+                            })
+                        
+                        share_trend_df = pd.DataFrame(share_trend)
+                        
+                        fig_share_trend = px.line(
+                            share_trend_df,
+                            x='Yıl',
+                            y='Pazar Payı',
+                            markers=True,
+                            title=f"{corp_for_insights} - Pazar Payı Trendi"
+                        )
+                        
+                        fig_share_trend.update_layout(
+                            height=400,
+                            yaxis_title="Pazar Payı (%)",
+                            yaxis_range=[0, max(share_trend_df['Pazar Payı']) * 1.5]
+                        )
+                        
+                        st.plotly_chart(fig_share_trend, use_container_width=True)
+                else:
+                    st.warning(f"{corp_for_insights} için yeterli veri bulunamadı.")
+    
+    # ============================================
+    # FOOTER
+    # ============================================
+    st.markdown("---")
+    st.markdown('<div class="footer">© 2024 Pharma Commercial Analytics Suite | Enterprise Streamlit Application</div>', unsafe_allow_html=True)
 
-# ================================================
-# 8. APPLICATION ENTRY POINT
-# ================================================
-
-def main():
-    """Main application entry point"""
-    try:
-        # Initialize application
-        app = PharmaIntelligencePro()
-        
-        # Run application
-        app.run()
-        
-    except Exception as e:
-        # Global error handler
-        st.error("### 🚨 Critical Application Error")
-        st.error(f"The application encountered a critical error: {str(e)}")
-        
-        with st.expander("Technical Details", expanded=False):
-            st.code(traceback.format_exc())
-        
-        st.info("""
-        **Troubleshooting steps:**
-        1. Refresh the page
-        2. Clear your browser cache
-        3. Ensure all required packages are installed
-        4. Check your data file format
-        
-        If the problem persists, please contact support.
-        """)
-
-# Run the application
 if __name__ == "__main__":
     main()
-
