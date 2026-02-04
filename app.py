@@ -1849,7 +1849,7 @@ class DataManager:
 
 
 # ============================================================================
-# FILTER SYSTEM CLASS
+# FILTER SYSTEM CLASS - HATA DÜZELTMELERİ İLE
 # ============================================================================
 
 class FilterSystem:
@@ -1994,11 +1994,12 @@ class FilterSystem:
                     if sales_range != (min_val, max_val):
                         filters['sales_range'] = (sales_range, last_sales)
             
-            # Growth filter
+            # Growth filter - HATA DÜZELTMESİ BURADA
             growth_cols = [col for col in df.columns if 'Buyume_' in col or 'Growth_' in col]
             if growth_cols:
                 last_growth = growth_cols[-1]
-                growth_data = df[last_growth].dropna()
+                # Sadece numerik verileri seç
+                growth_data = pd.to_numeric(df[last_growth], errors='coerce').dropna()
                 
                 if len(growth_data) > 0:
                     min_growth = float(growth_data.min())
@@ -2132,6 +2133,8 @@ class FilterSystem:
             if 'growth_range' in filters:
                 (min_val, max_val), col_name = filters['growth_range']
                 if col_name in filtered_df.columns:
+                    # Numeric olarak convert et
+                    filtered_df[col_name] = pd.to_numeric(filtered_df[col_name], errors='coerce')
                     filtered_df = filtered_df[
                         (filtered_df[col_name] >= min_val) & 
                         (filtered_df[col_name] <= max_val)
@@ -2141,7 +2144,10 @@ class FilterSystem:
             if filters.get('positive_growth'):
                 growth_cols = [col for col in filtered_df.columns if 'Buyume_' in col or 'Growth_' in col]
                 if growth_cols:
-                    filtered_df = filtered_df[filtered_df[growth_cols[-1]] > 0]
+                    # Numeric conversion
+                    last_growth = growth_cols[-1]
+                    filtered_df[last_growth] = pd.to_numeric(filtered_df[last_growth], errors='coerce')
+                    filtered_df = filtered_df[filtered_df[last_growth] > 0]
             
             if filters.get('top_performers'):
                 sales_cols = [col for col in filtered_df.columns if 'Satis_' in col or 'Sales_' in col]
@@ -2226,21 +2232,23 @@ class AnalyticsEngine:
                 metrics['sales_iqr'] = metrics['sales_q3'] - metrics['sales_q1']
                 metrics['sales_cv'] = (metrics['std_sales'] / metrics['avg_sales'] * 100) if metrics['avg_sales'] > 0 else 0
             
-            # Growth metrics
+            # Growth metrics - HATA DÜZELTMESİ BURADA
             growth_cols = [col for col in df.columns if 'Buyume_' in col or 'Growth_' in col]
             
             if growth_cols:
                 last_growth = growth_cols[-1]
-                growth_data = df[last_growth].dropna()
+                # Sadece numerik verileri al
+                growth_data = pd.to_numeric(df[last_growth], errors='coerce').dropna()
                 
-                metrics['avg_growth'] = float(growth_data.mean())
-                metrics['median_growth'] = float(growth_data.median())
-                metrics['std_growth'] = float(growth_data.std())
-                metrics['positive_growth_count'] = int((growth_data > 0).sum())
-                metrics['negative_growth_count'] = int((growth_data < 0).sum())
-                metrics['high_growth_count'] = int((growth_data > 20).sum())
-                metrics['decline_count'] = int((growth_data < -10).sum())
-                metrics['positive_growth_pct'] = (metrics['positive_growth_count'] / len(growth_data)) * 100
+                if len(growth_data) > 0:
+                    metrics['avg_growth'] = float(growth_data.mean())
+                    metrics['median_growth'] = float(growth_data.median())
+                    metrics['std_growth'] = float(growth_data.std())
+                    metrics['positive_growth_count'] = int((growth_data > 0).sum())
+                    metrics['negative_growth_count'] = int((growth_data < 0).sum())
+                    metrics['high_growth_count'] = int((growth_data > 20).sum())
+                    metrics['decline_count'] = int((growth_data < -10).sum())
+                    metrics['positive_growth_pct'] = (metrics['positive_growth_count'] / len(growth_data)) * 100
             
             # Market structure
             corp_col = FilterSystem.find_column(df, ['Corporation', 'Şirket', 'Sirket'])
@@ -2313,21 +2321,21 @@ class AnalyticsEngine:
             
             # CAGR metrics
             if 'CAGR' in df.columns:
-                cagr_data = df['CAGR'].dropna()
+                cagr_data = pd.to_numeric(df['CAGR'], errors='coerce').dropna()
                 metrics['avg_cagr'] = float(cagr_data.mean())
                 metrics['median_cagr'] = float(cagr_data.median())
                 metrics['positive_cagr_pct'] = float((cagr_data > 0).sum() / len(cagr_data) * 100)
             
             # Market share metrics
             if 'Pazar_Payi' in df.columns:
-                share_data = df['Pazar_Payi'].dropna()
+                share_data = pd.to_numeric(df['Pazar_Payi'], errors='coerce').dropna()
                 metrics['avg_market_share'] = float(share_data.mean())
                 metrics['median_market_share'] = float(share_data.median())
                 metrics['gini_market_share'] = AnalyticsEngine.calculate_gini(share_data)
             
             # Performance metrics
             if 'Performans_Skoru_100' in df.columns:
-                perf_data = df['Performans_Skoru_100'].dropna()
+                perf_data = pd.to_numeric(df['Performans_Skoru_100'], errors='coerce').dropna()
                 metrics['avg_performance'] = float(perf_data.mean())
                 metrics['high_performers'] = int((perf_data > 75).sum())
                 metrics['low_performers'] = int((perf_data < 25).sum())
@@ -2344,7 +2352,7 @@ class AnalyticsEngine:
     def calculate_gini(data: pd.Series) -> float:
         """Calculate Gini coefficient for inequality measurement"""
         try:
-            data = data.dropna()
+            data = pd.to_numeric(data, errors='coerce').dropna()
             if len(data) == 0:
                 return 0.0
             
@@ -2394,7 +2402,10 @@ class AnalyticsEngine:
             growth_cols = [col for col in df.columns if 'Buyume_' in col]
             if growth_cols:
                 last_growth = growth_cols[-1]
-                top_growth = df.nlargest(10, last_growth)
+                # Numeric conversion
+                df_numeric = df.copy()
+                df_numeric[last_growth] = pd.to_numeric(df_numeric[last_growth], errors='coerce')
+                top_growth = df_numeric.nlargest(10, last_growth)
                 avg_top_growth = top_growth[last_growth].mean()
                 
                 insights.append({
@@ -2409,7 +2420,7 @@ class AnalyticsEngine:
                 decline_count = metrics.get('decline_count', 0)
                 if decline_count > 0:
                     decline_pct = (decline_count / len(df)) * 100
-                    declining_df = df[df[last_growth] < -10]
+                    declining_df = df_numeric[df_numeric[last_growth] < -10]
                     declining_sales = declining_df[last_sales].sum()
                     
                     insights.append({
@@ -2484,7 +2495,9 @@ class AnalyticsEngine:
             # Opportunity identification
             if growth_cols and 'Pazar_Payi' in df.columns:
                 last_growth = growth_cols[-1]
-                opportunities = df[(df[last_growth] > 20) & (df['Pazar_Payi'] < 1)]
+                df_numeric = df.copy()
+                df_numeric[last_growth] = pd.to_numeric(df_numeric[last_growth], errors='coerce')
+                opportunities = df_numeric[(df_numeric[last_growth] > 20) & (df_numeric['Pazar_Payi'] < 1)]
                 
                 if len(opportunities) > 0:
                     opp_sales = opportunities[last_sales].sum()
@@ -2500,7 +2513,9 @@ class AnalyticsEngine:
             # Risk identification
             if growth_cols and 'Pazar_Payi' in df.columns:
                 last_growth = growth_cols[-1]
-                risks = df[(df[last_growth] < -5) & (df['Pazar_Payi'] > 5)]
+                df_numeric = df.copy()
+                df_numeric[last_growth] = pd.to_numeric(df_numeric[last_growth], errors='coerce')
+                risks = df_numeric[(df_numeric[last_growth] < -5) & (df_numeric['Pazar_Payi'] > 5)]
                 
                 if len(risks) > 0:
                     risk_sales = risks[last_sales].sum()
@@ -2521,10 +2536,6 @@ class AnalyticsEngine:
         except Exception as e:
             Logger.error(f"Insight generation failed: {str(e)}", e)
             return insights
-
-
-# Continue with remaining code in next part...
-# MLEngine, Visualizer, and Main Application coming next
 
 
 # ============================================================================
@@ -2560,8 +2571,14 @@ class MLEngine:
         try:
             Logger.info(f"Training {model_type} forecasting model")
             
-            # Prepare data
-            ml_data = df[feature_cols + [target_col]].dropna()
+            # Prepare data - numeric conversion
+            ml_data = df[feature_cols + [target_col]].copy()
+            
+            # Convert all columns to numeric
+            for col in ml_data.columns:
+                ml_data[col] = pd.to_numeric(ml_data[col], errors='coerce')
+            
+            ml_data = ml_data.dropna()
             
             if len(ml_data) < Config.ML_MIN_SAMPLES:
                 return None, f"Insufficient data: {len(ml_data)} rows (minimum {Config.ML_MIN_SAMPLES} required)"
@@ -2720,8 +2737,12 @@ class MLEngine:
         try:
             Logger.info(f"Performing {algorithm} clustering with {n_clusters} clusters")
             
-            # Prepare data
-            cluster_data = df[feature_cols].fillna(0)
+            # Prepare data - numeric conversion
+            cluster_data = df[feature_cols].copy()
+            for col in cluster_data.columns:
+                cluster_data[col] = pd.to_numeric(cluster_data[col], errors='coerce')
+            
+            cluster_data = cluster_data.fillna(0)
             
             if len(cluster_data) < Config.ML_MIN_SAMPLES_CLUSTERING:
                 return None, f"Insufficient data: {len(cluster_data)} rows (minimum {Config.ML_MIN_SAMPLES_CLUSTERING} required)"
@@ -2841,8 +2862,12 @@ class MLEngine:
         try:
             Logger.info(f"Detecting anomalies with contamination={contamination}")
             
-            # Prepare data
-            anomaly_data = df[feature_cols].fillna(0)
+            # Prepare data - numeric conversion
+            anomaly_data = df[feature_cols].copy()
+            for col in anomaly_data.columns:
+                anomaly_data[col] = pd.to_numeric(anomaly_data[col], errors='coerce')
+            
+            anomaly_data = anomaly_data.fillna(0)
             
             if len(anomaly_data) < Config.ML_MIN_SAMPLES_ANOMALY:
                 return None, f"Insufficient data: {len(anomaly_data)} rows"
@@ -3026,11 +3051,6 @@ class Visualizer:
         except Exception as e:
             Logger.error(f"KPI dashboard error: {str(e)}", e)
             st.error("❌ KPI dashboard error")
-
-
-# Main application code continues...
-# (Adding more visualization methods and main app in next section)
-
 
 
 # ============================================================================
@@ -3507,15 +3527,56 @@ def show_segmentation_tab():
                 unsafe_allow_html=True)
     
     st.markdown("### Segment products by different criteria")
-    st.dataframe(df.head(50), use_container_width=True)
+    
+    if 'Buyume_Kategori' in df.columns:
+        st.markdown("#### 📈 Growth Categories")
+        growth_counts = df['Buyume_Kategori'].value_counts()
+        st.dataframe(growth_counts)
+    
+    if 'Fiyat_Tier' in df.columns:
+        st.markdown("#### 💰 Price Tiers")
+        price_counts = df['Fiyat_Tier'].value_counts()
+        st.dataframe(price_counts)
+    
+    if 'Pazar_Pozisyon' in df.columns:
+        st.markdown("#### 🏆 Market Position")
+        position_counts = df['Pazar_Pozisyon'].value_counts()
+        st.dataframe(position_counts)
 
 
 def show_advanced_analytics_tab():
     """Advanced analytics tab"""
+    df = st.session_state.filtered_data
+    
     st.markdown('<div class="subsection-header"><h3>📈 Advanced Market Analytics</h3></div>', 
                 unsafe_allow_html=True)
     
-    st.info("🚀 Advanced analytics features coming soon!")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📊 Correlation Analysis")
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        if len(numeric_cols) >= 2:
+            selected_cols = st.multiselect(
+                "Select columns for correlation",
+                numeric_cols,
+                default=numeric_cols[:min(5, len(numeric_cols))]
+            )
+            if len(selected_cols) >= 2:
+                corr_matrix = df[selected_cols].corr()
+                st.dataframe(corr_matrix)
+    
+    with col2:
+        st.markdown("#### 📈 Trend Analysis")
+        sales_cols = [col for col in df.columns if 'Satis_' in col]
+        if sales_cols:
+            selected_product = st.selectbox(
+                "Select product for trend",
+                df['Molekül'].unique() if 'Molekül' in df.columns else df.iloc[:, 0].unique()
+            )
+            if selected_product:
+                product_data = df[df['Molekül'] == selected_product] if 'Molekül' in df.columns else df[df.iloc[:, 0] == selected_product]
+                st.write(product_data[sales_cols].T)
 
 
 def show_reporting_tab():
@@ -3569,555 +3630,3 @@ if __name__ == "__main__":
 # ============================================================================
 # END OF PHARMAINTELLIGENCE PRO v7.0 - PROFESSIONAL EDITION
 # ============================================================================
-
-# ============================================================================
-# ADDITIONAL PROFESSIONAL FEATURES
-# ============================================================================
-
-class AdvancedVisualizations:
-    """
-    Extended visualization library for advanced charts
-    """
-    
-    @staticmethod
-    def create_correlation_heatmap(df: pd.DataFrame, features: List[str]) -> Optional[go.Figure]:
-        """Create professional correlation heatmap"""
-        try:
-            corr_data = df[features].corr()
-            
-            fig = go.Figure(data=go.Heatmap(
-                z=corr_data.values,
-                x=features,
-                y=features,
-                colorscale='RdBu',
-                zmid=0,
-                text=corr_data.values,
-                texttemplate='%{text:.2f}',
-                textfont={"size": 10},
-                colorbar=dict(title="Correlation")
-            ))
-            
-            fig.update_layout(
-                title='Feature Correlation Matrix',
-                height=600,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#f8fafc'
-            )
-            
-            return fig
-        except:
-            return None
-    
-    @staticmethod
-    def create_distribution_plot(df: pd.DataFrame, column: str) -> Optional[go.Figure]:
-        """Create distribution plot with statistics"""
-        try:
-            fig = make_subplots(
-                rows=2, cols=1,
-                subplot_titles=('Distribution', 'Box Plot'),
-                row_heights=[0.7, 0.3]
-            )
-            
-            # Histogram
-            fig.add_trace(
-                go.Histogram(
-                    x=df[column],
-                    nbinsx=50,
-                    name='Distribution',
-                    marker_color=Config.COLOR_PRIMARY
-                ),
-                row=1, col=1
-            )
-            
-            # Box plot
-            fig.add_trace(
-                go.Box(
-                    x=df[column],
-                    name='Box Plot',
-                    marker_color=Config.COLOR_SECONDARY
-                ),
-                row=2, col=1
-            )
-            
-            fig.update_layout(
-                height=600,
-                showlegend=False,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#f8fafc'
-            )
-            
-            return fig
-        except:
-            return None
-    
-    @staticmethod
-    def create_time_series_decomposition(df: pd.DataFrame, value_col: str, time_col: str) -> Optional[go.Figure]:
-        """Create time series decomposition plot"""
-        try:
-            fig = make_subplots(
-                rows=3, cols=1,
-                subplot_titles=('Original Series', 'Trend', 'Seasonality'),
-                vertical_spacing=0.1
-            )
-            
-            # Original
-            fig.add_trace(
-                go.Scatter(
-                    x=df[time_col],
-                    y=df[value_col],
-                    mode='lines+markers',
-                    name='Original',
-                    line=dict(color=Config.COLOR_PRIMARY)
-                ),
-                row=1, col=1
-            )
-            
-            # Trend (rolling average)
-            trend = df[value_col].rolling(window=12, center=True).mean()
-            fig.add_trace(
-                go.Scatter(
-                    x=df[time_col],
-                    y=trend,
-                    mode='lines',
-                    name='Trend',
-                    line=dict(color=Config.COLOR_SECONDARY)
-                ),
-                row=2, col=1
-            )
-            
-            # Seasonality (detrended)
-            seasonal = df[value_col] - trend
-            fig.add_trace(
-                go.Scatter(
-                    x=df[time_col],
-                    y=seasonal,
-                    mode='lines',
-                    name='Seasonal',
-                    line=dict(color=Config.COLOR_SUCCESS)
-                ),
-                row=3, col=1
-            )
-            
-            fig.update_layout(
-                height=900,
-                showlegend=False,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#f8fafc'
-            )
-            
-            return fig
-        except:
-            return None
-
-
-class StatisticalTests:
-    """
-    Statistical testing and analysis utilities
-    """
-    
-    @staticmethod
-    def perform_normality_test(data: pd.Series) -> Dict:
-        """Perform Shapiro-Wilk normality test"""
-        try:
-            clean_data = data.dropna()
-            if len(clean_data) < 3:
-                return {'test': 'insufficient_data', 'statistic': None, 'p_value': None, 'is_normal': None}
-            
-            statistic, p_value = shapiro(clean_data)
-            is_normal = p_value > Config.SIGNIFICANCE_LEVEL
-            
-            return {
-                'test': 'shapiro_wilk',
-                'statistic': float(statistic),
-                'p_value': float(p_value),
-                'is_normal': is_normal,
-                'interpretation': 'Data appears normally distributed' if is_normal else 'Data deviates from normal distribution'
-            }
-        except:
-            return {'test': 'failed', 'statistic': None, 'p_value': None, 'is_normal': None}
-    
-    @staticmethod
-    def calculate_confidence_interval(data: pd.Series, confidence: float = 0.95) -> Dict:
-        """Calculate confidence interval for mean"""
-        try:
-            clean_data = data.dropna()
-            if len(clean_data) < 2:
-                return {'lower': None, 'upper': None, 'mean': None}
-            
-            mean = clean_data.mean()
-            sem = stats.sem(clean_data)
-            interval = stats.t.interval(confidence, len(clean_data)-1, loc=mean, scale=sem)
-            
-            return {
-                'mean': float(mean),
-                'lower': float(interval[0]),
-                'upper': float(interval[1]),
-                'confidence': confidence
-            }
-        except:
-            return {'lower': None, 'upper': None, 'mean': None}
-    
-    @staticmethod
-    def perform_correlation_test(x: pd.Series, y: pd.Series) -> Dict:
-        """Perform Pearson and Spearman correlation tests"""
-        try:
-            # Remove NaN
-            valid_mask = ~(x.isna() | y.isna())
-            x_clean = x[valid_mask]
-            y_clean = y[valid_mask]
-            
-            if len(x_clean) < 3:
-                return {'pearson': None, 'spearman': None}
-            
-            # Pearson
-            pearson_r, pearson_p = pearsonr(x_clean, y_clean)
-            
-            # Spearman
-            spearman_r, spearman_p = spearmanr(x_clean, y_clean)
-            
-            return {
-                'pearson': {
-                    'correlation': float(pearson_r),
-                    'p_value': float(pearson_p),
-                    'significant': pearson_p < Config.SIGNIFICANCE_LEVEL
-                },
-                'spearman': {
-                    'correlation': float(spearman_r),
-                    'p_value': float(spearman_p),
-                    'significant': spearman_p < Config.SIGNIFICANCE_LEVEL
-                }
-            }
-        except:
-            return {'pearson': None, 'spearman': None}
-
-
-class DataQualityChecker:
-    """
-    Comprehensive data quality assessment
-    """
-    
-    @staticmethod
-    def generate_quality_report(df: pd.DataFrame) -> Dict:
-        """Generate comprehensive data quality report"""
-        report = {
-            'overview': {},
-            'completeness': {},
-            'consistency': {},
-            'validity': {},
-            'recommendations': []
-        }
-        
-        try:
-            # Overview
-            report['overview'] = {
-                'total_rows': len(df),
-                'total_columns': len(df.columns),
-                'memory_mb': df.memory_usage(deep=True).sum() / 1024**2,
-                'numeric_columns': len(df.select_dtypes(include=[np.number]).columns),
-                'categorical_columns': len(df.select_dtypes(include=['object', 'category']).columns)
-            }
-            
-            # Completeness
-            missing_counts = df.isnull().sum()
-            missing_percentages = (missing_counts / len(df)) * 100
-            
-            report['completeness'] = {
-                'total_missing': int(missing_counts.sum()),
-                'missing_percentage': float((missing_counts.sum() / (len(df) * len(df.columns))) * 100),
-                'columns_with_missing': missing_counts[missing_counts > 0].to_dict(),
-                'completeness_score': float(1 - (missing_counts.sum() / (len(df) * len(df.columns))))
-            }
-            
-            # Add recommendations
-            if report['completeness']['missing_percentage'] > Config.MAX_MISSING_PERCENTAGE:
-                report['recommendations'].append({
-                    'type': 'warning',
-                    'category': 'completeness',
-                    'message': f"High missing data rate ({report['completeness']['missing_percentage']:.1f}%). Consider data imputation or removal."
-                })
-            
-            # Consistency
-            duplicates = df.duplicated().sum()
-            report['consistency'] = {
-                'duplicate_rows': int(duplicates),
-                'duplicate_percentage': float((duplicates / len(df)) * 100)
-            }
-            
-            if duplicates > 0:
-                report['recommendations'].append({
-                    'type': 'info',
-                    'category': 'consistency',
-                    'message': f"Found {duplicates} duplicate rows. Review and remove if appropriate."
-                })
-            
-            # Validity
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            outlier_info = {}
-            
-            for col in numeric_cols:
-                Q1 = df[col].quantile(0.25)
-                Q3 = df[col].quantile(0.75)
-                IQR = Q3 - Q1
-                outliers = ((df[col] < (Q1 - Config.OUTLIER_STD_THRESHOLD * IQR)) | 
-                           (df[col] > (Q3 + Config.OUTLIER_STD_THRESHOLD * IQR))).sum()
-                
-                if outliers > 0:
-                    outlier_info[col] = {
-                        'count': int(outliers),
-                        'percentage': float((outliers / len(df)) * 100)
-                    }
-            
-            report['validity'] = {
-                'outlier_columns': outlier_info,
-                'total_outliers': sum(info['count'] for info in outlier_info.values())
-            }
-            
-            # Overall quality score
-            scores = [
-                report['completeness']['completeness_score'],
-                max(0, 1 - (report['consistency']['duplicate_percentage'] / 100)),
-                max(0, 1 - (len(outlier_info) / len(numeric_cols))) if len(numeric_cols) > 0 else 1
-            ]
-            
-            report['overall_quality_score'] = float(np.mean(scores))
-            
-            # Final recommendations
-            if report['overall_quality_score'] < Config.MIN_DATA_QUALITY_SCORE:
-                report['recommendations'].append({
-                    'type': 'warning',
-                    'category': 'overall',
-                    'message': f"Data quality score is below threshold ({report['overall_quality_score']:.2%}). Review data quality issues."
-                })
-            else:
-                report['recommendations'].append({
-                    'type': 'success',
-                    'category': 'overall',
-                    'message': f"Data quality is acceptable ({report['overall_quality_score']:.2%})."
-                })
-            
-            return report
-            
-        except Exception as e:
-            Logger.error(f"Quality report generation failed: {str(e)}", e)
-            return report
-
-
-class ExportManager:
-    """
-    Advanced export and reporting manager
-    """
-    
-    @staticmethod
-    def generate_executive_summary(df: pd.DataFrame, metrics: Dict, insights: List[Dict]) -> str:
-        """Generate executive summary report"""
-        summary = f"""
-# PHARMACEUTICAL MARKET ANALYSIS
-# Executive Summary Report
-{'=' * 80}
-
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-Platform: {Config.APP_NAME} v{Config.VERSION}
-
-## 1. MARKET OVERVIEW
-{'=' * 80}
-
-Total Market Size: {Utils.format_currency(metrics.get('total_market_value', 0))}
-Products Analyzed: {metrics.get('total_rows', 0):,}
-Geographic Coverage: {metrics.get('country_coverage', 0)} countries
-Unique Molecules: {metrics.get('unique_molecules', 0):,}
-
-Average Growth Rate: {Utils.format_percentage(metrics.get('avg_growth', 0))}
-Market Concentration (HHI): {metrics.get('hhi_index', 0):.0f}
-Number of Competitors: {metrics.get('num_competitors', 0)}
-
-## 2. KEY FINDINGS
-{'=' * 80}
-
-"""
-        
-        # Add insights
-        for i, insight in enumerate(insights[:10], 1):
-            summary += f"{i}. {insight['title']}\n   {insight['description']}\n\n"
-        
-        summary += f"""
-## 3. MARKET STRUCTURE
-{'=' * 80}
-
-Top Competitor Share (CR1): {Utils.format_percentage(metrics.get('top_1_share', 0))}
-Top 4 Competitors (CR4): {Utils.format_percentage(metrics.get('cr4', 0))}
-Effective Competitors: {metrics.get('effective_competitors', 0):.1f}
-
-Gini Coefficient: {metrics.get('gini_coefficient', 0):.3f}
-Market Structure: {'Highly Concentrated' if metrics.get('hhi_index', 0) > 2500 else 'Moderately Concentrated' if metrics.get('hhi_index', 0) > 1500 else 'Competitive'}
-
-## 4. PRICING ANALYSIS
-{'=' * 80}
-
-Average Price: {Utils.format_currency(metrics.get('avg_price', 0))}
-Price Range: {Utils.format_currency(metrics.get('min_price', 0))} - {Utils.format_currency(metrics.get('max_price', 0))}
-Price Variability (CV): {Utils.format_percentage(metrics.get('price_cv', 0))}
-
-## 5. GROWTH DYNAMICS
-{'=' * 80}
-
-Products with Positive Growth: {Utils.format_percentage(metrics.get('positive_growth_pct', 0))}
-High Growth Products (>20%): {metrics.get('high_growth_count', 0)}
-Declining Products (<-10%): {metrics.get('decline_count', 0)}
-
-Average CAGR: {Utils.format_percentage(metrics.get('avg_cagr', 0))}
-
-## 6. RECOMMENDATIONS
-{'=' * 80}
-
-Based on the analysis:
-
-1. Market Concentration Strategy
-   - Current HHI suggests {'monopolistic' if metrics.get('hhi_index', 0) > 2500 else 'oligopolistic' if metrics.get('hhi_index', 0) > 1500 else 'competitive'} market
-   - Consider {'market share defense' if metrics.get('hhi_index', 0) > 2500 else 'strategic partnerships' if metrics.get('hhi_index', 0) > 1500 else 'differentiation'} strategies
-
-2. Growth Opportunities
-   - Focus on high-growth segments showing >20% growth
-   - Monitor declining products for turnaround or divestment
-
-3. Pricing Strategy
-   - Current CV of {metrics.get('price_cv', 0):.1f}% suggests {'high' if metrics.get('price_cv', 0) > 50 else 'moderate'} price variation
-   - {'Value-based' if metrics.get('price_cv', 0) > 50 else 'Competitive'} pricing recommended
-
-{'=' * 80}
-End of Executive Summary
-{'=' * 80}
-"""
-        
-        return summary
-
-
-# ============================================================================
-# ENHANCED SESSION MANAGEMENT
-# ============================================================================
-
-class SessionManager:
-    """
-    Enhanced session state management with persistence
-    """
-    
-    @staticmethod
-    def initialize_session() -> None:
-        """Initialize all session state variables"""
-        defaults = {
-            'data': None,
-            'filtered_data': None,
-            'metrics': {},
-            'insights': [],
-            'ml_results': {},
-            'active_filters': {},
-            'analysis_history': [],
-            'user_preferences': {
-                'theme': 'dark',
-                'chart_style': 'modern',
-                'export_format': 'csv'
-            }
-        }
-        
-        for key, value in defaults.items():
-            if key not in st.session_state:
-                st.session_state[key] = value
-    
-    @staticmethod
-    def save_analysis_state(name: str) -> None:
-        """Save current analysis state"""
-        state = {
-            'name': name,
-            'timestamp': datetime.now().isoformat(),
-            'metrics': st.session_state.metrics,
-            'filters': st.session_state.active_filters,
-            'row_count': len(st.session_state.filtered_data) if st.session_state.filtered_data is not None else 0
-        }
-        
-        st.session_state.analysis_history.append(state)
-    
-    @staticmethod
-    def clear_session() -> None:
-        """Clear all session data"""
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-
-
-# ============================================================================
-# PERFORMANCE PROFILER
-# ============================================================================
-
-class Profiler:
-    """
-    Application performance profiling
-    """
-    
-    def __init__(self):
-        self.metrics = {}
-        self.start_time = time.time()
-    
-    def profile(self, name: str):
-        """Context manager for profiling code blocks"""
-        class ProfileContext:
-            def __init__(self, profiler, name):
-                self.profiler = profiler
-                self.name = name
-                self.start = None
-            
-            def __enter__(self):
-                self.start = time.time()
-                return self
-            
-            def __exit__(self, *args):
-                elapsed = time.time() - self.start
-                self.profiler.metrics[self.name] = elapsed
-                Logger.info(f"Profile [{self.name}]: {elapsed:.3f}s")
-        
-        return ProfileContext(self, name)
-    
-    def get_report(self) -> Dict:
-        """Get profiling report"""
-        return {
-            'total_time': time.time() - self.start_time,
-            'operations': self.metrics
-        }
-
-
-# ============================================================================
-# CONFIGURATION VALIDATOR
-# ============================================================================
-
-class ConfigValidator:
-    """
-    Validate and enforce configuration constraints
-    """
-    
-    @staticmethod
-    def validate() -> List[str]:
-        """Validate all configuration settings"""
-        errors = []
-        
-        # Validate numeric ranges
-        if Config.MIN_N_CLUSTERS >= Config.MAX_N_CLUSTERS:
-            errors.append("MIN_N_CLUSTERS must be less than MAX_N_CLUSTERS")
-        
-        if Config.MIN_CONTAMINATION >= Config.MAX_CONTAMINATION:
-            errors.append("MIN_CONTAMINATION must be less than MAX_CONTAMINATION")
-        
-        # Validate colors
-        color_attributes = [attr for attr in dir(Config) if attr.startswith('COLOR_')]
-        for attr in color_attributes:
-            color = getattr(Config, attr)
-            if not re.match(r'^#[0-9A-Fa-f]{6}$', color):
-                errors.append(f"Invalid color format for {attr}: {color}")
-        
-        return errors
-
-
-# Initialize on import
-SessionManager.initialize_session()
-validation_errors = ConfigValidator.validate()
-if validation_errors:
-    Logger.warning(f"Configuration validation errors: {validation_errors}")
