@@ -70,9 +70,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'Yardım': 'https://pharmaintelligence.com/enterprise-support',
-        'Hata Bildir': "https://pharmaintelligence.com/enterprise-bug-report",
-        'Hakkında': """
+        'Get help': 'https://pharmaintelligence.com/enterprise-support',
+        'Report a bug': "https://pharmaintelligence.com/enterprise-bug-report",
+        'About': """
         ### PharmaIntelligence Enterprise v5.0
         • International Product Analytics
         • Predictive Modeling
@@ -5222,3 +5222,4 @@ if __name__ == "__main__":
         # Yenileme butonu
         if st.button("🔄 **SAYFAYI YENİLE**", type="primary", use_container_width=True):
             st.rerun()
+
