@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -6,3618 +8,2235 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import warnings
 warnings.filterwarnings('ignore')
-import json
-from datetime import datetime
-import math
-import itertools
-import re
-from scipy import stats
-import hashlib
-import time
 
-# ============================================
-# KONFİGÜRASYON VE STİL
-# ============================================
+# ═══════════════════════════════════════════════════════════════════════════════
+# PAGE CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
 st.set_page_config(
-    page_title="Pharma Commercial Analytics Suite",
+    page_title="Pharma Commercial Analytics Platform",
     page_icon="💊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-def inject_css():
-    st.markdown("""
-    <style>
+# ═══════════════════════════════════════════════════════════════════════════════
+# CUSTOM CSS STYLING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+st.markdown("""
+<style>
     .main-header {
-        font-size: 2.8rem;
-        color: #1E3A8A;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 3px solid #3B82F6;
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%);
+        border-radius: 10px;
     }
     .sub-header {
         font-size: 1.8rem;
-        color: #1E3A8A;
-        font-weight: 700;
-        margin-top: 2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-top: 1.5rem;
         margin-bottom: 1rem;
-        padding-left: 0.5rem;
-        border-left: 4px solid #10B981;
+        border-bottom: 3px solid #1f77b4;
+        padding-bottom: 0.5rem;
     }
     .metric-card {
-        background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
-        border-radius: 12px;
-        padding: 1.2rem;
-        border-left: 5px solid #3B82F6;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        margin-bottom: 1rem;
-    }
-    .insight-card {
-        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        background-color: #f8f9fa;
+        padding: 1.5rem;
         border-radius: 10px;
-        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin: 0.5rem 0;
-        border-left: 4px solid #D97706;
     }
-    .warning-card {
-        background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
-        border-radius: 10px;
+    .insight-box {
+        background-color: #fff3cd;
+        border-left: 5px solid #ffc107;
         padding: 1rem;
-        margin: 0.5rem 0;
-        border-left: 4px solid #DC2626;
+        margin: 1rem 0;
+        border-radius: 5px;
     }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #F8FAFC;
-        padding: 8px;
-        border-radius: 10px;
+    .warning-box {
+        background-color: #f8d7da;
+        border-left: 5px solid #dc3545;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 5px;
     }
-    .stTabs [data-baseweb="tab"] {
-        height: 60px;
-        white-space: pre-wrap;
-        background-color: #E2E8F0;
-        border-radius: 8px 8px 0 0;
-        gap: 8px;
-        padding: 12px 20px;
-        font-weight: 600;
+    .success-box {
+        background-color: #d4edda;
+        border-left: 5px solid #28a745;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 5px;
     }
-    .stTabs [aria-selected="true"] {
-        background-color: #3B82F6 !important;
-        color: white !important;
+    .info-box {
+        background-color: #d1ecf1;
+        border-left: 5px solid #17a2b8;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 5px;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+    div[data-testid="stMetricDelta"] {
+        font-size: 1.2rem;
     }
     .dataframe {
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-    .stButton button {
-        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-        color: white;
-        border: none;
-        padding: 0.5rem 2rem;
-        border-radius: 8px;
-        font-weight: 600;
-    }
-    .footer {
-        text-align: center;
-        margin-top: 3rem;
-        padding-top: 1rem;
-        border-top: 1px solid #E5E7EB;
-        color: #6B7280;
         font-size: 0.9rem;
     }
-    </style>
-    """, unsafe_allow_html=True)
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 0.8rem 1.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-inject_css()
+# ═══════════════════════════════════════════════════════════════════════════════
+# REQUIRED COLUMNS DEFINITION
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# ============================================
-# VERİ YÜKLEME VE VALİDASYON
-# ============================================
-@st.cache_data(ttl=3600, show_spinner=False)
+REQUIRED_COLUMNS = [
+    "Source.Name",
+    "Country",
+    "Sector",
+    "Panel",
+    "Region",
+    "Sub-Region",
+    "Corporation",
+    "Manufacturer",
+    "Molecule List",
+    "Molecule",
+    "Chemical Salt",
+    "International Product",
+    "Specialty Product",
+    "NFC123",
+    "International Pack",
+    "International Strength",
+    "International Size",
+    "International Volume",
+    "International Prescription",
+    "MAT Q3 2022\nUSD MNF",
+    "MAT Q3 2022\nStandard Units",
+    "MAT Q3 2022\nUnits",
+    "MAT Q3 2022\nSU Avg Price USD MNF",
+    "MAT Q3 2022\nUnit Avg Price USD MNF",
+    "MAT Q3 2023\nUSD MNF",
+    "MAT Q3 2023\nStandard Units",
+    "MAT Q3 2023\nUnits",
+    "MAT Q3 2023\nSU Avg Price USD MNF",
+    "MAT Q3 2023\nUnit Avg Price USD MNF",
+    "MAT Q3 2024\nUSD MNF",
+    "MAT Q3 2024\nStandard Units",
+    "MAT Q3 2024\nUnits",
+    "MAT Q3 2024\nSU Avg Price USD MNF",
+    "MAT Q3 2024\nUnit Avg Price USD MNF"
+]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DATA LOADING FUNCTION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@st.cache_data
 def load_and_validate_data(uploaded_file):
     try:
-        df = pd.read_excel(uploaded_file, engine='openpyxl')
+        df = pd.read_excel(uploaded_file)
         
-        required_columns = [
-            'Source.Name', 'Country', 'Sector', 'Panel', 'Region', 'Sub-Region',
-            'Corporation', 'Manufacturer', 'Molecule List', 'Molecule', 'Chemical Salt',
-            'International Product', 'Specialty Product', 'NFC123', 'International Pack',
-            'International Strength', 'International Size', 'International Volume',
-            'International Prescription',
-            'MAT Q3 2022\nUSD MNF', 'MAT Q3 2022\nStandard Units', 'MAT Q3 2022\nUnits',
-            'MAT Q3 2022\nSU Avg Price USD MNF', 'MAT Q3 2022\nUnit Avg Price USD MNF',
-            'MAT Q3 2023\nUSD MNF', 'MAT Q3 2023\nStandard Units', 'MAT Q3 2023\nUnits',
-            'MAT Q3 2023\nSU Avg Price USD MNF', 'MAT Q3 2023\nUnit Avg Price USD MNF',
-            'MAT Q3 2024\nUSD MNF', 'MAT Q3 2024\nStandard Units', 'MAT Q3 2024\nUnits',
-            'MAT Q3 2024\nSU Avg Price USD MNF', 'MAT Q3 2024\nUnit Avg Price USD MNF'
-        ]
-        
-        missing_cols = [col for col in required_columns if col not in df.columns]
-        if missing_cols:
-            st.error(f"EKSİK KOLONLAR: {missing_cols}")
+        missing_columns = set(REQUIRED_COLUMNS) - set(df.columns)
+        if missing_columns:
+            st.error(f"❌ Eksik kolonlar tespit edildi: {missing_columns}")
             st.stop()
         
-        extra_cols = [col for col in df.columns if col not in required_columns]
-        if extra_cols:
-            st.warning(f"EKSTRA KOLONLAR (göz ardı edilecek): {extra_cols}")
+        extra_columns = set(df.columns) - set(REQUIRED_COLUMNS)
+        if extra_columns:
+            st.warning(f"⚠️ Fazladan kolonlar bulundu ve görmezden geliniyor: {extra_columns}")
         
-        df = df[required_columns]
+        df = df[REQUIRED_COLUMNS].copy()
         
-        numeric_columns = [col for col in df.columns if any(x in col for x in ['USD', 'Units', 'Price'])]
+        numeric_columns = [col for col in df.columns if 'MAT Q3' in col]
         for col in numeric_columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        df.fillna(0, inplace=True)
         
         return df
+    
     except Exception as e:
-        st.error(f"Veri yükleme hatası: {str(e)}")
+        st.error(f"❌ Dosya yükleme hatası: {str(e)}")
         st.stop()
 
-# ============================================
-# GLOBAL FİLTRELER
-# ============================================
-class GlobalFilters:
-    def __init__(self, df):
-        self.df = df
-        self.initialize_filters()
-    
-    def initialize_filters(self):
-        with st.sidebar:
-            st.markdown("### 🌍 GLOBAL FİLTRELER")
-            
-            # Country (çoklu seçim)
-            all_countries = sorted(self.df['Country'].dropna().unique())
-            self.selected_countries = st.multiselect(
-                "Ülke (Çoklu Seçim)",
-                options=all_countries,
-                default=all_countries[:5] if len(all_countries) > 5 else all_countries,
-                key="country_filter"
-            )
-            
-            # Region
-            all_regions = sorted(self.df['Region'].dropna().unique())
-            self.selected_region = st.selectbox(
-                "Bölge",
-                options=["Tümü"] + all_regions,
-                key="region_filter"
-            )
-            
-            # Sub-Region
-            all_subregions = sorted(self.df['Sub-Region'].dropna().unique())
-            self.selected_subregion = st.selectbox(
-                "Alt Bölge",
-                options=["Tümü"] + all_subregions,
-                key="subregion_filter"
-            )
-            
-            # Sector
-            all_sectors = sorted(self.df['Sector'].dropna().unique())
-            self.selected_sector = st.selectbox(
-                "Sektör",
-                options=["Tümü"] + all_sectors,
-                key="sector_filter"
-            )
-            
-            # Panel
-            all_panels = sorted(self.df['Panel'].dropna().unique())
-            self.selected_panel = st.selectbox(
-                "Panel",
-                options=["Tümü"] + all_panels,
-                key="panel_filter"
-            )
-            
-            # Corporation (çoklu)
-            all_corps = sorted(self.df['Corporation'].dropna().unique())
-            self.selected_corps = st.multiselect(
-                "Kuruluş (Çoklu)",
-                options=all_corps,
-                default=all_corps[:3] if len(all_corps) > 3 else all_corps,
-                key="corp_filter"
-            )
-            
-            # Manufacturer
-            all_manufacturers = sorted(self.df['Manufacturer'].dropna().unique())
-            self.selected_manufacturer = st.selectbox(
-                "Üretici",
-                options=["Tümü"] + all_manufacturers,
-                key="manufacturer_filter"
-            )
-            
-            # Molecule (çoklu)
-            all_molecules = sorted(self.df['Molecule'].dropna().unique())
-            self.selected_molecules = st.multiselect(
-                "Molekül (Çoklu)",
-                options=all_molecules,
-                default=all_molecules[:5] if len(all_molecules) > 5 else all_molecules,
-                key="molecule_filter"
-            )
-            
-            # Specialty Product
-            all_specialty = sorted(self.df['Specialty Product'].dropna().unique())
-            self.selected_specialty = st.selectbox(
-                "Özel Ürün",
-                options=["Tümü"] + all_specialty,
-                key="specialty_filter"
-            )
-            
-            # International Product
-            all_intl = sorted(self.df['International Product'].dropna().unique())
-            self.selected_intl = st.selectbox(
-                "Uluslararası Ürün",
-                options=["Tümü"] + all_intl,
-                key="intl_filter"
-            )
-    
-    def apply_filters(self, df):
-        filtered_df = df.copy()
-        
-        if self.selected_countries:
-            filtered_df = filtered_df[filtered_df['Country'].isin(self.selected_countries)]
-        
-        if self.selected_region != "Tümü":
-            filtered_df = filtered_df[filtered_df['Region'] == self.selected_region]
-        
-        if self.selected_subregion != "Tümü":
-            filtered_df = filtered_df[filtered_df['Sub-Region'] == self.selected_subregion]
-        
-        if self.selected_sector != "Tümü":
-            filtered_df = filtered_df[filtered_df['Sector'] == self.selected_sector]
-        
-        if self.selected_panel != "Tümü":
-            filtered_df = filtered_df[filtered_df['Panel'] == self.selected_panel]
-        
-        if self.selected_corps:
-            filtered_df = filtered_df[filtered_df['Corporation'].isin(self.selected_corps)]
-        
-        if self.selected_manufacturer != "Tümü":
-            filtered_df = filtered_df[filtered_df['Manufacturer'] == self.selected_manufacturer]
-        
-        if self.selected_molecules:
-            filtered_df = filtered_df[filtered_df['Molecule'].isin(self.selected_molecules)]
-        
-        if self.selected_specialty != "Tümü":
-            filtered_df = filtered_df[filtered_df['Specialty Product'] == self.selected_specialty]
-        
-        if self.selected_intl != "Tümü":
-            filtered_df = filtered_df[filtered_df['International Product'] == self.selected_intl]
-        
-        return filtered_df
+# ═══════════════════════════════════════════════════════════════════════════════
+# GLOBAL FILTER FUNCTION
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# ============================================
-# HARİTA İŞLEMLERİ - ÜLKE KODLARI
-# ============================================
-class CountryCodeMapper:
-    def __init__(self):
-        self.country_codes = self._create_country_code_map()
+def apply_global_filters(df):
+    filtered_df = df.copy()
     
-    def _create_country_code_map(self):
-        # ISO Alpha-3 ülke kodları
-        country_map = {
-            # Amerika
-            'United States': 'USA', 'USA': 'USA', 'US': 'USA', 'America': 'USA',
-            'Canada': 'CAN',
-            'Mexico': 'MEX',
-            'Brazil': 'BRA',
-            'Argentina': 'ARG',
-            'Chile': 'CHL',
-            'Colombia': 'COL',
-            'Peru': 'PER',
-            
-            # Avrupa
-            'United Kingdom': 'GBR', 'UK': 'GBR', 'Great Britain': 'GBR',
-            'Germany': 'DEU',
-            'France': 'FRA',
-            'Italy': 'ITA',
-            'Spain': 'ESP',
-            'Netherlands': 'NLD',
-            'Belgium': 'BEL',
-            'Switzerland': 'CHE',
-            'Sweden': 'SWE',
-            'Norway': 'NOR',
-            'Denmark': 'DNK',
-            'Finland': 'FIN',
-            'Austria': 'AUT',
-            'Portugal': 'PRT',
-            'Ireland': 'IRL',
-            'Poland': 'POL',
-            'Czech Republic': 'CZE', 'Czechia': 'CZE',
-            'Hungary': 'HUN',
-            'Romania': 'ROU',
-            'Greece': 'GRC',
-            'Turkey': 'TUR', 'Türkiye': 'TUR',
-            'Russia': 'RUS', 'Russian Federation': 'RUS',
-            
-            # Asya
-            'China': 'CHN',
-            'Japan': 'JPN',
-            'India': 'IND',
-            'South Korea': 'KOR', 'Korea, South': 'KOR',
-            'Australia': 'AUS',
-            'New Zealand': 'NZL',
-            'Singapore': 'SGP',
-            'Malaysia': 'MYS',
-            'Thailand': 'THA',
-            'Indonesia': 'IDN',
-            'Philippines': 'PHL',
-            'Vietnam': 'VNM', 'Viet Nam': 'VNM',
-            'Taiwan': 'TWN',
-            'Hong Kong': 'HKG',
-            
-            # Orta Doğu
-            'Saudi Arabia': 'SAU',
-            'United Arab Emirates': 'ARE', 'UAE': 'ARE',
-            'Israel': 'ISR',
-            'Qatar': 'QAT',
-            'Kuwait': 'KWT',
-            'Oman': 'OMN',
-            'Jordan': 'JOR',
-            'Lebanon': 'LBN',
-            'Egypt': 'EGY',
-            
-            # Afrika
-            'South Africa': 'ZAF',
-            'Nigeria': 'NGA',
-            'Kenya': 'KEN',
-            'Morocco': 'MAR',
-            'Algeria': 'DZA',
-            'Tunisia': 'TUN',
-            'Ghana': 'GHA',
-            
-            # Diğer
-            'Pakistan': 'PAK',
-            'Bangladesh': 'BGD',
-            'Sri Lanka': 'LKA',
-            'Ukraine': 'UKR',
-            'Kazakhstan': 'KAZ',
-            'Azerbaijan': 'AZE',
-            'Georgia': 'GEO',
-            'Armenia': 'ARM',
-            
-            # Ek ülkeler
-            'Bulgaria': 'BGR',
-            'Croatia': 'HRV',
-            'Serbia': 'SRB',
-            'Slovenia': 'SVN',
-            'Slovakia': 'SVK',
-            'Lithuania': 'LTU',
-            'Latvia': 'LVA',
-            'Estonia': 'EST',
-            'Iceland': 'ISL',
-            'Luxembourg': 'LUX',
-            'Cyprus': 'CYP',
-            'Malta': 'MLT',
-            'Monaco': 'MCO',
-            'Andorra': 'AND',
-            'Liechtenstein': 'LIE',
-            'San Marino': 'SMR',
-            'Vatican City': 'VAT',
-            'Bosnia and Herzegovina': 'BIH',
-            'Montenegro': 'MNE',
-            'North Macedonia': 'MKD',
-            'Albania': 'ALB',
-            'Kosovo': 'XKX',
-            'Moldova': 'MDA',
-            'Belarus': 'BLR',
-            
-            # Latin Amerika
-            'Uruguay': 'URY',
-            'Paraguay': 'PRY',
-            'Bolivia': 'BOL',
-            'Ecuador': 'ECU',
-            'Venezuela': 'VEN',
-            'Guyana': 'GUY',
-            'Suriname': 'SUR',
-            'French Guiana': 'GUF',
-            
-            # Karayipler
-            'Cuba': 'CUB',
-            'Dominican Republic': 'DOM',
-            'Puerto Rico': 'PRI',
-            'Jamaica': 'JAM',
-            'Trinidad and Tobago': 'TTO',
-            'Bahamas': 'BHS',
-            'Barbados': 'BRB',
-            
-            # Orta Amerika
-            'Costa Rica': 'CRI',
-            'Panama': 'PAN',
-            'Nicaragua': 'NIC',
-            'Honduras': 'HND',
-            'El Salvador': 'SLV',
-            'Guatemala': 'GTM',
-            'Belize': 'BLZ',
-            
-            # Asya ek
-            'North Korea': 'PRK',
-            'Mongolia': 'MNG',
-            'Myanmar': 'MMR',
-            'Laos': 'LAO',
-            'Cambodia': 'KHM',
-            'Brunei': 'BRN',
-            'Timor-Leste': 'TLS',
-            'Papua New Guinea': 'PNG',
-            'Fiji': 'FJI',
-            'Solomon Islands': 'SLB',
-            'Vanuatu': 'VUT',
-            'Samoa': 'WSM',
-            'Kiribati': 'KIR',
-            'Micronesia': 'FSM',
-            'Marshall Islands': 'MHL',
-            'Palau': 'PLW',
-            'Nauru': 'NRU',
-            'Tuvalu': 'TUV',
-            
-            # Afrika ek
-            'Ethiopia': 'ETH',
-            'Democratic Republic of the Congo': 'COD',
-            'Tanzania': 'TZA',
-            'Uganda': 'UGA',
-            'Sudan': 'SDN',
-            'Angola': 'AGO',
-            'Mozambique': 'MOZ',
-            'Zambia': 'ZMB',
-            'Zimbabwe': 'ZWE',
-            'Madagascar': 'MDG',
-            'Cameroon': 'CMR',
-            "Côte d'Ivoire": 'CIV',
-            'Niger': 'NER',
-            'Burkina Faso': 'BFA',
-            'Mali': 'MLI',
-            'Senegal': 'SEN',
-            'Guinea': 'GIN',
-            'Benin': 'BEN',
-            'Rwanda': 'RWA',
-            'Burundi': 'BDI',
-            'Somalia': 'SOM',
-            'Chad': 'TCD',
-            'Central African Republic': 'CAF',
-            'Republic of the Congo': 'COG',
-            'Gabon': 'GAB',
-            'Equatorial Guinea': 'GNQ',
-            'Botswana': 'BWA',
-            'Namibia': 'NAM',
-            'Mauritius': 'MUS',
-            'Seychelles': 'SYC',
-            'Comoros': 'COM',
-            'Cabo Verde': 'CPV',
-            'São Tomé and Príncipe': 'STP',
-            'Eswatini': 'SWZ',
-            'Lesotho': 'LSO',
-            'Eritrea': 'ERI',
-            'Djibouti': 'DJI',
-            'Liberia': 'LBR',
-            'Sierra Leone': 'SLE',
-            'Togo': 'TGO',
-            'Gambia': 'GMB',
-            'Guinea-Bissau': 'GNB',
-            'Mauritania': 'MRT',
-            
-            # Orta Doğu ek
-            'Iran': 'IRN', 'Iran, Islamic Republic of': 'IRN',
-            'Iraq': 'IRQ',
-            'Syria': 'SYR', 'Syrian Arab Republic': 'SYR',
-            'Yemen': 'YEM',
-            'Afghanistan': 'AFG',
-            'Turkmenistan': 'TKM',
-            'Uzbekistan': 'UZB',
-            'Tajikistan': 'TJK',
-            'Kyrgyzstan': 'KGZ',
-            'Bahrain': 'BHR',
-            'Palestine': 'PSE',
-            
-            # Avrupa ek
-            'Faroe Islands': 'FRO',
-            'Greenland': 'GRL',
-            'Gibraltar': 'GIB',
-            'Isle of Man': 'IMN',
-            'Guernsey': 'GGY',
-            'Jersey': 'JEY',
-            'Åland Islands': 'ALA',
-            'Svalbard and Jan Mayen': 'SJM',
-            
-            # Okyanusya
-            'New Caledonia': 'NCL',
-            'French Polynesia': 'PYF',
-            'Guam': 'GUM',
-            'Northern Mariana Islands': 'MNP',
-            'American Samoa': 'ASM',
-            'Cook Islands': 'COK',
-            'Niue': 'NIU',
-            'Tokelau': 'TKL',
-            'Wallis and Futuna': 'WLF',
-            'Pitcairn Islands': 'PCN',
-            'Norfolk Island': 'NFK',
-            'Christmas Island': 'CXR',
-            'Cocos (Keeling) Islands': 'CCK',
-            'Heard Island and McDonald Islands': 'HMD',
-            'British Indian Ocean Territory': 'IOT',
-            'French Southern and Antarctic Lands': 'ATF',
-            'Bouvet Island': 'BVT',
-            'South Georgia and the South Sandwich Islands': 'SGS',
-            'Antarctica': 'ATA',
-            
-            # Özel bölgeler
-            'Hong Kong SAR': 'HKG',
-            'Macao SAR': 'MAC',
-            'Taiwan, Province of China': 'TWN',
-            'Réunion': 'REU',
-            'Mayotte': 'MYT',
-            'French Guiana': 'GUF',
-            'Martinique': 'MTQ',
-            'Guadeloupe': 'GLP',
-            'Saint Martin': 'MAF',
-            'Saint Barthélemy': 'BLM',
-            'Saint Pierre and Miquelon': 'SPM',
-            'Aruba': 'ABW',
-            'Curaçao': 'CUW',
-            'Sint Maarten': 'SXM',
-            'Bonaire, Sint Eustatius and Saba': 'BES',
-            'Anguilla': 'AIA',
-            'Bermuda': 'BMU',
-            'Cayman Islands': 'CYM',
-            'Montserrat': 'MSR',
-            'Turks and Caicos Islands': 'TCA',
-            'British Virgin Islands': 'VGB',
-            'U.S. Virgin Islands': 'VIR',
-            'Puerto Rico': 'PRI',
-            'Guam': 'GUM',
-            'Northern Mariana Islands': 'MNP',
-            'American Samoa': 'ASM',
-            'Wake Island': 'WAK',
-            'Midway Atoll': 'MID',
-            'Johnston Atoll': 'JTN',
-            'Baker Island': 'BAK',
-            'Howland Island': 'HWL',
-            'Jarvis Island': 'JAR',
-            'Kingman Reef': 'KMR',
-            'Palmyra Atoll': 'PAL',
-            'Navassa Island': 'NAV',
-            'Serranilla Bank': 'SRB',
-            'Bajo Nuevo Bank': 'BNB',
-            'Scarborough Shoal': 'SCS',
-            'Spratly Islands': 'SPR',
-            'Paracel Islands': 'PAR',
-            'Senkaku Islands': 'SEN',
-            'Liancourt Rocks': 'LIA',
-            'Kuril Islands': 'KUR',
-            'Crimea': 'CRI',
-            'Abkhazia': 'ABH',
-            'South Ossetia': 'OSS',
-            'Artsakh': 'ARK',
-            'Transnistria': 'TRA',
-            'Northern Cyprus': 'CYN',
-            'Somaliland': 'SOL',
-            'Western Sahara': 'ESH',
-            'Kosovo': 'XKX',
-            'Palestine': 'PSE',
-            'Taiwan': 'TWN',
-            'Hong Kong': 'HKG',
-            'Macao': 'MAC'
+    st.sidebar.markdown("## 🎛️ Global Filtreler")
+    st.sidebar.markdown("---")
+    
+    countries = sorted(df['Country'].unique())
+    selected_countries = st.sidebar.multiselect(
+        "🌍 Ülke Seçimi",
+        options=countries,
+        default=countries,
+        key="country_filter"
+    )
+    if selected_countries:
+        filtered_df = filtered_df[filtered_df['Country'].isin(selected_countries)]
+    
+    regions = sorted(filtered_df['Region'].unique())
+    selected_regions = st.sidebar.multiselect(
+        "🗺️ Bölge Seçimi",
+        options=regions,
+        default=regions,
+        key="region_filter"
+    )
+    if selected_regions:
+        filtered_df = filtered_df[filtered_df['Region'].isin(selected_regions)]
+    
+    sub_regions = sorted(filtered_df['Sub-Region'].unique())
+    selected_sub_regions = st.sidebar.multiselect(
+        "📍 Alt Bölge Seçimi",
+        options=sub_regions,
+        default=sub_regions,
+        key="sub_region_filter"
+    )
+    if selected_sub_regions:
+        filtered_df = filtered_df[filtered_df['Sub-Region'].isin(selected_sub_regions)]
+    
+    sectors = sorted(filtered_df['Sector'].unique())
+    selected_sectors = st.sidebar.multiselect(
+        "🏢 Sektör Seçimi",
+        options=sectors,
+        default=sectors,
+        key="sector_filter"
+    )
+    if selected_sectors:
+        filtered_df = filtered_df[filtered_df['Sector'].isin(selected_sectors)]
+    
+    panels = sorted(filtered_df['Panel'].unique())
+    selected_panels = st.sidebar.multiselect(
+        "📊 Panel Seçimi",
+        options=panels,
+        default=panels,
+        key="panel_filter"
+    )
+    if selected_panels:
+        filtered_df = filtered_df[filtered_df['Panel'].isin(selected_panels)]
+    
+    corporations = sorted(filtered_df['Corporation'].unique())
+    selected_corporations = st.sidebar.multiselect(
+        "🏛️ Corporation Seçimi",
+        options=corporations,
+        default=corporations,
+        key="corporation_filter"
+    )
+    if selected_corporations:
+        filtered_df = filtered_df[filtered_df['Corporation'].isin(selected_corporations)]
+    
+    manufacturers = sorted(filtered_df['Manufacturer'].unique())
+    selected_manufacturers = st.sidebar.multiselect(
+        "🏭 Üretici Seçimi",
+        options=manufacturers,
+        default=manufacturers,
+        key="manufacturer_filter"
+    )
+    if selected_manufacturers:
+        filtered_df = filtered_df[filtered_df['Manufacturer'].isin(selected_manufacturers)]
+    
+    molecules = sorted(filtered_df['Molecule'].unique())
+    selected_molecules = st.sidebar.multiselect(
+        "⚗️ Molekül Seçimi",
+        options=molecules,
+        default=molecules,
+        key="molecule_filter"
+    )
+    if selected_molecules:
+        filtered_df = filtered_df[filtered_df['Molecule'].isin(selected_molecules)]
+    
+    specialty_products = sorted(filtered_df['Specialty Product'].unique())
+    selected_specialty = st.sidebar.multiselect(
+        "💎 Specialty Product Seçimi",
+        options=specialty_products,
+        default=specialty_products,
+        key="specialty_filter"
+    )
+    if selected_specialty:
+        filtered_df = filtered_df[filtered_df['Specialty Product'].isin(selected_specialty)]
+    
+    intl_products = sorted(filtered_df['International Product'].unique())
+    selected_intl_products = st.sidebar.multiselect(
+        "🌐 International Product Seçimi",
+        options=intl_products,
+        default=intl_products,
+        key="intl_product_filter"
+    )
+    if selected_intl_products:
+        filtered_df = filtered_df[filtered_df['International Product'].isin(selected_intl_products)]
+    
+    st.sidebar.markdown("---")
+    st.sidebar.info(f"📋 Filtrelenmiş Kayıt Sayısı: {len(filtered_df):,}")
+    
+    return filtered_df
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HELPER FUNCTIONS FOR CALCULATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def calculate_growth_rate(current, previous):
+    if previous == 0:
+        return 0
+    return ((current - previous) / previous) * 100
+
+def calculate_contribution(current, previous):
+    return current - previous
+
+def safe_division(numerator, denominator):
+    if denominator == 0:
+        return 0
+    return numerator / denominator
+
+def format_number(num):
+    if abs(num) >= 1_000_000_000:
+        return f"${num/1_000_000_000:.2f}B"
+    elif abs(num) >= 1_000_000:
+        return f"${num/1_000_000:.2f}M"
+    elif abs(num) >= 1_000:
+        return f"${num/1_000:.2f}K"
+    else:
+        return f"${num:.2f}"
+
+def format_percentage(pct):
+    return f"{pct:.2f}%"
+
+def get_trend_indicator(value):
+    if value > 0:
+        return "📈"
+    elif value < 0:
+        return "📉"
+    else:
+        return "➡️"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PRICE-VOLUME-MIX DECOMPOSITION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def price_volume_mix_decomposition(df, year_from, year_to, groupby_cols=None):
+    if groupby_cols is None:
+        groupby_cols = []
+    
+    usd_col_from = f"MAT Q3 {year_from}\nUSD MNF"
+    usd_col_to = f"MAT Q3 {year_to}\nUSD MNF"
+    units_col_from = f"MAT Q3 {year_from}\nStandard Units"
+    units_col_to = f"MAT Q3 {year_to}\nStandard Units"
+    price_col_from = f"MAT Q3 {year_from}\nSU Avg Price USD MNF"
+    price_col_to = f"MAT Q3 {year_to}\nSU Avg Price USD MNF"
+    
+    if groupby_cols:
+        agg_dict = {
+            usd_col_from: 'sum',
+            usd_col_to: 'sum',
+            units_col_from: 'sum',
+            units_col_to: 'sum'
         }
+        grouped = df.groupby(groupby_cols).agg(agg_dict).reset_index()
         
-        # Tüm ülke isimlerini lowercase'e çevir
-        country_map_lower = {k.lower(): v for k, v in country_map.items()}
+        grouped['avg_price_from'] = safe_division(
+            grouped[usd_col_from], 
+            grouped[units_col_from]
+        )
+        grouped['avg_price_to'] = safe_division(
+            grouped[usd_col_to], 
+            grouped[units_col_to]
+        )
         
-        return country_map_lower
-    
-    def get_country_code(self, country_name):
-        if pd.isna(country_name):
-            return None
+        grouped['total_change'] = grouped[usd_col_to] - grouped[usd_col_from]
+        grouped['volume_effect'] = (grouped[units_col_to] - grouped[units_col_from]) * grouped['avg_price_from']
+        grouped['price_effect'] = (grouped['avg_price_to'] - grouped['avg_price_from']) * grouped[units_col_to]
+        grouped['mix_effect'] = grouped['total_change'] - grouped['volume_effect'] - grouped['price_effect']
         
-        country_name_str = str(country_name).strip()
-        country_lower = country_name_str.lower()
+        return grouped
+    else:
+        total_usd_from = df[usd_col_from].sum()
+        total_usd_to = df[usd_col_to].sum()
+        total_units_from = df[units_col_from].sum()
+        total_units_to = df[units_col_to].sum()
         
-        # Direkt eşleştirme
-        if country_lower in self.country_codes:
-            return self.country_codes[country_lower]
+        avg_price_from = safe_division(total_usd_from, total_units_from)
+        avg_price_to = safe_division(total_usd_to, total_units_to)
         
-        # Kısmi eşleştirmeler
-        for country_key, code in self.country_codes.items():
-            if country_lower in country_key or country_key in country_lower:
-                return code
-        
-        # Özel durumlar
-        special_cases = {
-            'usa': 'USA',
-            'uk': 'GBR',
-            'u.s.': 'USA',
-            'u.k.': 'GBR',
-            'uae': 'ARE',
-            'emirates': 'ARE',
-            'rus': 'RUS',
-            'chn': 'CHN',
-            'jpn': 'JPN',
-            'deu': 'DEU',
-            'fra': 'FRA',
-            'gbr': 'GBR',
-            'ita': 'ITA',
-            'esp': 'ESP',
-            'nld': 'NLD',
-            'bel': 'BEL',
-            'che': 'CHE',
-            'swe': 'SWE',
-            'nor': 'NOR',
-            'dnk': 'DNK',
-            'fin': 'FIN',
-            'aut': 'AUT',
-            'prt': 'PRT',
-            'irl': 'IRL',
-            'pol': 'POL',
-            'cze': 'CZE',
-            'hun': 'HUN',
-            'rou': 'ROU',
-            'grc': 'GRC',
-            'tur': 'TUR',
-            'rus': 'RUS',
-            'ind': 'IND',
-            'aus': 'AUS',
-            'nzl': 'NZL',
-            'sgp': 'SGP',
-            'mys': 'MYS',
-            'tha': 'THA',
-            'idn': 'IDN',
-            'phl': 'PHL',
-            'vnm': 'VNM',
-            'twn': 'TWN',
-            'hkg': 'HKG',
-            'kor': 'KOR',
-            'bra': 'BRA',
-            'arg': 'ARG',
-            'chl': 'CHL',
-            'col': 'COL',
-            'per': 'PER',
-            'mex': 'MEX',
-            'can': 'CAN',
-            'zaf': 'ZAF',
-            'nga': 'NGA',
-            'ken': 'KEN',
-            'mar': 'MAR',
-            'dza': 'DZA',
-            'tun': 'TUN',
-            'gha': 'GHA',
-            'sau': 'SAU',
-            'are': 'ARE',
-            'isr': 'ISR',
-            'qat': 'QAT',
-            'kwt': 'KWT',
-            'omn': 'OMN',
-            'jor': 'JOR',
-            'lbn': 'LBN',
-            'egy': 'EGY'
-        }
-        
-        # 3 harfli kod denemesi
-        if len(country_name_str) == 3 and country_name_str.upper() in special_cases.values():
-            return country_name_str.upper()
-        
-        # Son çare olarak None döndür
-        return None
-
-# ============================================
-# HARİTA İŞLEMLERİ
-# ============================================
-class WorldMapHandler:
-    def __init__(self):
-        self.country_mapper = CountryCodeMapper()
-    
-    def prepare_map_data(self, df, year):
-        if year == 2022:
-            usd_col = 'MAT Q3 2022\nUSD MNF'
-            units_col = 'MAT Q3 2022\nUnits'
-            su_col = 'MAT Q3 2022\nStandard Units'
-        elif year == 2023:
-            usd_col = 'MAT Q3 2023\nUSD MNF'
-            units_col = 'MAT Q3 2023\nUnits'
-            su_col = 'MAT Q3 2023\nStandard Units'
-        elif year == 2024:
-            usd_col = 'MAT Q3 2024\nUSD MNF'
-            units_col = 'MAT Q3 2024\nUnits'
-            su_col = 'MAT Q3 2024\nStandard Units'
-        else:
-            return pd.DataFrame()
-        
-        country_data = df.groupby('Country').agg({
-            usd_col: 'sum',
-            units_col: 'sum',
-            su_col: 'sum'
-        }).reset_index()
-        
-        total_usd = country_data[usd_col].sum()
-        if total_usd > 0:
-            country_data['Global_Pay_Pct'] = (country_data[usd_col] / total_usd) * 100
-        else:
-            country_data['Global_Pay_Pct'] = 0
-        
-        country_data['ISO_A3'] = country_data['Country'].apply(self.country_mapper.get_country_code)
-        
-        # ISO kodu olmayanları filtreleme
-        country_data_with_iso = country_data.dropna(subset=['ISO_A3'])
-        
-        # ISO kodu olmayanlar için uyarı
-        missing_countries = country_data[country_data['ISO_A3'].isna()]['Country'].tolist()
-        if missing_countries and len(missing_countries) < 10:  # Sadece az sayıda eksik varsa göster
-            st.sidebar.warning(f"Harita için ISO kodu bulunamayan ülkeler: {', '.join(missing_countries[:5])}")
-        
-        return country_data_with_iso
-
-# ============================================
-# ANALİTİK MOTORLARI
-# ============================================
-class AnalyticsEngine:
-    @staticmethod
-    def calculate_growth(df, start_year, end_year):
-        if start_year == 2022 and end_year == 2023:
-            start_col = 'MAT Q3 2022\nUSD MNF'
-            end_col = 'MAT Q3 2023\nUSD MNF'
-        elif start_year == 2023 and end_year == 2024:
-            start_col = 'MAT Q3 2023\nUSD MNF'
-            end_col = 'MAT Q3 2024\nUSD MNF'
-        elif start_year == 2022 and end_year == 2024:
-            start_col = 'MAT Q3 2022\nUSD MNF'
-            end_col = 'MAT Q3 2024\nUSD MNF'
-        else:
-            return 0, 0
-        
-        start_total = df[start_col].sum()
-        end_total = df[end_col].sum()
-        
-        if start_total == 0:
-            return 0, end_total
-        
-        growth_pct = ((end_total - start_total) / start_total) * 100
-        growth_abs = end_total - start_total
-        
-        return growth_pct, growth_abs
-    
-    @staticmethod
-    def price_volume_mix_analysis(df, start_year, end_year):
-        if start_year == 2022 and end_year == 2023:
-            usd_start = 'MAT Q3 2022\nUSD MNF'
-            usd_end = 'MAT Q3 2023\nUSD MNF'
-            units_start = 'MAT Q3 2022\nUnits'
-            units_end = 'MAT Q3 2023\nUnits'
-            price_start = 'MAT Q3 2022\nUnit Avg Price USD MNF'
-            price_end = 'MAT Q3 2023\nUnit Avg Price USD MNF'
-        elif start_year == 2023 and end_year == 2024:
-            usd_start = 'MAT Q3 2023\nUSD MNF'
-            usd_end = 'MAT Q3 2024\nUSD MNF'
-            units_start = 'MAT Q3 2023\nUnits'
-            units_end = 'MAT Q3 2024\nUnits'
-            price_start = 'MAT Q3 2023\nUnit Avg Price USD MNF'
-            price_end = 'MAT Q3 2024\nUnit Avg Price USD MNF'
-        else:
-            return {}
-        
-        total_start_usd = df[usd_start].sum()
-        total_end_usd = df[usd_end].sum()
-        total_start_units = df[units_start].sum()
-        total_end_units = df[units_end].sum()
-        
-        if total_start_usd == 0 or total_start_units == 0:
-            return {
-                'price_effect': 0,
-                'volume_effect': 0,
-                'mix_effect': 0,
-                'total_growth': 0
-            }
-        
-        weighted_price_start = total_start_usd / total_start_units
-        weighted_price_end = total_end_usd / total_end_units
-        
-        price_effect = (weighted_price_end - weighted_price_start) * total_start_units
-        volume_effect = weighted_price_start * (total_end_units - total_start_units)
-        mix_effect = total_end_usd - (weighted_price_start * total_end_units)
-        
-        total_growth = total_end_usd - total_start_usd
-        
-        price_effect_pct = (price_effect / total_start_usd) * 100 if total_start_usd != 0 else 0
-        volume_effect_pct = (volume_effect / total_start_usd) * 100 if total_start_usd != 0 else 0
-        mix_effect_pct = (mix_effect / total_start_usd) * 100 if total_start_usd != 0 else 0
+        total_change = total_usd_to - total_usd_from
+        volume_effect = (total_units_to - total_units_from) * avg_price_from
+        price_effect = (avg_price_to - avg_price_from) * total_units_to
+        mix_effect = total_change - volume_effect - price_effect
         
         return {
-            'price_effect': price_effect,
+            'total_change': total_change,
             'volume_effect': volume_effect,
+            'price_effect': price_effect,
             'mix_effect': mix_effect,
-            'total_growth': total_growth,
-            'price_effect_pct': price_effect_pct,
-            'volume_effect_pct': volume_effect_pct,
-            'mix_effect_pct': mix_effect_pct,
-            'weighted_price_start': weighted_price_start,
-            'weighted_price_end': weighted_price_end,
-            'unit_growth_pct': ((total_end_units - total_start_units) / total_start_units * 100) if total_start_units != 0 else 0
+            'total_usd_from': total_usd_from,
+            'total_usd_to': total_usd_to
         }
-    
-    @staticmethod
-    def calculate_market_share(df, year, group_by='Corporation'):
-        if year == 2022:
-            usd_col = 'MAT Q3 2022\nUSD MNF'
-        elif year == 2023:
-            usd_col = 'MAT Q3 2023\nUSD MNF'
-        elif year == 2024:
-            usd_col = 'MAT Q3 2024\nUSD MNF'
-        else:
-            return pd.DataFrame()
-        
-        share_df = df.groupby(group_by).agg({
-            usd_col: 'sum'
-        }).reset_index()
-        
-        total_usd = share_df[usd_col].sum()
-        if total_usd > 0:
-            share_df['Market_Share_Pct'] = (share_df[usd_col] / total_usd) * 100
-        else:
-            share_df['Market_Share_Pct'] = 0
-        
-        share_df = share_df.sort_values('Market_Share_Pct', ascending=False)
-        share_df['Cumulative_Share'] = share_df['Market_Share_Pct'].cumsum()
-        
-        return share_df
-    
-    @staticmethod
-    def calculate_specialty_metrics(df):
-        metrics = {}
-        
-        for year in [2022, 2023, 2024]:
-            if year == 2022:
-                usd_col = 'MAT Q3 2022\nUSD MNF'
-            elif year == 2023:
-                usd_col = 'MAT Q3 2023\nUSD MNF'
-            else:
-                usd_col = 'MAT Q3 2024\nUSD MNF'
-            
-            specialty_mask = df['Specialty Product'].astype(str).str.contains('Specialty', case=False, na=False)
-            specialty_total = df[specialty_mask][usd_col].sum()
-            non_specialty_total = df[~specialty_mask][usd_col].sum()
-            total_usd = specialty_total + non_specialty_total
-            
-            if total_usd > 0:
-                specialty_pct = (specialty_total / total_usd) * 100
-            else:
-                specialty_pct = 0
-            
-            metrics[f'specialty_total_{year}'] = specialty_total
-            metrics[f'non_specialty_total_{year}'] = non_specialty_total
-            metrics[f'specialty_pct_{year}'] = specialty_pct
-        
-        return metrics
 
-# ============================================
-# OTOMATİK İÇGÖRÜ MOTORU
-# ============================================
-class InsightEngine:
-    def __init__(self, df):
-        self.df = df
-    
-    def generate_country_insights(self, country):
-        country_df = self.df[self.df['Country'] == country]
-        
-        if len(country_df) == 0:
-            return []
-        
-        insights = []
-        
-        # Büyüme analizi
-        growth_22_23, _ = AnalyticsEngine.calculate_growth(country_df, 2022, 2023)
-        growth_23_24, _ = AnalyticsEngine.calculate_growth(country_df, 2023, 2024)
-        growth_22_24, _ = AnalyticsEngine.calculate_growth(country_df, 2022, 2024)
-        
-        if growth_22_23 > 20:
-            insights.append(f"🇹🇷 **{country}**, 2022'den 2023'e **%{growth_22_23:.1f}** büyüme ile çok güçlü performans sergiledi.")
-        elif growth_22_23 < -10:
-            insights.append(f"⚠️ **{country}**, 2022'den 2023'e **%{growth_22_23:.1f}** küçülme yaşadı. Dikkat gerektiriyor.")
-        
-        if growth_23_24 > growth_22_23:
-            insights.append(f"📈 **{country}**, büyüme hızını artırdı: 2023-2024 (%{growth_23_24:.1f}) > 2022-2023 (%{growth_22_23:.1f})")
-        
-        # Global pay analizi
-        global_share_2024 = (country_df['MAT Q3 2024\nUSD MNF'].sum() / self.df['MAT Q3 2024\nUSD MNF'].sum() * 100)
-        
-        if global_share_2024 > 5:
-            insights.append(f"🌍 **{country}**, %{global_share_2024:.2f} global pay ile kilit pazarlardan biri.")
-        elif global_share_2024 < 0.5:
-            insights.append(f"🔍 **{country}**, sadece %{global_share_2024:.2f} global paya sahip. Büyüme potansiyeli incelenmeli.")
-        
-        # Molekül bazlı analiz
-        mol_share = country_df.groupby('Molecule').agg({
-            'MAT Q3 2024\nUSD MNF': 'sum'
-        }).reset_index()
-        if not mol_share.empty and mol_share['MAT Q3 2024\nUSD MNF'].sum() > 0:
-            mol_share['Share'] = (mol_share['MAT Q3 2024\nUSD MNF'] / mol_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
-            top_molecule = mol_share.nlargest(1, 'Share')
-            
-            if not top_molecule.empty:
-                mol_name = top_molecule.iloc[0]['Molecule']
-                mol_pct = top_molecule.iloc[0]['Share']
-                insights.append(f"💊 En büyük molekül: **{mol_name}** (%{mol_pct:.1f} pay)")
-        
-        # Fiyat-Volume ayrıştırma
-        pvm_22_23 = AnalyticsEngine.price_volume_mix_analysis(country_df, 2022, 2023)
-        price_effect_pct = pvm_22_23.get('price_effect_pct', 0)
-        
-        if price_effect_pct > 10:
-            insights.append(f"💰 Fiyat etkisi baskın: 2022-2023 büyümesinin %{price_effect_pct:.1f}'i fiyattan geldi.")
-        elif price_effect_pct < -5:
-            insights.append(f"📉 Fiyat erozyonu: 2022-2023'te fiyatlar %{abs(price_effect_pct):.1f} düştü.")
-        
-        return insights[:5]
-    
-    def generate_molecule_insights(self, molecule):
-        mol_df = self.df[self.df['Molecule'] == molecule]
-        
-        if len(mol_df) == 0:
-            return []
-        
-        insights = []
-        
-        # Global büyüme
-        growth_22_23, _ = AnalyticsEngine.calculate_growth(mol_df, 2022, 2023)
-        growth_23_24, _ = AnalyticsEngine.calculate_growth(mol_df, 2023, 2024)
-        
-        if growth_22_23 > 0 and growth_23_24 > 0:
-            insights.append(f"🚀 **{molecule}** molekülü iki yıl üst üste büyüdü: %{growth_22_23:.1f} → %{growth_23_24:.1f}")
-        
-        # Ülke dağılımı
-        country_share = mol_df.groupby('Country').agg({
-            'MAT Q3 2024\nUSD MNF': 'sum'
-        }).reset_index()
-        if not country_share.empty and country_share['MAT Q3 2024\nUSD MNF'].sum() > 0:
-            country_share['Share'] = (country_share['MAT Q3 2024\nUSD MNF'] / country_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
-            top_countries = country_share.nlargest(3, 'Share')
-            
-            if len(top_countries) > 0:
-                country_list = ", ".join([f"{row['Country']} (%{row['Share']:.1f})" for _, row in top_countries.iterrows()])
-                insights.append(f"📍 En büyük pazarlar: {country_list}")
-        
-        # Üretici konsantrasyonu
-        mfg_share = mol_df.groupby('Manufacturer').agg({
-            'MAT Q3 2024\nUSD MNF': 'sum'
-        }).reset_index()
-        if not mfg_share.empty and mfg_share['MAT Q3 2024\nUSD MNF'].sum() > 0:
-            mfg_share['Share'] = (mfg_share['MAT Q3 2024\nUSD MNF'] / mfg_share['MAT Q3 2024\nUSD MNF'].sum() * 100)
-            top_mfg = mfg_share.nlargest(1, 'Share')
-            
-            if not top_mfg.empty:
-                mfg_name = top_mfg.iloc[0]['Manufacturer']
-                mfg_pct = top_mfg.iloc[0]['Share']
-                if mfg_pct > 50:
-                    insights.append(f"🏭 **{mfg_name}**, %{mfg_pct:.1f} pay ile pazara hakim.")
-        
-        return insights[:5]
-    
-    def generate_corporation_insights(self, corporation):
-        corp_df = self.df[self.df['Corporation'] == corporation]
-        
-        if len(corp_df) == 0:
-            return []
-        
-        insights = []
-        
-        # Pazar payı trendi
-        total_2022 = self.df['MAT Q3 2022\nUSD MNF'].sum()
-        total_2023 = self.df['MAT Q3 2023\nUSD MNF'].sum()
-        total_2024 = self.df['MAT Q3 2024\nUSD MNF'].sum()
-        
-        share_2022 = (corp_df['MAT Q3 2022\nUSD MNF'].sum() / total_2022 * 100) if total_2022 > 0 else 0
-        share_2023 = (corp_df['MAT Q3 2023\nUSD MNF'].sum() / total_2023 * 100) if total_2023 > 0 else 0
-        share_2024 = (corp_df['MAT Q3 2024\nUSD MNF'].sum() / total_2024 * 100) if total_2024 > 0 else 0
-        
-        share_change_22_24 = share_2024 - share_2022
-        
-        if share_change_22_24 > 1:
-            insights.append(f"📊 **{corporation}**, pazar payını %{share_change_22_24:.2f} artırdı (2022: %{share_2022:.2f} → 2024: %{share_2024:.2f})")
-        elif share_change_22_24 < -1:
-            insights.append(f"⚠️ **{corporation}**, pazar payını %{abs(share_change_22_24):.2f} kaybetti (2022: %{share_2022:.2f} → 2024: %{share_2024:.2f})")
-        
-        # Coğrafi çeşitlilik
-        country_count = corp_df['Country'].nunique()
-        if country_count > 20:
-            insights.append(f"🌐 **{country_count} ülkede** varlık gösteriyor. Yüksek coğrafi çeşitlilik.")
-        
-        # Molekül konsantrasyonu
-        top_mol = corp_df.groupby('Molecule').agg({
-            'MAT Q3 2024\nUSD MNF': 'sum'
-        }).reset_index().nlargest(1, 'MAT Q3 2024\nUSD MNF')
-        
-        if not top_mol.empty:
-            mol_name = top_mol.iloc[0]['Molecule']
-            mol_value = top_mol.iloc[0]['MAT Q3 2024\nUSD MNF']
-            total_value = corp_df['MAT Q3 2024\nUSD MNF'].sum()
-            mol_pct = (mol_value / total_value * 100) if total_value > 0 else 0
-            
-            if mol_pct > 30:
-                insights.append(f"💡 En büyük molekül **{mol_name}**, toplamın %{mol_pct:.1f}'ini oluşturuyor.")
-        
-        return insights[:5]
+# ═══════════════════════════════════════════════════════════════════════════════
+# COUNTRY MAP GENERATION
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# ============================================
-# ANA UYGULAMA
-# ============================================
+def generate_country_map(df, metric_col, title, color_scale='Blues'):
+    country_data = df.groupby('Country')[metric_col].sum().reset_index()
+    country_data.columns = ['Country', 'Value']
+    
+    fig = px.choropleth(
+        country_data,
+        locations='Country',
+        locationmode='country names',
+        color='Value',
+        hover_name='Country',
+        hover_data={'Value': ':,.2f'},
+        color_continuous_scale=color_scale,
+        title=title
+    )
+    
+    fig.update_layout(
+        height=600,
+        geo=dict(
+            showframe=False,
+            showcoastlines=True,
+            projection_type='natural earth'
+        )
+    )
+    
+    return fig
+
+def generate_global_share_map(df, year):
+    usd_col = f"MAT Q3 {year}\nUSD MNF"
+    units_col = f"MAT Q3 {year}\nUnits"
+    su_col = f"MAT Q3 {year}\nStandard Units"
+    
+    country_agg = df.groupby('Country').agg({
+        usd_col: 'sum',
+        units_col: 'sum',
+        su_col: 'sum'
+    }).reset_index()
+    
+    total_global = country_agg[usd_col].sum()
+    country_agg['Global_Share_Pct'] = (country_agg[usd_col] / total_global) * 100
+    
+    hover_text = []
+    for idx, row in country_agg.iterrows():
+        text = f"<b>{row['Country']}</b><br>"
+        text += f"USD MNF: {format_number(row[usd_col])}<br>"
+        text += f"Units: {row[units_col]:,.0f}<br>"
+        text += f"Standard Units: {row[su_col]:,.0f}<br>"
+        text += f"Global Pay: {row['Global_Share_Pct']:.2f}%"
+        hover_text.append(text)
+    
+    country_agg['hover_text'] = hover_text
+    
+    fig = px.choropleth(
+        country_agg,
+        locations='Country',
+        locationmode='country names',
+        color='Global_Share_Pct',
+        hover_name='Country',
+        hover_data={'hover_text': True, 'Global_Share_Pct': False},
+        color_continuous_scale='YlOrRd',
+        title=f'Global Pay (%) - {year}'
+    )
+    
+    fig.update_traces(hovertemplate='%{customdata[0]}')
+    
+    fig.update_layout(
+        height=600,
+        geo=dict(
+            showframe=False,
+            showcoastlines=True,
+            projection_type='natural earth'
+        )
+    )
+    
+    return fig
+
+def generate_growth_map(df, year_from, year_to):
+    usd_col_from = f"MAT Q3 {year_from}\nUSD MNF"
+    usd_col_to = f"MAT Q3 {year_to}\nUSD MNF"
+    
+    country_agg = df.groupby('Country').agg({
+        usd_col_from: 'sum',
+        usd_col_to: 'sum'
+    }).reset_index()
+    
+    country_agg['Growth_Pct'] = country_agg.apply(
+        lambda row: calculate_growth_rate(row[usd_col_to], row[usd_col_from]),
+        axis=1
+    )
+    
+    hover_text = []
+    for idx, row in country_agg.iterrows():
+        text = f"<b>{row['Country']}</b><br>"
+        text += f"{year_from}: {format_number(row[usd_col_from])}<br>"
+        text += f"{year_to}: {format_number(row[usd_col_to])}<br>"
+        text += f"Büyüme: {row['Growth_Pct']:.2f}%"
+        hover_text.append(text)
+    
+    country_agg['hover_text'] = hover_text
+    
+    fig = px.choropleth(
+        country_agg,
+        locations='Country',
+        locationmode='country names',
+        color='Growth_Pct',
+        hover_name='Country',
+        hover_data={'hover_text': True, 'Growth_Pct': False},
+        color_continuous_scale='RdYlGn',
+        color_continuous_midpoint=0,
+        title=f'Büyüme Oranı (%) - {year_from} → {year_to}'
+    )
+    
+    fig.update_traces(hovertemplate='%{customdata[0]}')
+    
+    fig.update_layout(
+        height=600,
+        geo=dict(
+            showframe=False,
+            showcoastlines=True,
+            projection_type='natural earth'
+        )
+    )
+    
+    return fig
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AUTOMATIC INSIGHTS GENERATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def generate_executive_insights(df):
+    insights = []
+    
+    usd_2022 = df["MAT Q3 2022\nUSD MNF"].sum()
+    usd_2023 = df["MAT Q3 2023\nUSD MNF"].sum()
+    usd_2024 = df["MAT Q3 2024\nUSD MNF"].sum()
+    
+    growth_22_23 = calculate_growth_rate(usd_2023, usd_2022)
+    growth_23_24 = calculate_growth_rate(usd_2024, usd_2023)
+    
+    insights.append(f"Global satışlar 2022'den 2023'e {get_trend_indicator(growth_22_23)} {abs(growth_22_23):.2f}% değişim gösterdi.")
+    insights.append(f"2023'den 2024'e satışlarda {get_trend_indicator(growth_23_24)} {abs(growth_23_24):.2f}% değişim gözlemlendi.")
+    
+    country_2024 = df.groupby('Country')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False)
+    top_country = country_2024.index[0]
+    top_country_value = country_2024.iloc[0]
+    top_country_share = (top_country_value / usd_2024) * 100
+    
+    insights.append(f"En büyük pazar {top_country} olup, toplam satışların %{top_country_share:.2f}'sini oluşturuyor.")
+    
+    country_growth = df.groupby('Country').agg({
+        "MAT Q3 2023\nUSD MNF": 'sum',
+        "MAT Q3 2024\nUSD MNF": 'sum'
+    })
+    country_growth['Growth'] = country_growth.apply(
+        lambda row: calculate_growth_rate(row["MAT Q3 2024\nUSD MNF"], row["MAT Q3 2023\nUSD MNF"]),
+        axis=1
+    )
+    country_growth = country_growth.sort_values('Growth', ascending=False)
+    
+    if len(country_growth) > 0:
+        fastest_growing = country_growth.index[0]
+        fastest_growth_rate = country_growth['Growth'].iloc[0]
+        insights.append(f"En hızlı büyüyen pazar {fastest_growing} olup, %{fastest_growth_rate:.2f} büyüme gösterdi.")
+    
+    molecule_2024 = df.groupby('Molecule')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False)
+    if len(molecule_2024) > 0:
+        top_molecule = molecule_2024.index[0]
+        top_molecule_value = molecule_2024.iloc[0]
+        top_molecule_share = (top_molecule_value / usd_2024) * 100
+        insights.append(f"En değerli molekül {top_molecule} olup, toplam satışların %{top_molecule_share:.2f}'sini temsil ediyor.")
+    
+    return insights
+
+def generate_country_insights(df, country):
+    insights = []
+    
+    country_df = df[df['Country'] == country]
+    
+    if len(country_df) == 0:
+        return ["Seçilen ülke için yeterli veri bulunmuyor."]
+    
+    usd_2022 = country_df["MAT Q3 2022\nUSD MNF"].sum()
+    usd_2023 = country_df["MAT Q3 2023\nUSD MNF"].sum()
+    usd_2024 = country_df["MAT Q3 2024\nUSD MNF"].sum()
+    
+    growth_22_23 = calculate_growth_rate(usd_2023, usd_2022)
+    growth_23_24 = calculate_growth_rate(usd_2024, usd_2023)
+    
+    insights.append(f"{country} pazarı 2022'den 2023'e {get_trend_indicator(growth_22_23)} {abs(growth_22_23):.2f}% değişim gösterdi.")
+    insights.append(f"{country} pazarı 2023'den 2024'e {get_trend_indicator(growth_23_24)} {abs(growth_23_24):.2f}% değişim gösterdi.")
+    
+    global_usd_2024 = df["MAT Q3 2024\nUSD MNF"].sum()
+    country_share = (usd_2024 / global_usd_2024) * 100
+    insights.append(f"{country}'in global pazardaki payı %{country_share:.2f} seviyesinde.")
+    
+    top_molecules = country_df.groupby('Molecule')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False).head(3)
+    if len(top_molecules) > 0:
+        mol_list = ", ".join([f"{mol} ({format_number(val)})" for mol, val in top_molecules.items()])
+        insights.append(f"{country}'deki en büyük moleküller: {mol_list}")
+    
+    return insights
+
+def generate_molecule_insights(df, molecule):
+    insights = []
+    
+    molecule_df = df[df['Molecule'] == molecule]
+    
+    if len(molecule_df) == 0:
+        return ["Seçilen molekül için yeterli veri bulunmuyor."]
+    
+    usd_2022 = molecule_df["MAT Q3 2022\nUSD MNF"].sum()
+    usd_2023 = molecule_df["MAT Q3 2023\nUSD MNF"].sum()
+    usd_2024 = molecule_df["MAT Q3 2024\nUSD MNF"].sum()
+    
+    growth_22_23 = calculate_growth_rate(usd_2023, usd_2022)
+    growth_23_24 = calculate_growth_rate(usd_2024, usd_2023)
+    
+    insights.append(f"{molecule} satışları 2022'den 2023'e {get_trend_indicator(growth_22_23)} {abs(growth_22_23):.2f}% değişim gösterdi.")
+    insights.append(f"{molecule} satışları 2023'den 2024'e {get_trend_indicator(growth_23_24)} {abs(growth_23_24):.2f}% değişim gösterdi.")
+    
+    global_usd_2024 = df["MAT Q3 2024\nUSD MNF"].sum()
+    molecule_share = (usd_2024 / global_usd_2024) * 100
+    insights.append(f"{molecule}'ün global pazardaki payı %{molecule_share:.2f} seviyesinde.")
+    
+    country_sales = molecule_df.groupby('Country')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False).head(5)
+    if len(country_sales) > 0:
+        country_list = ", ".join([f"{country} ({format_number(val)})" for country, val in country_sales.items()])
+        insights.append(f"{molecule} için en büyük pazarlar: {country_list}")
+    
+    return insights
+
+def generate_corporation_insights(df, corporation):
+    insights = []
+    
+    corp_df = df[df['Corporation'] == corporation]
+    
+    if len(corp_df) == 0:
+        return ["Seçilen corporation için yeterli veri bulunmuyor."]
+    
+    usd_2022 = corp_df["MAT Q3 2022\nUSD MNF"].sum()
+    usd_2023 = corp_df["MAT Q3 2023\nUSD MNF"].sum()
+    usd_2024 = corp_df["MAT Q3 2024\nUSD MNF"].sum()
+    
+    growth_22_23 = calculate_growth_rate(usd_2023, usd_2022)
+    growth_23_24 = calculate_growth_rate(usd_2024, usd_2023)
+    
+    insights.append(f"{corporation} satışları 2022'den 2023'e {get_trend_indicator(growth_22_23)} {abs(growth_22_23):.2f}% değişim gösterdi.")
+    insights.append(f"{corporation} satışları 2023'den 2024'e {get_trend_indicator(growth_23_24)} {abs(growth_23_24):.2f}% değişim gösterdi.")
+    
+    global_usd_2024 = df["MAT Q3 2024\nUSD MNF"].sum()
+    corp_share = (usd_2024 / global_usd_2024) * 100
+    insights.append(f"{corporation}'ın global pazardaki payı %{corp_share:.2f} seviyesinde.")
+    
+    top_countries = corp_df.groupby('Country')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False).head(3)
+    if len(top_countries) > 0:
+        country_list = ", ".join([f"{country} ({format_number(val)})" for country, val in top_countries.items()])
+        insights.append(f"{corporation} için en büyük pazarlar: {country_list}")
+    
+    return insights
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MAIN APPLICATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def main():
-    st.markdown('<h1 class="main-header">💊 Pharma Commercial Analytics Suite</h1>', unsafe_allow_html=True)
-    st.markdown("### Üç Yıllık Zincir Analiz ve Global Ticari İstihbarat Platformu")
+    st.markdown("<h1 class='main-header'>💊 Pharma Commercial Analytics Platform</h1>", unsafe_allow_html=True)
     
-    # Veri yükleme
-    uploaded_file = st.file_uploader("📂 Excel dosyasını yükleyin (.xlsx formatında)", type=["xlsx"])
+    st.markdown("---")
     
-    if not uploaded_file:
-        st.warning("🔍 Lütfen analiz için Excel dosyasını yükleyin.")
+    uploaded_file = st.file_uploader(
+        "📂 Excel Dosyası Yükleyin (.xlsx)",
+        type=['xlsx'],
+        help="MAT Q3 2022, 2023, 2024 verilerini içeren Excel dosyasını yükleyin."
+    )
+    
+    if uploaded_file is None:
+        st.info("👆 Lütfen analiz için Excel dosyasını yükleyin.")
+        st.markdown("### 📋 Beklenen Veri Formatı")
+        st.markdown("""
+        Excel dosyanız aşağıdaki kolonları içermelidir:
+        - Tanımlayıcı Kolonlar: Source.Name, Country, Sector, Panel, Region, Sub-Region, Corporation, Manufacturer, vb.
+        - Zaman Serisi Kolonları: MAT Q3 2022/2023/2024 için USD MNF, Standard Units, Units, Avg Price kolonları
+        """)
         st.stop()
     
-    # Veri yükleme ve validasyon
-    with st.spinner("📊 Veri yükleniyor ve doğrulanıyor..."):
+    with st.spinner("🔄 Veriler yükleniyor ve doğrulanıyor..."):
         df = load_and_validate_data(uploaded_file)
     
-    st.success(f"✅ Veri başarıyla yüklendi: {len(df)} satır, {len(df.columns)} sütun")
+    st.success(f"✅ Veri başarıyla yüklendi! Toplam {len(df):,} kayıt.")
     
-    # Global filtreleri başlat
-    filters = GlobalFilters(df)
-    filtered_df = filters.apply_filters(df)
+    filtered_df = apply_global_filters(df)
     
-    st.sidebar.info(f"🔍 {len(filtered_df):,} satır filtrelendi")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📊 Platform Bilgileri")
+    st.sidebar.info("""
+    **Enterprise Pharma Analytics**
     
-    # Analytics Engine
-    analytics = AnalyticsEngine()
-    insight_engine = InsightEngine(filtered_df)
-    map_handler = WorldMapHandler()
+    - 3 Yıllık Trend Analizi
+    - Global Harita Görselleştirme
+    - Price-Volume-Mix Ayrıştırma
+    - Otomatik İçgörü Motoru
+    """)
     
-    # Sekmeler
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Yönetici Özeti",
         "🌍 Global Harita Analizi",
-        "🇹🇷 Ülke Derinlemesine",
-        "💊 Molekül & Ürün",
-        "🏢 Corporation & Rekabet",
-        "⭐ Specialty vs Non-Specialty",
-        "📈 Fiyat – Volume – Mix",
-        "🤖 Otomatik İçgörü Motoru"
+        "🏳️ Ülke Derinlemesine",
+        "⚗️ Molekül & Ürün",
+        "🏛️ Corporation & Rekabet",
+        "💎 Specialty vs Non-Specialty",
+        "📈 Fiyat-Volume-Mix",
+        "🧠 Otomatik İçgörü Motoru"
     ])
     
-    # ============================================
-    # TAB 1: Yönetici Özeti
-    # ============================================
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 1: YÖNETİCİ ÖZETİ
+    # ═══════════════════════════════════════════════════════════════════════════
+    
     with tab1:
-        st.markdown('<h2 class="sub-header">📊 Yönetici Özeti</h2>', unsafe_allow_html=True)
+        st.markdown("<h2 class='sub-header'>📊 Yönetici Özeti - Global Performans</h2>", unsafe_allow_html=True)
+        
+        usd_2022 = filtered_df["MAT Q3 2022\nUSD MNF"].sum()
+        usd_2023 = filtered_df["MAT Q3 2023\nUSD MNF"].sum()
+        usd_2024 = filtered_df["MAT Q3 2024\nUSD MNF"].sum()
+        
+        units_2022 = filtered_df["MAT Q3 2022\nUnits"].sum()
+        units_2023 = filtered_df["MAT Q3 2023\nUnits"].sum()
+        units_2024 = filtered_df["MAT Q3 2024\nUnits"].sum()
+        
+        su_2022 = filtered_df["MAT Q3 2022\nStandard Units"].sum()
+        su_2023 = filtered_df["MAT Q3 2023\nStandard Units"].sum()
+        su_2024 = filtered_df["MAT Q3 2024\nStandard Units"].sum()
+        
+        growth_usd_22_23 = calculate_growth_rate(usd_2023, usd_2022)
+        growth_usd_23_24 = calculate_growth_rate(usd_2024, usd_2023)
+        
+        growth_units_22_23 = calculate_growth_rate(units_2023, units_2022)
+        growth_units_23_24 = calculate_growth_rate(units_2024, units_2023)
+        
+        growth_su_22_23 = calculate_growth_rate(su_2023, su_2022)
+        growth_su_23_24 = calculate_growth_rate(su_2024, su_2023)
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            total_2022 = filtered_df['MAT Q3 2022\nUSD MNF'].sum()
-            total_2023 = filtered_df['MAT Q3 2023\nUSD MNF'].sum()
-            total_2024 = filtered_df['MAT Q3 2024\nUSD MNF'].sum()
-            
-            growth_22_23, abs_22_23 = analytics.calculate_growth(filtered_df, 2022, 2023)
-            growth_23_24, abs_23_24 = analytics.calculate_growth(filtered_df, 2023, 2024)
-            
-            st.markdown(f'''
-            <div class="metric-card">
-                <h3>🌍 Global USD MNF</h3>
-                <p style="font-size: 2rem; font-weight: 800; color: #1E3A8A;">${total_2024:,.0f}M</p>
-                <p>2022: ${total_2022:,.0f}M</p>
-                <p>2023: ${total_2023:,.0f}M</p>
-                <p style="color: {'#10B981' if growth_23_24 > 0 else '#DC2626'}; font-weight: 600;">
-                    2023→2024: {'+' if growth_23_24 >= 0 else ''}{growth_23_24:.1f}%
-                </p>
-            </div>
-            ''', unsafe_allow_html=True)
+            st.metric(
+                label="💰 2022 USD MNF",
+                value=format_number(usd_2022),
+                delta=None
+            )
+            st.metric(
+                label="💰 2023 USD MNF",
+                value=format_number(usd_2023),
+                delta=f"{growth_usd_22_23:.2f}%"
+            )
+            st.metric(
+                label="💰 2024 USD MNF",
+                value=format_number(usd_2024),
+                delta=f"{growth_usd_23_24:.2f}%"
+            )
         
         with col2:
-            units_2024 = filtered_df['MAT Q3 2024\nUnits'].sum()
-            su_2024 = filtered_df['MAT Q3 2024\nStandard Units'].sum()
-            
-            units_growth = ((filtered_df['MAT Q3 2024\nUnits'].sum() - filtered_df['MAT Q3 2023\nUnits'].sum()) / 
-                           filtered_df['MAT Q3 2023\nUnits'].sum() * 100) if filtered_df['MAT Q3 2023\nUnits'].sum() > 0 else 0
-            
-            st.markdown(f'''
-            <div class="metric-card">
-                <h3>📦 Volume Metrikleri</h3>
-                <p style="font-size: 1.5rem; font-weight: 700; color: #1E3A8A;">{units_2024:,.0f}</p>
-                <p>Units (2024)</p>
-                <p style="font-size: 1.5rem; font-weight: 700; color: #1E3A8A;">{su_2024:,.0f}</p>
-                <p>Standard Units (2024)</p>
-                <p style="color: {'#10B981' if units_growth > 0 else '#DC2626'}; font-weight: 600;">
-                    Units Büyüme: {'+' if units_growth >= 0 else ''}{units_growth:.1f}%
-                </p>
-            </div>
-            ''', unsafe_allow_html=True)
+            st.metric(
+                label="📦 2022 Units",
+                value=f"{units_2022:,.0f}",
+                delta=None
+            )
+            st.metric(
+                label="📦 2023 Units",
+                value=f"{units_2023:,.0f}",
+                delta=f"{growth_units_22_23:.2f}%"
+            )
+            st.metric(
+                label="📦 2024 Units",
+                value=f"{units_2024:,.0f}",
+                delta=f"{growth_units_23_24:.2f}%"
+            )
         
         with col3:
-            top_countries = filtered_df.groupby('Country').agg({
-                'MAT Q3 2024\nUSD MNF': 'sum'
-            }).reset_index().nlargest(3, 'MAT Q3 2024\nUSD MNF')
-            
-            country_list = ""
-            for idx, row in top_countries.iterrows():
-                share = (row['MAT Q3 2024\nUSD MNF'] / total_2024 * 100) if total_2024 > 0 else 0
-                country_list += f"• {row['Country']}: %{share:.1f}<br>"
-            
-            st.markdown(f'''
-            <div class="metric-card">
-                <h3>🏆 Top 3 Ülke</h3>
-                <div style="font-size: 1.1rem;">
-                    {country_list}
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
+            st.metric(
+                label="📊 2022 Standard Units",
+                value=f"{su_2022:,.0f}",
+                delta=None
+            )
+            st.metric(
+                label="📊 2023 Standard Units",
+                value=f"{su_2023:,.0f}",
+                delta=f"{growth_su_22_23:.2f}%"
+            )
+            st.metric(
+                label="📊 2024 Standard Units",
+                value=f"{su_2024:,.0f}",
+                delta=f"{growth_su_23_24:.2f}%"
+            )
         
-        # Detaylı analiz
         st.markdown("---")
-        col1, col2 = st.columns(2)
         
-        with col1:
-            st.markdown("##### 📈 Üç Yıllık Trend")
-            
-            trend_data = pd.DataFrame({
-                'Yıl': [2022, 2023, 2024],
-                'USD MNF': [total_2022, total_2023, total_2024],
-                'Units': [
-                    filtered_df['MAT Q3 2022\nUnits'].sum(),
-                    filtered_df['MAT Q3 2023\nUnits'].sum(),
-                    filtered_df['MAT Q3 2024\nUnits'].sum()
-                ]
-            })
-            
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
-            
-            fig.add_trace(
-                go.Bar(x=trend_data['Yıl'], y=trend_data['USD MNF'],
-                      name='USD MNF', marker_color='#3B82F6'),
-                secondary_y=False,
-            )
-            
-            fig.add_trace(
-                go.Scatter(x=trend_data['Yıl'], y=trend_data['Units'],
-                          name='Units', mode='lines+markers',
-                          line=dict(color='#10B981', width=3)),
-                secondary_y=True,
-            )
-            
-            fig.update_layout(
-                title="USD MNF ve Units Trendi (2022-2024)",
-                height=400,
-                showlegend=True,
-                template="plotly_white"
-            )
-            
-            fig.update_yaxes(title_text="USD MNF", secondary_y=False)
-            fig.update_yaxes(title_text="Units", secondary_y=True)
-            
-            st.plotly_chart(fig, use_container_width=True)
+        st.markdown("### 📈 3 Yıllık USD MNF Trendi")
         
-        with col2:
-            st.markdown("##### 📊 Büyüme Zinciri")
-            
-            growth_data = pd.DataFrame({
-                'Dönem': ['2022→2023', '2023→2024'],
-                'Büyüme (%)': [growth_22_23, growth_23_24],
-                'Mutlak Büyüme ($M)': [abs_22_23, abs_23_24]
-            })
-            
-            fig = go.Figure(data=[
-                go.Bar(name='Büyüme %', x=growth_data['Dönem'], y=growth_data['Büyüme (%)'],
-                      marker_color=['#60A5FA', '#3B82F6']),
-                go.Scatter(name='Mutlak Büyüme', x=growth_data['Dönem'], y=growth_data['Mutlak Büyüme ($M)'],
-                          mode='lines+markers', line=dict(color='#EF4444', width=3),
-                          yaxis='y2')
-            ])
-            
-            fig.update_layout(
-                title="Zincir Büyüme Analizi",
-                height=400,
-                yaxis=dict(title="Büyüme (%)"),
-                yaxis2=dict(title="Mutlak Büyüme ($M)", overlaying='y', side='right'),
-                template="plotly_white"
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+        trend_data = pd.DataFrame({
+            'Yıl': ['2022', '2023', '2024'],
+            'USD MNF': [usd_2022, usd_2023, usd_2024]
+        })
         
-        # Otomatik içgörüler
+        fig_trend = px.line(
+            trend_data,
+            x='Yıl',
+            y='USD MNF',
+            markers=True,
+            title='Global USD MNF Trendi (2022-2024)',
+            text='USD MNF'
+        )
+        
+        fig_trend.update_traces(
+            texttemplate='%{text:.2s}',
+            textposition='top center',
+            line=dict(width=3, color='#1f77b4'),
+            marker=dict(size=12)
+        )
+        
+        fig_trend.update_layout(
+            height=400,
+            hovermode='x unified'
+        )
+        
+        st.plotly_chart(fig_trend, use_container_width=True)
+        
         st.markdown("---")
-        st.markdown("##### 🧠 Otomatik İçgörüler")
         
-        # Global içgörüler
-        col1, col2, col3 = st.columns(3)
+        st.markdown("### 🏆 Top 10 Ülkeler - 2024 USD MNF")
         
-        with col1:
-            if growth_22_23 > 0 and growth_23_24 > 0:
-                st.markdown('<div class="insight-card">✅ İki yıl üst üste pozitif büyüme</div>', unsafe_allow_html=True)
-            elif growth_23_24 < 0:
-                st.markdown(f'<div class="warning-card">⚠️ Son dönem küçülme: %{growth_23_24:.1f}</div>', unsafe_allow_html=True)
+        country_2024 = filtered_df.groupby('Country').agg({
+            "MAT Q3 2022\nUSD MNF": 'sum',
+            "MAT Q3 2023\nUSD MNF": 'sum',
+            "MAT Q3 2024\nUSD MNF": 'sum'
+        }).reset_index()
         
-        with col2:
-            avg_price_2024 = total_2024 / filtered_df['MAT Q3 2024\nUnits'].sum() if filtered_df['MAT Q3 2024\nUnits'].sum() > 0 else 0
-            avg_price_2023 = total_2023 / filtered_df['MAT Q3 2023\nUnits'].sum() if filtered_df['MAT Q3 2023\nUnits'].sum() > 0 else 0
-            
-            price_change = ((avg_price_2024 - avg_price_2023) / avg_price_2023 * 100) if avg_price_2023 > 0 else 0
-            
-            if price_change > 5:
-                st.markdown(f'<div class="insight-card">💰 Ortalama fiyat %{price_change:.1f} arttı</div>', unsafe_allow_html=True)
-            elif price_change < -5:
-                st.markdown(f'<div class="warning-card">📉 Ortalama fiyat %{abs(price_change):.1f} düştü</div>', unsafe_allow_html=True)
+        country_2024['Growth_22_23'] = country_2024.apply(
+            lambda row: calculate_growth_rate(row["MAT Q3 2023\nUSD MNF"], row["MAT Q3 2022\nUSD MNF"]),
+            axis=1
+        )
         
-        with col3:
-            country_concentration = (top_countries['MAT Q3 2024\nUSD MNF'].sum() / total_2024 * 100) if total_2024 > 0 else 0
-            
-            if country_concentration > 60:
-                st.markdown(f'<div class="warning-card">🌍 Yüksek konsantrasyon: Top 3 ülke %{country_concentration:.1f} pay</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="insight-card">🌐 Sağlıklı dağılım: Top 3 ülke %{country_concentration:.1f} pay</div>', unsafe_allow_html=True)
+        country_2024['Growth_23_24'] = country_2024.apply(
+            lambda row: calculate_growth_rate(row["MAT Q3 2024\nUSD MNF"], row["MAT Q3 2023\nUSD MNF"]),
+            axis=1
+        )
+        
+        country_2024['Contribution_22_23'] = country_2024["MAT Q3 2023\nUSD MNF"] - country_2024["MAT Q3 2022\nUSD MNF"]
+        country_2024['Contribution_23_24'] = country_2024["MAT Q3 2024\nUSD MNF"] - country_2024["MAT Q3 2023\nUSD MNF"]
+        
+        country_2024['Global_Share_2024'] = (country_2024["MAT Q3 2024\nUSD MNF"] / usd_2024) * 100
+        
+        top_countries = country_2024.nlargest(10, "MAT Q3 2024\nUSD MNF")
+        
+        fig_top_countries = px.bar(
+            top_countries,
+            x='Country',
+            y="MAT Q3 2024\nUSD MNF",
+            title='Top 10 Ülkeler - 2024 USD MNF',
+            text="MAT Q3 2024\nUSD MNF",
+            color='Global_Share_2024',
+            color_continuous_scale='Blues'
+        )
+        
+        fig_top_countries.update_traces(
+            texttemplate='%{text:.2s}',
+            textposition='outside'
+        )
+        
+        fig_top_countries.update_layout(height=500)
+        
+        st.plotly_chart(fig_top_countries, use_container_width=True)
+        
+        st.markdown("### 📋 Top 10 Ülkeler - Detaylı Tablo")
+        
+        display_top_countries = top_countries[[
+            'Country',
+            'MAT Q3 2024\nUSD MNF',
+            'Global_Share_2024',
+            'Growth_22_23',
+            'Growth_23_24',
+            'Contribution_22_23',
+            'Contribution_23_24'
+        ]].copy()
+        
+        display_top_countries.columns = [
+            'Ülke',
+            '2024 USD MNF',
+            'Global Pay (%)',
+            'Büyüme 22→23 (%)',
+            'Büyüme 23→24 (%)',
+            'Katkı 22→23',
+            'Katkı 23→24'
+        ]
+        
+        st.dataframe(
+            display_top_countries.style.format({
+                '2024 USD MNF': '{:,.0f}',
+                'Global Pay (%)': '{:.2f}',
+                'Büyüme 22→23 (%)': '{:.2f}',
+                'Büyüme 23→24 (%)': '{:.2f}',
+                'Katkı 22→23': '{:,.0f}',
+                'Katkı 23→24': '{:,.0f}'
+            }),
+            use_container_width=True,
+            height=400
+        )
+        
+        st.markdown("---")
+        
+        st.markdown("### 🧠 Otomatik İçgörüler")
+        
+        insights = generate_executive_insights(filtered_df)
+        
+        for insight in insights:
+            st.markdown(f"<div class='insight-box'>💡 {insight}</div>", unsafe_allow_html=True)
     
-    # ============================================
-    # TAB 2: Global Harita Analizi
-    # ============================================
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 2: GLOBAL HARİTA ANALİZİ
+    # ═══════════════════════════════════════════════════════════════════════════
+    
     with tab2:
-        st.markdown('<h2 class="sub-header">🌍 Global Harita Analizi</h2>', unsafe_allow_html=True)
+        st.markdown("<h2 class='sub-header'>🌍 Global Harita Analizi</h2>", unsafe_allow_html=True)
         
-        map_tab1, map_tab2, map_tab3 = st.tabs([
-            "🗺️ USD MNF Dağılımı",
-            "📊 Global Pay (%)",
-            "📈 Büyüme Analizi"
-        ])
+        st.markdown("### 💰 Dünya Haritası - USD MNF")
         
-        with map_tab1:
-            year_select = st.selectbox("Harita Yılı", [2024, 2023, 2022], key="map_usd_year")
-            
-            map_data = map_handler.prepare_map_data(filtered_df, year_select)
-            
-            if not map_data.empty:
-                fig = px.choropleth(
-                    map_data,
-                    locations='ISO_A3',
-                    color=f'MAT Q3 {year_select}\nUSD MNF',
-                    hover_name='Country',
-                    hover_data={
-                        f'MAT Q3 {year_select}\nUSD MNF': ':.2f',
-                        f'MAT Q3 {year_select}\nUnits': ':.0f',
-                        f'MAT Q3 {year_select}\nStandard Units': ':.0f',
-                        'Global_Pay_Pct': ':.2f%'
-                    },
-                    color_continuous_scale="Viridis",
-                    labels={f'MAT Q3 {year_select}\nUSD MNF': f'USD MNF ({year_select})'},
-                    title=f"Dünya Haritası - USD MNF Dağılımı ({year_select})"
-                )
-                
-                fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Ülke sıralaması
-                st.markdown("##### 🏆 Ülke Sıralaması")
-                top_countries_map = map_data.nlargest(10, f'MAT Q3 {year_select}\nUSD MNF')
-                
-                fig_bar = go.Figure(data=[
-                    go.Bar(x=top_countries_map['Country'],
-                          y=top_countries_map[f'MAT Q3 {year_select}\nUSD MNF'],
-                          marker_color='#3B82F6',
-                          text=top_countries_map[f'MAT Q3 {year_select}\nUSD MNF'].apply(lambda x: f'${x:,.0f}M'),
-                          textposition='auto')
-                ])
-                
-                fig_bar.update_layout(
-                    title=f"Top 10 Ülke - USD MNF ({year_select})",
-                    height=400,
-                    xaxis_tickangle=-45
-                )
-                
-                st.plotly_chart(fig_bar, use_container_width=True)
-            else:
-                st.warning("Harita verisi bulunamadı. Ülke isimleri ISO koduyla eşleştirilemedi.")
-                st.info("""
-                **Not:** Harita görüntülenemiyor çünkü ülke isimleri ISO koduyla eşleştirilemedi.
-                Lütfen ülke isimlerinin standart İngilizce isimler olduğundan emin olun.
-                Örnek: 'United States', 'United Kingdom', 'Germany' vb.
-                """)
+        map_year = st.selectbox(
+            "Yıl Seçimi",
+            options=[2022, 2023, 2024],
+            index=2,
+            key="map_year_usd"
+        )
         
-        with map_tab2:
-            year_select_share = st.selectbox("Harita Yılı", [2024, 2023, 2022], key="map_share_year")
-            
-            share_data = map_handler.prepare_map_data(filtered_df, year_select_share)
-            
-            if not share_data.empty:
-                fig = px.choropleth(
-                    share_data,
-                    locations='ISO_A3',
-                    color='Global_Pay_Pct',
-                    hover_name='Country',
-                    hover_data={
-                        f'MAT Q3 {year_select_share}\nUSD MNF': ':.2f',
-                        'Global_Pay_Pct': ':.2f%'
-                    },
-                    color_continuous_scale="Plasma",
-                    labels={'Global_Pay_Pct': 'Global Pay (%)'},
-                    title=f"Dünya Haritası - Global Pay Dağılımı ({year_select_share})"
-                )
-                
-                fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Pay değişimi analizi
-                st.markdown("##### 📊 Global Pay Değişimi (2022 → 2024)")
-                
-                share_2022 = map_handler.prepare_map_data(filtered_df, 2022)
-                share_2024 = map_handler.prepare_map_data(filtered_df, 2024)
-                
-                if not share_2022.empty and not share_2024.empty:
-                    # Merge data
-                    share_2022_clean = share_2022[['Country', 'Global_Pay_Pct']].copy()
-                    share_2022_clean.columns = ['Country', 'Global_Pay_Pct_2022']
-                    
-                    share_2024_clean = share_2024[['Country', 'Global_Pay_Pct']].copy()
-                    share_2024_clean.columns = ['Country', 'Global_Pay_Pct_2024']
-                    
-                    share_comparison = pd.merge(
-                        share_2022_clean,
-                        share_2024_clean,
-                        on='Country',
-                        how='outer'
-                    ).fillna(0)
-                    
-                    share_comparison['Change'] = share_comparison['Global_Pay_Pct_2024'] - share_comparison['Global_Pay_Pct_2022']
-                    top_gainers = share_comparison.nlargest(5, 'Change')
-                    top_losers = share_comparison.nsmallest(5, 'Change')
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown("**⬆️ En Çok Kazananlar**")
-                        for _, row in top_gainers.iterrows():
-                            st.write(f"{row['Country']}: +{row['Change']:.2f}%")
-                    
-                    with col2:
-                        st.markdown("**⬇️ En Çok Kaybedenler**")
-                        for _, row in top_losers.iterrows():
-                            st.write(f"{row['Country']}: {row['Change']:.2f}%")
+        usd_col = f"MAT Q3 {map_year}\nUSD MNF"
+        fig_map_usd = generate_country_map(filtered_df, usd_col, f"Global USD MNF Dağılımı - {map_year}", 'Blues')
+        st.plotly_chart(fig_map_usd, use_container_width=True)
         
-        with map_tab3:
-            growth_type = st.radio("Büyüme Dönemi", ["2022 → 2023", "2023 → 2024"], horizontal=True)
-            
-            if growth_type == "2022 → 2023":
-                start_year, end_year = 2022, 2023
-            else:
-                start_year, end_year = 2023, 2024
-            
-            # Ülke bazlı büyüme hesapla
-            country_growth = []
-            
-            for country in filtered_df['Country'].unique():
-                country_df = filtered_df[filtered_df['Country'] == country]
-                growth_pct, _ = analytics.calculate_growth(country_df, start_year, end_year)
-                country_growth.append({
-                    'Country': country,
-                    'Growth_Pct': growth_pct
-                })
-            
-            growth_df = pd.DataFrame(country_growth)
-            
-            if not growth_df.empty:
-                growth_df['ISO_A3'] = growth_df['Country'].apply(map_handler.country_mapper.get_country_code)
-                growth_df = growth_df.dropna(subset=['ISO_A3'])
-                
-                if not growth_df.empty:
-                    # Büyüme kategorileri
-                    def growth_category(x):
-                        if pd.isna(x):
-                            return 'Veri Yok'
-                        elif x > 20:
-                            return 'Çok Yüksek Büyüme (>20%)'
-                        elif x > 10:
-                            return 'Yüksek Büyüme (10-20%)'
-                        elif x > 0:
-                            return 'Orta Büyüme (0-10%)'
-                        elif x > -10:
-                            return 'Hafif Düşüş (0- -10%)'
-                        else:
-                            return 'Keskin Düşüş (<-10%)'
-                    
-                    growth_df['Growth_Category'] = growth_df['Growth_Pct'].apply(growth_category)
-                    
-                    color_discrete_map = {
-                        'Çok Yüksek Büyüme (>20%)': '#10B981',
-                        'Yüksek Büyüme (10-20%)': '#34D399',
-                        'Orta Büyüme (0-10%)': '#60A5FA',
-                        'Hafif Düşüş (0- -10%)': '#FBBF24',
-                        'Keskin Düşüş (<-10%)': '#DC2626',
-                        'Veri Yok': '#9CA3AF'
-                    }
-                    
-                    fig = px.choropleth(
-                        growth_df,
-                        locations='ISO_A3',
-                        color='Growth_Category',
-                        hover_name='Country',
-                        hover_data={
-                            'Growth_Pct': ':.1f%',
-                            'Country': True
-                        },
-                        color_discrete_map=color_discrete_map,
-                        category_orders={
-                            'Growth_Category': [
-                                'Çok Yüksek Büyüme (>20%)',
-                                'Yüksek Büyüme (10-20%)',
-                                'Orta Büyüme (0-10%)',
-                                'Hafif Düşüş (0- -10%)',
-                                'Keskin Düşüş (<-10%)',
-                                'Veri Yok'
-                            ]
-                        },
-                        title=f"Dünya Haritası - Büyüme Oranları ({start_year} → {end_year})"
-                    )
-                    
-                    fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Büyüme istatistikleri
-                    st.markdown("##### 📈 Büyüme Dağılımı")
-                    
-                    growth_stats = growth_df['Growth_Pct'].describe()
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Ortalama Büyüme", f"{growth_stats['mean']:.1f}%")
-                    with col2:
-                        st.metric("Medyan Büyüme", f"{growth_stats['50%']:.1f}%")
-                    with col3:
-                        st.metric("Maksimum", f"{growth_stats['max']:.1f}%")
-                    with col4:
-                        st.metric("Minimum", f"{growth_stats['min']:.1f}%")
-                else:
-                    st.warning("Büyüme verisi haritalandırılamadı. Ülke kodları eşleştirilemedi.")
-                    st.info("""
-                    **Not:** Harita görüntülenemiyor çünkü ülke isimleri ISO koduyla eşleştirilemedi.
-                    Lütfen ülke isimlerinin standart İngilizce isimler olduğundan emin olun.
-                    Örnek: 'United States', 'United Kingdom', 'Germany' vb.
-                    """)
+        st.markdown("---")
+        
+        st.markdown("### 🎯 Dünya Haritası - Global Pay (%)")
+        
+        map_year_share = st.selectbox(
+            "Yıl Seçimi",
+            options=[2022, 2023, 2024],
+            index=2,
+            key="map_year_share"
+        )
+        
+        fig_map_share = generate_global_share_map(filtered_df, map_year_share)
+        st.plotly_chart(fig_map_share, use_container_width=True)
+        
+        st.markdown("---")
+        
+        st.markdown("### 📊 Dünya Haritası - Büyüme Oranı (%)")
+        
+        growth_period = st.selectbox(
+            "Büyüme Dönemi Seçimi",
+            options=["2022 → 2023", "2023 → 2024"],
+            index=1,
+            key="growth_period"
+        )
+        
+        if growth_period == "2022 → 2023":
+            fig_map_growth = generate_growth_map(filtered_df, 2022, 2023)
+        else:
+            fig_map_growth = generate_growth_map(filtered_df, 2023, 2024)
+        
+        st.plotly_chart(fig_map_growth, use_container_width=True)
+        
+        st.markdown("---")
+        
+        st.markdown("### 📊 Global Pay Trend - Top 10 Ülkeler")
+        
+        share_data = []
+        for year in [2022, 2023, 2024]:
+            usd_col = f"MAT Q3 {year}\nUSD MNF"
+            country_sum = filtered_df.groupby('Country')[usd_col].sum().reset_index()
+            total = country_sum[usd_col].sum()
+            country_sum['Share'] = (country_sum[usd_col] / total) * 100
+            country_sum['Year'] = year
+            share_data.append(country_sum[['Country', 'Share', 'Year']])
+        
+        share_df = pd.concat(share_data, ignore_index=True)
+        
+        top_10_countries_2024 = filtered_df.groupby('Country')["MAT Q3 2024\nUSD MNF"].sum().nlargest(10).index.tolist()
+        
+        share_df_top10 = share_df[share_df['Country'].isin(top_10_countries_2024)]
+        
+        fig_share_trend = px.line(
+            share_df_top10,
+            x='Year',
+            y='Share',
+            color='Country',
+            markers=True,
+            title='Top 10 Ülkeler - Global Pay Trendi (%)',
+            labels={'Share': 'Global Pay (%)', 'Year': 'Yıl'}
+        )
+        
+        fig_share_trend.update_layout(height=500, hovermode='x unified')
+        
+        st.plotly_chart(fig_share_trend, use_container_width=True)
     
-    # ============================================
-    # TAB 3: Ülke Derinlemesine
-    # ============================================
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 3: ÜLKE DERİNLEMESİNE
+    # ═══════════════════════════════════════════════════════════════════════════
+    
     with tab3:
-        st.markdown('<h2 class="sub-header">🇹🇷 Ülke Derinlemesine Analiz</h2>', unsafe_allow_html=True)
+        st.markdown("<h2 class='sub-header'>🏳️ Ülke Derinlemesine Analiz</h2>", unsafe_allow_html=True)
         
         available_countries = sorted(filtered_df['Country'].unique())
-        selected_country = st.selectbox("Analiz Edilecek Ülke Seçin", available_countries)
         
-        if selected_country:
-            country_df = filtered_df[filtered_df['Country'] == selected_country]
-            
-            if len(country_df) > 0:
-                # Özet metrikler
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    usd_2024 = country_df['MAT Q3 2024\nUSD MNF'].sum()
-                    st.metric("2024 USD MNF", f"${usd_2024:,.0f}M")
-                
-                with col2:
-                    global_share = (usd_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
-                    st.metric("Global Pay", f"{global_share:.2f}%")
-                
-                with col3:
-                    growth_22_23, _ = analytics.calculate_growth(country_df, 2022, 2023)
-                    st.metric("2022→2023 Büyüme", f"{growth_22_23:.1f}%")
-                
-                with col4:
-                    growth_23_24, _ = analytics.calculate_growth(country_df, 2023, 2024)
-                    st.metric("2023→2024 Büyüme", f"{growth_23_24:.1f}%")
-                
-                st.markdown("---")
-                
-                # Trend analizi
-                st.markdown("##### 📈 Üç Yıllık Trend")
-                
-                trend_country = pd.DataFrame({
-                    'Yıl': [2022, 2023, 2024],
-                    'USD MNF': [
-                        country_df['MAT Q3 2022\nUSD MNF'].sum(),
-                        country_df['MAT Q3 2023\nUSD MNF'].sum(),
-                        country_df['MAT Q3 2024\nUSD MNF'].sum()
-                    ],
-                    'Units': [
-                        country_df['MAT Q3 2022\nUnits'].sum(),
-                        country_df['MAT Q3 2023\nUnits'].sum(),
-                        country_df['MAT Q3 2024\nUnits'].sum()
-                    ],
-                    'Standard Units': [
-                        country_df['MAT Q3 2022\nStandard Units'].sum(),
-                        country_df['MAT Q3 2023\nStandard Units'].sum(),
-                        country_df['MAT Q3 2024\nStandard Units'].sum()
-                    ]
-                })
-                
-                fig = make_subplots(rows=2, cols=2, subplot_titles=("USD MNF Trendi", "Units Trendi", "Standard Units Trendi", "Büyüme Zinciri"))
-                
-                # USD MNF
-                fig.add_trace(
-                    go.Bar(x=trend_country['Yıl'], y=trend_country['USD MNF'],
-                          name='USD MNF', marker_color='#3B82F6'),
-                    row=1, col=1
-                )
-                
-                # Units
-                fig.add_trace(
-                    go.Bar(x=trend_country['Yıl'], y=trend_country['Units'],
-                          name='Units', marker_color='#10B981'),
-                    row=1, col=2
-                )
-                
-                # Standard Units
-                fig.add_trace(
-                    go.Bar(x=trend_country['Yıl'], y=trend_country['Standard Units'],
-                          name='Standard Units', marker_color='#F59E0B'),
-                    row=2, col=1
-                )
-                
-                # Büyüme zinciri
-                growth_values = [
-                    ((trend_country.loc[1, 'USD MNF'] - trend_country.loc[0, 'USD MNF']) / trend_country.loc[0, 'USD MNF'] * 100) if trend_country.loc[0, 'USD MNF'] > 0 else 0,
-                    ((trend_country.loc[2, 'USD MNF'] - trend_country.loc[1, 'USD MNF']) / trend_country.loc[1, 'USD MNF'] * 100) if trend_country.loc[1, 'USD MNF'] > 0 else 0
-                ]
-                
-                fig.add_trace(
-                    go.Scatter(x=['2022→2023', '2023→2024'], y=growth_values,
-                              mode='lines+markers', name='Büyüme %',
-                              line=dict(color='#EF4444', width=3)),
-                    row=2, col=2
-                )
-                
-                fig.update_layout(height=600, showlegend=False, template="plotly_white")
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Price-Volume-Mix analizi
-                st.markdown("---")
-                st.markdown("##### 📊 Price-Volume-Mix Ayrıştırması")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("**2022 → 2023**")
-                    pvm_22_23 = analytics.price_volume_mix_analysis(country_df, 2022, 2023)
-                    
-                    if pvm_22_23:
-                        fig_pvm1 = go.Figure(data=[
-                            go.Bar(name='Fiyat Etkisi', x=['Fiyat'], y=[pvm_22_23['price_effect_pct']],
-                                  marker_color='#3B82F6'),
-                            go.Bar(name='Volume Etkisi', x=['Volume'], y=[pvm_22_23['volume_effect_pct']],
-                                  marker_color='#10B981'),
-                            go.Bar(name='Mix Etkisi', x=['Mix'], y=[pvm_22_23['mix_effect_pct']],
-                                  marker_color='#F59E0B')
-                        ])
-                        
-                        fig_pvm1.update_layout(
-                            title="Ayrıştırma Katkıları (%)",
-                            yaxis_title="Katkı (%)",
-                            barmode='group',
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig_pvm1, use_container_width=True)
-                        
-                        # Detaylı bilgiler
-                        if country_df['MAT Q3 2022\nUSD MNF'].sum() > 0:
-                            total_growth_pct = (pvm_22_23['total_growth'] / country_df['MAT Q3 2022\nUSD MNF'].sum() * 100)
-                            st.write(f"**Toplam Büyüme:** %{total_growth_pct:.1f}")
-                        
-                        if pvm_22_23['weighted_price_start'] > 0:
-                            price_change_pct = ((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / pvm_22_23['weighted_price_start'] * 100)
-                            st.write(f"**Ortalama Fiyat Değişimi:** %{price_change_pct:.1f}")
-                        
-                        st.write(f"**Volume Büyümesi:** %{pvm_22_23.get('unit_growth_pct', 0):.1f}")
-                
-                with col2:
-                    st.markdown("**2023 → 2024**")
-                    pvm_23_24 = analytics.price_volume_mix_analysis(country_df, 2023, 2024)
-                    
-                    if pvm_23_24:
-                        fig_pvm2 = go.Figure(data=[
-                            go.Bar(name='Fiyat Etkisi', x=['Fiyat'], y=[pvm_23_24['price_effect_pct']],
-                                  marker_color='#3B82F6'),
-                            go.Bar(name='Volume Etkisi', x=['Volume'], y=[pvm_23_24['volume_effect_pct']],
-                                  marker_color='#10B981'),
-                            go.Bar(name='Mix Etkisi', x=['Mix'], y=[pvm_23_24['mix_effect_pct']],
-                                  marker_color='#F59E0B')
-                        ])
-                        
-                        fig_pvm2.update_layout(
-                            title="Ayrıştırma Katkıları (%)",
-                            yaxis_title="Katkı (%)",
-                            barmode='group',
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig_pvm2, use_container_width=True)
-                        
-                        # Detaylı bilgiler
-                        if country_df['MAT Q3 2023\nUSD MNF'].sum() > 0:
-                            total_growth_pct = (pvm_23_24['total_growth'] / country_df['MAT Q3 2023\nUSD MNF'].sum() * 100)
-                            st.write(f"**Toplam Büyüme:** %{total_growth_pct:.1f}")
-                        
-                        if pvm_23_24['weighted_price_start'] > 0:
-                            price_change_pct = ((pvm_23_24['weighted_price_end'] - pvm_23_24['weighted_price_start']) / pvm_23_24['weighted_price_start'] * 100)
-                            st.write(f"**Ortalama Fiyat Değişimi:** %{price_change_pct:.1f}")
-                        
-                        st.write(f"**Volume Büyümesi:** %{pvm_23_24.get('unit_growth_pct', 0):.1f}")
-                
-                # Molekül analizi
-                st.markdown("---")
-                st.markdown("##### 💊 Molekül Bazlı Analiz")
-                
-                mol_analysis = country_df.groupby('Molecule').agg({
-                    'MAT Q3 2024\nUSD MNF': 'sum',
-                    'MAT Q3 2023\nUSD MNF': 'sum',
-                    'MAT Q3 2022\nUSD MNF': 'sum'
-                }).reset_index()
-                
-                if not mol_analysis.empty and mol_analysis['MAT Q3 2024\nUSD MNF'].sum() > 0:
-                    mol_analysis['Share_2024'] = (mol_analysis['MAT Q3 2024\nUSD MNF'] / mol_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
-                    mol_analysis = mol_analysis.sort_values('Share_2024', ascending=False).head(10)
-                    
-                    fig_mol = go.Figure()
-                    
-                    fig_mol.add_trace(go.Bar(
-                        x=mol_analysis['Molecule'],
-                        y=mol_analysis['MAT Q3 2024\nUSD MNF'],
-                        name='2024',
-                        marker_color='#3B82F6'
-                    ))
-                    
-                    fig_mol.add_trace(go.Bar(
-                        x=mol_analysis['Molecule'],
-                        y=mol_analysis['MAT Q3 2023\nUSD MNF'],
-                        name='2023',
-                        marker_color='#60A5FA'
-                    ))
-                    
-                    fig_mol.add_trace(go.Bar(
-                        x=mol_analysis['Molecule'],
-                        y=mol_analysis['MAT Q3 2022\nUSD MNF'],
-                        name='2022',
-                        marker_color='#93C5FD'
-                    ))
-                    
-                    fig_mol.update_layout(
-                        title="Top 10 Molekül - Üç Yıllık Karşılaştırma",
-                        barmode='group',
-                        height=500,
-                        xaxis_tickangle=-45,
-                        yaxis_title="USD MNF"
-                    )
-                    
-                    st.plotly_chart(fig_mol, use_container_width=True)
-                
-                # Üretici analizi
-                st.markdown("##### 🏭 Üretici Dağılımı")
-                
-                mfg_analysis = country_df.groupby('Manufacturer').agg({
-                    'MAT Q3 2024\nUSD MNF': 'sum'
-                }).reset_index()
-                
-                if not mfg_analysis.empty and mfg_analysis['MAT Q3 2024\nUSD MNF'].sum() > 0:
-                    mfg_analysis['Share'] = (mfg_analysis['MAT Q3 2024\nUSD MNF'] / mfg_analysis['MAT Q3 2024\nUSD MNF'].sum() * 100)
-                    mfg_analysis = mfg_analysis.sort_values('Share', ascending=False)
-                    
-                    fig_mfg = px.pie(
-                        mfg_analysis.head(8),
-                        values='MAT Q3 2024\nUSD MNF',
-                        names='Manufacturer',
-                        title="Üretici Pay Dağılımı (2024)",
-                        hole=0.4
-                    )
-                    
-                    fig_mfg.update_traces(textposition='inside', textinfo='percent+label')
-                    fig_mfg.update_layout(height=500)
-                    
-                    st.plotly_chart(fig_mfg, use_container_width=True)
-    
-    # ============================================
-    # TAB 4: Molekül & Ürün
-    # ============================================
-    with tab4:
-        st.markdown('<h2 class="sub-header">💊 Molekül & Ürün Analizi</h2>', unsafe_allow_html=True)
+        selected_country = st.selectbox(
+            "Ülke Seçin",
+            options=available_countries,
+            key="country_deep_dive"
+        )
         
-        mol_tab1, mol_tab2, mol_tab3 = st.tabs([
-            "📊 Molekül Performansı",
-            "🌍 Coğrafi Dağılım",
-            "📈 Trend Analizi"
-        ])
+        country_df = filtered_df[filtered_df['Country'] == selected_country]
         
-        with mol_tab1:
-            # Molekül seçimi
-            available_molecules = sorted(filtered_df['Molecule'].unique())
-            selected_molecules = st.multiselect(
-                "Analiz Edilecek Moleküller (Çoklu Seçim)",
-                options=available_molecules,
-                default=available_molecules[:3] if len(available_molecules) >= 3 else available_molecules
-            )
+        if len(country_df) == 0:
+            st.warning("Seçilen ülke için veri bulunmuyor.")
+        else:
+            usd_2022_country = country_df["MAT Q3 2022\nUSD MNF"].sum()
+            usd_2023_country = country_df["MAT Q3 2023\nUSD MNF"].sum()
+            usd_2024_country = country_df["MAT Q3 2024\nUSD MNF"].sum()
             
-            if selected_molecules:
-                # Performans özeti
-                st.markdown("##### 📈 Performans Özeti")
-                
-                perf_data = []
-                
-                for molecule in selected_molecules:
-                    mol_df = filtered_df[filtered_df['Molecule'] == molecule]
-                    
-                    if len(mol_df) > 0:
-                        usd_2022 = mol_df['MAT Q3 2022\nUSD MNF'].sum()
-                        usd_2023 = mol_df['MAT Q3 2023\nUSD MNF'].sum()
-                        usd_2024 = mol_df['MAT Q3 2024\nUSD MNF'].sum()
-                        
-                        growth_22_23 = ((usd_2023 - usd_2022) / usd_2022 * 100) if usd_2022 > 0 else 0
-                        growth_23_24 = ((usd_2024 - usd_2023) / usd_2023 * 100) if usd_2023 > 0 else 0
-                        
-                        global_share_2024 = (usd_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
-                        
-                        perf_data.append({
-                            'Molecule': molecule,
-                            'USD_2022': usd_2022,
-                            'USD_2023': usd_2023,
-                            'USD_2024': usd_2024,
-                            'Growth_22_23': growth_22_23,
-                            'Growth_23_24': growth_23_24,
-                            'Global_Share_2024': global_share_2024
-                        })
-                
-                if perf_data:
-                    perf_df = pd.DataFrame(perf_data)
-                    
-                    # Metrikler
-                    cols = st.columns(len(selected_molecules))
-                    
-                    for idx, molecule in enumerate(selected_molecules):
-                        with cols[idx]:
-                            mol_row = perf_df[perf_df['Molecule'] == molecule].iloc[0]
-                            st.metric(
-                                molecule,
-                                f"${mol_row['USD_2024']:,.0f}M",
-                                f"{mol_row['Growth_23_24']:.1f}%"
-                            )
-                    
-                    # Detaylı tablo
-                    st.markdown("##### 📋 Detaylı Performans Tablosu")
-                    
-                    display_df = perf_df.copy()
-                    display_df['USD_2022'] = display_df['USD_2022'].apply(lambda x: f"${x:,.0f}M")
-                    display_df['USD_2023'] = display_df['USD_2023'].apply(lambda x: f"${x:,.0f}M")
-                    display_df['USD_2024'] = display_df['USD_2024'].apply(lambda x: f"${x:,.0f}M")
-                    display_df['Growth_22_23'] = display_df['Growth_22_23'].apply(lambda x: f"{x:.1f}%")
-                    display_df['Growth_23_24'] = display_df['Growth_23_24'].apply(lambda x: f"{x:.1f}%")
-                    display_df['Global_Share_2024'] = display_df['Global_Share_2024'].apply(lambda x: f"{x:.2f}%")
-                    
-                    st.dataframe(display_df, use_container_width=True)
-                    
-                    # Trend grafiği
-                    st.markdown("##### 📊 Üç Yıllık Trend")
-                    
-                    trend_mol = pd.melt(
-                        perf_df[['Molecule', 'USD_2022', 'USD_2023', 'USD_2024']],
-                        id_vars=['Molecule'],
-                        value_vars=['USD_2022', 'USD_2023', 'USD_2024'],
-                        var_name='Year',
-                        value_name='USD_MNF'
-                    )
-                    
-                    trend_mol['Year'] = trend_mol['Year'].str.replace('USD_', '')
-                    
-                    fig = px.line(
-                        trend_mol,
-                        x='Year',
-                        y='USD_MNF',
-                        color='Molecule',
-                        markers=True,
-                        title="Moleküller - Üç Yıllık Trend"
-                    )
-                    
-                    fig.update_layout(height=500, yaxis_title="USD MNF")
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Büyüme karşılaştırması
-                    st.markdown("##### ⚡ Büyüme Karşılaştırması")
-                    
-                    growth_comparison = perf_df[['Molecule', 'Growth_22_23', 'Growth_23_24']].copy()
-                    growth_comparison['Growth_22_24'] = growth_comparison.apply(
-                        lambda row: ((row['Growth_22_23']/100 + 1) * (row['Growth_23_24']/100 + 1) - 1) * 100,
-                        axis=1
-                    )
-                    
-                    fig_growth = go.Figure()
-                    
-                    for molecule in growth_comparison['Molecule']:
-                        row = growth_comparison[growth_comparison['Molecule'] == molecule].iloc[0]
-                        fig_growth.add_trace(go.Scatter(
-                            x=['2022→2023', '2023→2024', '2022→2024'],
-                            y=[row['Growth_22_23'], row['Growth_23_24'], row['Growth_22_24']],
-                            mode='lines+markers',
-                            name=molecule
-                        ))
-                    
-                    fig_growth.update_layout(
-                        title="Büyüme Oranları Karşılaştırması",
-                        height=500,
-                        yaxis_title="Büyüme (%)",
-                        xaxis_title="Dönem"
-                    )
-                    
-                    st.plotly_chart(fig_growth, use_container_width=True)
-        
-        with mol_tab2:
-            # Molekül seçimi
-            mol_for_map = st.selectbox(
-                "Haritalandırılacak Molekül",
-                options=sorted(filtered_df['Molecule'].unique())
-            )
+            growth_22_23_country = calculate_growth_rate(usd_2023_country, usd_2022_country)
+            growth_23_24_country = calculate_growth_rate(usd_2024_country, usd_2023_country)
             
-            if mol_for_map:
-                mol_map_df = filtered_df[filtered_df['Molecule'] == mol_for_map]
-                
-                if not mol_map_df.empty:
-                    # Coğrafi dağılım
-                    country_dist = mol_map_df.groupby('Country').agg({
-                        'MAT Q3 2024\nUSD MNF': 'sum',
-                        'MAT Q3 2023\nUSD MNF': 'sum',
-                        'MAT Q3 2022\nUSD MNF': 'sum'
-                    }).reset_index()
-                    
-                    total_mol_2024 = country_dist['MAT Q3 2024\nUSD MNF'].sum()
-                    if total_mol_2024 > 0:
-                        country_dist['Share_2024'] = (country_dist['MAT Q3 2024\nUSD MNF'] / total_mol_2024 * 100)
-                    else:
-                        country_dist['Share_2024'] = 0
-                    
-                    # Harita hazırlığı
-                    country_dist['ISO_A3'] = country_dist['Country'].apply(map_handler.country_mapper.get_country_code)
-                    country_dist = country_dist.dropna(subset=['ISO_A3'])
-                    
-                    if not country_dist.empty:
-                        fig = px.choropleth(
-                            country_dist,
-                            locations='ISO_A3',
-                            color='MAT Q3 2024\nUSD MNF',
-                            hover_name='Country',
-                            hover_data={
-                                'MAT Q3 2024\nUSD MNF': ':.2f',
-                                'Share_2024': ':.2f%',
-                                'MAT Q3 2023\nUSD MNF': ':.2f',
-                                'MAT Q3 2022\nUSD MNF': ':.2f'
-                            },
-                            color_continuous_scale="Viridis",
-                            title=f"{mol_for_map} - Coğrafi Dağılım (2024)"
-                        )
-                        
-                        fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Ülke sıralaması
-                    st.markdown("##### 🏆 Ülke Sıralaması")
-                    
-                    top_countries_mol = country_dist.nlargest(10, 'MAT Q3 2024\nUSD MNF')
-                    
-                    fig_bar = go.Figure()
-                    
-                    fig_bar.add_trace(go.Bar(
-                        x=top_countries_mol['Country'],
-                        y=top_countries_mol['MAT Q3 2024\nUSD MNF'],
-                        name='2024',
-                        marker_color='#3B82F6',
-                        text=top_countries_mol['Share_2024'].apply(lambda x: f'{x:.1f}%'),
-                        textposition='auto'
-                    ))
-                    
-                    fig_bar.add_trace(go.Bar(
-                        x=top_countries_mol['Country'],
-                        y=top_countries_mol['MAT Q3 2023\nUSD MNF'],
-                        name='2023',
-                        marker_color='#60A5FA'
-                    ))
-                    
-                    fig_bar.update_layout(
-                        title=f"{mol_for_map} - Top 10 Ülke",
-                        barmode='group',
-                        height=500,
-                        xaxis_tickangle=-45,
-                        yaxis_title="USD MNF"
-                    )
-                    
-                    st.plotly_chart(fig_bar, use_container_width=True)
-                    
-                    # Konsantrasyon analizi
-                    st.markdown("##### 🎯 Pazar Konsantrasyonu")
-                    
-                    if total_mol_2024 > 0:
-                        top5_share = top_countries_mol.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100
-                        top3_share = top_countries_mol.head(3)['MAT Q3 2024\nUSD MNF'].sum() / total_mol_2024 * 100
-                    else:
-                        top5_share = 0
-                        top3_share = 0
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Top 5 Ülke Payı", f"{top5_share:.1f}%")
-                    
-                    with col2:
-                        st.metric("Top 3 Ülke Payı", f"{top3_share:.1f}%")
-                    
-                    with col3:
-                        country_count = len(country_dist)
-                        st.metric("Toplam Ülke Sayısı", country_count)
-        
-        with mol_tab3:
-            # Trend analizi için molekül seçimi
-            trend_molecules = st.multiselect(
-                "Trend Analizi için Moleküller",
-                options=sorted(filtered_df['Molecule'].unique()),
-                default=sorted(filtered_df['Molecule'].unique())[:5] if len(filtered_df['Molecule'].unique()) >= 5 else sorted(filtered_df['Molecule'].unique())
-            )
+            global_share_2022 = (usd_2022_country / usd_2022) * 100
+            global_share_2023 = (usd_2023_country / usd_2023) * 100
+            global_share_2024 = (usd_2024_country / usd_2024) * 100
             
-            if trend_molecules:
-                # Trend verisi hazırlama
-                trend_data_all = []
-                
-                for molecule in trend_molecules:
-                    mol_trend_df = filtered_df[filtered_df['Molecule'] == molecule]
-                    
-                    if len(mol_trend_df) > 0:
-                        for year in [2022, 2023, 2024]:
-                            if year == 2022:
-                                usd_col = 'MAT Q3 2022\nUSD MNF'
-                            elif year == 2023:
-                                usd_col = 'MAT Q3 2023\nUSD MNF'
-                            else:
-                                usd_col = 'MAT Q3 2024\nUSD MNF'
-                            
-                            total_usd = mol_trend_df[usd_col].sum()
-                            global_share = (total_usd / filtered_df[usd_col].sum() * 100) if filtered_df[usd_col].sum() > 0 else 0
-                            
-                            trend_data_all.append({
-                                'Molecule': molecule,
-                                'Year': year,
-                                'USD_MNF': total_usd,
-                                'Global_Share': global_share
-                            })
-                
-                if trend_data_all:
-                    trend_df = pd.DataFrame(trend_data_all)
-                    
-                    # USD MNF trendi
-                    st.markdown("##### 📈 USD MNF Trendi")
-                    
-                    fig_trend = px.line(
-                        trend_df,
-                        x='Year',
-                        y='USD_MNF',
-                        color='Molecule',
-                        markers=True,
-                        title="Moleküller - USD MNF Trendi (2022-2024)"
-                    )
-                    
-                    fig_trend.update_layout(height=500, yaxis_title="USD MNF")
-                    st.plotly_chart(fig_trend, use_container_width=True)
-                    
-                    # Global pay trendi
-                    st.markdown("##### 📊 Global Pay Trendi")
-                    
-                    fig_share = px.line(
-                        trend_df,
-                        x='Year',
-                        y='Global_Share',
-                        color='Molecule',
-                        markers=True,
-                        title="Moleküller - Global Pay Trendi (2022-2024)"
-                    )
-                    
-                    fig_share.update_layout(height=500, yaxis_title="Global Pay (%)")
-                    st.plotly_chart(fig_share, use_container_width=True)
-                    
-                    # Büyüme matrisi
-                    st.markdown("##### ⚡ Büyüme Matrisi")
-                    
-                    growth_matrix = []
-                    
-                    for molecule in trend_molecules:
-                        mol_data = trend_df[trend_df['Molecule'] == molecule]
-                        
-                        if len(mol_data) == 3:
-                            usd_2022 = mol_data[mol_data['Year'] == 2022]['USD_MNF'].values[0]
-                            usd_2023 = mol_data[mol_data['Year'] == 2023]['USD_MNF'].values[0]
-                            usd_2024 = mol_data[mol_data['Year'] == 2024]['USD_MNF'].values[0]
-                            
-                            growth_22_23 = ((usd_2023 - usd_2022) / usd_2022 * 100) if usd_2022 > 0 else 0
-                            growth_23_24 = ((usd_2024 - usd_2023) / usd_2023 * 100) if usd_2023 > 0 else 0
-                            
-                            growth_matrix.append({
-                                'Molecule': molecule,
-                                'USD_2022': usd_2022,
-                                'USD_2023': usd_2023,
-                                'USD_2024': usd_2024,
-                                'Growth_22_23': growth_22_23,
-                                'Growth_23_24': growth_23_24,
-                                'Growth_22_24': ((usd_2024 - usd_2022) / usd_2022 * 100) if usd_2022 > 0 else 0
-                            })
-                    
-                    if growth_matrix:
-                        growth_df = pd.DataFrame(growth_matrix)
-                        
-                        # Heatmap için veri hazırlama
-                        heatmap_data = growth_df[['Molecule', 'Growth_22_23', 'Growth_23_24']].copy()
-                        heatmap_data = heatmap_data.set_index('Molecule')
-                        
-                        fig_heatmap = go.Figure(data=go.Heatmap(
-                            z=heatmap_data.values,
-                            x=['2022→2023', '2023→2024'],
-                            y=heatmap_data.index,
-                            colorscale='RdYlGn',
-                            zmid=0,
-                            text=[[f'{val:.1f}%' for val in row] for row in heatmap_data.values],
-                            texttemplate='%{text}',
-                            textfont={"size": 12}
-                        ))
-                        
-                        fig_heatmap.update_layout(
-                            title="Büyüme Oranları Heatmap",
-                            height=400,
-                            xaxis_title="Dönem",
-                            yaxis_title="Molekül"
-                        )
-                        
-                        st.plotly_chart(fig_heatmap, use_container_width=True)
-    
-    # ============================================
-    # TAB 5: Corporation & Rekabet
-    # ============================================
-    with tab5:
-        st.markdown('<h2 class="sub-header">🏢 Corporation & Rekabet Analizi</h2>', unsafe_allow_html=True)
-        
-        corp_tab1, corp_tab2, corp_tab3 = st.tabs([
-            "📊 Pazar Payı Analizi",
-            "📈 Pay Değişimi",
-            "🌍 Coğrafi Varlık"
-        ])
-        
-        with corp_tab1:
-            # Pazar payı analizi
-            year_for_share = st.selectbox("Pazar Payı Yılı", [2024, 2023, 2022], key="corp_share_year")
-            
-            share_df = analytics.calculate_market_share(filtered_df, year_for_share, 'Corporation')
-            
-            if not share_df.empty:
-                # Top 10 corporation
-                top_corps = share_df.head(10)
-                
-                st.markdown(f"##### 🏆 Top 10 Corporation - {year_for_share}")
-                
-                fig = go.Figure()
-                
-                fig.add_trace(go.Bar(
-                    x=top_corps['Corporation'],
-                    y=top_corps['Market_Share_Pct'],
-                    marker_color='#3B82F6',
-                    text=top_corps['Market_Share_Pct'].apply(lambda x: f'{x:.1f}%'),
-                    textposition='auto'
-                ))
-                
-                fig.update_layout(
-                    title=f"Pazar Payı Dağılımı ({year_for_share})",
-                    height=500,
-                    xaxis_tickangle=-45,
-                    yaxis_title="Pazar Payı (%)"
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Cumulative share
-                st.markdown("##### 📈 Kümülatif Pazar Payı")
-                
-                fig_cum = go.Figure()
-                
-                fig_cum.add_trace(go.Scatter(
-                    x=top_corps['Corporation'],
-                    y=top_corps['Cumulative_Share'],
-                    mode='lines+markers',
-                    line=dict(color='#10B981', width=3),
-                    marker=dict(size=10),
-                    name='Kümülatif Pay'
-                ))
-                
-                fig_cum.add_trace(go.Bar(
-                    x=top_corps['Corporation'],
-                    y=top_corps['Market_Share_Pct'],
-                    name='Bireysel Pay',
-                    marker_color='rgba(59, 130, 246, 0.5)'
-                ))
-                
-                fig_cum.update_layout(
-                    title="Kümülatif Pazar Payı",
-                    height=500,
-                    xaxis_tickangle=-45,
-                    yaxis_title="Pay (%)",
-                    barmode='overlay'
-                )
-                
-                st.plotly_chart(fig_cum, use_container_width=True)
-                
-                # Pazar konsantrasyonu
-                st.markdown("##### 🎯 Pazar Konsantrasyonu")
-                
-                top3_share = top_corps.head(3)['Market_Share_Pct'].sum()
-                top5_share = top_corps.head(5)['Market_Share_Pct'].sum()
-                top10_share = top_corps['Market_Share_Pct'].sum()
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("Top 3 Payı", f"{top3_share:.1f}%")
-                
-                with col2:
-                    st.metric("Top 5 Payı", f"{top5_share:.1f}%")
-                
-                with col3:
-                    st.metric("Top 10 Payı", f"{top10_share:.1f}%")
-                
-                # Herfindahl-Hirschman Index (HHI)
-                hhi = (share_df['Market_Share_Pct'] ** 2).sum()
-                
-                if hhi < 1500:
-                    concentration_level = "Düşük Konsantrasyon"
-                    concentration_color = "#10B981"
-                elif hhi < 2500:
-                    concentration_level = "Orta Konsantrasyon"
-                    concentration_color = "#F59E0B"
-                else:
-                    concentration_level = "Yüksek Konsantrasyon"
-                    concentration_color = "#DC2626"
-                
-                st.markdown(f'''
-                <div class="metric-card">
-                    <h3>📊 Herfindahl-Hirschman Index (HHI)</h3>
-                    <p style="font-size: 2rem; font-weight: 800; color: {concentration_color};">{hhi:.0f}</p>
-                    <p>{concentration_level}</p>
-                    <p style="font-size: 0.9rem; color: #6B7280;">
-                        HHI < 1,500: Düşük konsantrasyon<br>
-                        HHI 1,500-2,500: Orta konsantrasyon<br>
-                        HHI > 2,500: Yüksek konsantrasyon
-                    </p>
-                </div>
-                ''', unsafe_allow_html=True)
-        
-        with corp_tab2:
-            # Pay değişimi analizi
-            st.markdown("##### 📈 Pazar Payı Değişimi (2022 → 2024)")
-            
-            share_2022 = analytics.calculate_market_share(filtered_df, 2022, 'Corporation')
-            share_2023 = analytics.calculate_market_share(filtered_df, 2023, 'Corporation')
-            share_2024 = analytics.calculate_market_share(filtered_df, 2024, 'Corporation')
-            
-            if not share_2022.empty and not share_2023.empty and not share_2024.empty:
-                # Pay değişimi tablosu
-                share_comparison = pd.merge(
-                    share_2022[['Corporation', 'Market_Share_Pct']],
-                    share_2023[['Corporation', 'Market_Share_Pct']],
-                    on='Corporation',
-                    suffixes=('_2022', '_2023')
-                )
-                
-                share_comparison = pd.merge(
-                    share_comparison,
-                    share_2024[['Corporation', 'Market_Share_Pct']],
-                    on='Corporation'
-                )
-                
-                share_comparison = share_comparison.rename(columns={'Market_Share_Pct': 'Market_Share_Pct_2024'})
-                
-                share_comparison['Change_22_23'] = share_comparison['Market_Share_Pct_2023'] - share_comparison['Market_Share_Pct_2022']
-                share_comparison['Change_23_24'] = share_comparison['Market_Share_Pct_2024'] - share_comparison['Market_Share_Pct_2023']
-                share_comparison['Change_22_24'] = share_comparison['Market_Share_Pct_2024'] - share_comparison['Market_Share_Pct_2022']
-                
-                # Top 20 corporation filtrele
-                top_corps_all = share_comparison.nlargest(20, 'Market_Share_Pct_2024')
-                
-                # Pay trend grafiği
-                trend_corp_data = []
-                
-                for _, row in top_corps_all.iterrows():
-                    trend_corp_data.append({
-                        'Corporation': row['Corporation'],
-                        'Year': 2022,
-                        'Market_Share': row['Market_Share_Pct_2022']
-                    })
-                    trend_corp_data.append({
-                        'Corporation': row['Corporation'],
-                        'Year': 2023,
-                        'Market_Share': row['Market_Share_Pct_2023']
-                    })
-                    trend_corp_data.append({
-                        'Corporation': row['Corporation'],
-                        'Year': 2024,
-                        'Market_Share': row['Market_Share_Pct_2024']
-                    })
-                
-                trend_corp_df = pd.DataFrame(trend_corp_data)
-                
-                fig_trend = px.line(
-                    trend_corp_df,
-                    x='Year',
-                    y='Market_Share',
-                    color='Corporation',
-                    markers=True,
-                    title="Top 20 Corporation - Pazar Payı Trendi"
-                )
-                
-                fig_trend.update_layout(height=600, yaxis_title="Pazar Payı (%)")
-                st.plotly_chart(fig_trend, use_container_width=True)
-                
-                # En çok kazanan ve kaybedenler
-                st.markdown("##### 🏆 En Çok Kazananlar & Kaybedenler")
-                
-                top_gainers_corp = share_comparison.nlargest(5, 'Change_22_24')
-                top_losers_corp = share_comparison.nsmallest(5, 'Change_22_24')
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("**⬆️ En Çok Kazananlar (2022→2024)**")
-                    
-                    for _, row in top_gainers_corp.iterrows():
-                        st.write(f"**{row['Corporation']}**: +{row['Change_22_24']:.2f}%")
-                        st.progress(min(row['Change_22_24'] / 10, 1.0))
-                
-                with col2:
-                    st.markdown("**⬇️ En Çok Kaybedenler (2022→2024)**")
-                    
-                    for _, row in top_losers_corp.iterrows():
-                        st.write(f"**{row['Corporation']}**: {row['Change_22_24']:.2f}%")
-                        st.progress(min(abs(row['Change_22_24']) / 10, 1.0))
-                
-                # Pay değişimi heatmap
-                st.markdown("##### 🔥 Pay Değişimi Heatmap")
-                
-                heatmap_corp_data = top_corps_all[['Corporation', 'Change_22_23', 'Change_23_24']].copy()
-                heatmap_corp_data = heatmap_corp_data.set_index('Corporation')
-                
-                fig_heatmap_corp = go.Figure(data=go.Heatmap(
-                    z=heatmap_corp_data.values,
-                    x=['2022→2023', '2023→2024'],
-                    y=heatmap_corp_data.index,
-                    colorscale='RdYlGn',
-                    zmid=0,
-                    text=[[f'{val:+.2f}%' for val in row] for row in heatmap_corp_data.values],
-                    texttemplate='%{text}',
-                    textfont={"size": 10}
-                ))
-                
-                fig_heatmap_corp.update_layout(
-                    title="Pazar Payı Değişimi Heatmap",
-                    height=500,
-                    xaxis_title="Dönem",
-                    yaxis_title="Corporation"
-                )
-                
-                st.plotly_chart(fig_heatmap_corp, use_container_width=True)
-        
-        with corp_tab3:
-            # Corporation seçimi
-            selected_corp = st.selectbox(
-                "Analiz Edilecek Corporation",
-                options=sorted(filtered_df['Corporation'].unique())
-            )
-            
-            if selected_corp:
-                corp_df = filtered_df[filtered_df['Corporation'] == selected_corp]
-                
-                if len(corp_df) > 0:
-                    # Coğrafi dağılım
-                    country_dist_corp = corp_df.groupby('Country').agg({
-                        'MAT Q3 2024\nUSD MNF': 'sum',
-                        'MAT Q3 2023\nUSD MNF': 'sum',
-                        'MAT Q3 2022\nUSD MNF': 'sum'
-                    }).reset_index()
-                    
-                    total_corp_2024 = country_dist_corp['MAT Q3 2024\nUSD MNF'].sum()
-                    if total_corp_2024 > 0:
-                        country_dist_corp['Share_2024'] = (country_dist_corp['MAT Q3 2024\nUSD MNF'] / total_corp_2024 * 100)
-                    else:
-                        country_dist_corp['Share_2024'] = 0
-                    
-                    # Harita
-                    country_dist_corp['ISO_A3'] = country_dist_corp['Country'].apply(map_handler.country_mapper.get_country_code)
-                    country_dist_corp = country_dist_corp.dropna(subset=['ISO_A3'])
-                    
-                    if not country_dist_corp.empty:
-                        fig = px.choropleth(
-                            country_dist_corp,
-                            locations='ISO_A3',
-                            color='MAT Q3 2024\nUSD MNF',
-                            hover_name='Country',
-                            hover_data={
-                                'MAT Q3 2024\nUSD MNF': ':.2f',
-                                'Share_2024': ':.2f%',
-                                'MAT Q3 2023\nUSD MNF': ':.2f'
-                            },
-                            color_continuous_scale="Viridis",
-                            title=f"{selected_corp} - Coğrafi Dağılım (2024)"
-                        )
-                        
-                        fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Ülke sıralaması
-                    st.markdown("##### 🌍 Ülke Dağılımı")
-                    
-                    top_countries_corp = country_dist_corp.nlargest(10, 'MAT Q3 2024\nUSD MNF')
-                    
-                    fig_bar_corp = go.Figure()
-                    
-                    fig_bar_corp.add_trace(go.Bar(
-                        x=top_countries_corp['Country'],
-                        y=top_countries_corp['MAT Q3 2024\nUSD MNF'],
-                        name='2024',
-                        marker_color='#3B82F6',
-                        text=top_countries_corp['Share_2024'].apply(lambda x: f'{x:.1f}%'),
-                        textposition='auto'
-                    ))
-                    
-                    fig_bar_corp.add_trace(go.Bar(
-                        x=top_countries_corp['Country'],
-                        y=top_countries_corp['MAT Q3 2023\nUSD MNF'],
-                        name='2023',
-                        marker_color='#60A5FA'
-                    ))
-                    
-                    fig_bar_corp.add_trace(go.Bar(
-                        x=top_countries_corp['Country'],
-                        y=top_countries_corp['MAT Q3 2022\nUSD MNF'],
-                        name='2022',
-                        marker_color='#93C5FD'
-                    ))
-                    
-                    fig_bar_corp.update_layout(
-                        title=f"{selected_corp} - Top 10 Ülke",
-                        barmode='group',
-                        height=500,
-                        xaxis_tickangle=-45,
-                        yaxis_title="USD MNF"
-                    )
-                    
-                    st.plotly_chart(fig_bar_corp, use_container_width=True)
-                    
-                    # Coğrafi çeşitlilik metrikleri
-                    st.markdown("##### 📊 Coğrafi Çeşitlilik Metrikleri")
-                    
-                    total_countries = len(country_dist_corp)
-                    if total_corp_2024 > 0:
-                        top5_share_corp = top_countries_corp.head(5)['MAT Q3 2024\nUSD MNF'].sum() / total_corp_2024 * 100
-                    else:
-                        top5_share_corp = 0
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Toplam Ülke Sayısı", total_countries)
-                    
-                    with col2:
-                        st.metric("Top 5 Ülke Payı", f"{top5_share_corp:.1f}%")
-                    
-                    with col3:
-                        region_count = corp_df['Region'].nunique()
-                        st.metric("Bölge Sayısı", region_count)
-                    
-                    # Molekül dağılımı
-                    st.markdown("##### 💊 Molekül Dağılımı")
-                    
-                    mol_dist_corp = corp_df.groupby('Molecule').agg({
-                        'MAT Q3 2024\nUSD MNF': 'sum'
-                    }).reset_index()
-                    
-                    if not mol_dist_corp.empty and mol_dist_corp['MAT Q3 2024\nUSD MNF'].sum() > 0:
-                        mol_dist_corp['Share'] = (mol_dist_corp['MAT Q3 2024\nUSD MNF'] / mol_dist_corp['MAT Q3 2024\nUSD MNF'].sum() * 100)
-                        mol_dist_corp = mol_dist_corp.sort_values('Share', ascending=False).head(10)
-                        
-                        fig_pie_corp = px.pie(
-                            mol_dist_corp,
-                            values='MAT Q3 2024\nUSD MNF',
-                            names='Molecule',
-                            title=f"{selected_corp} - Molekül Dağılımı (2024)",
-                            hole=0.4
-                        )
-                        
-                        fig_pie_corp.update_traces(textposition='inside', textinfo='percent+label')
-                        fig_pie_corp.update_layout(height=500)
-                        
-                        st.plotly_chart(fig_pie_corp, use_container_width=True)
-    
-    # ============================================
-    # TAB 6: Specialty vs Non-Specialty
-    # ============================================
-    with tab6:
-        st.markdown('<h2 class="sub-header">⭐ Specialty vs Non-Specialty Analizi</h2>', unsafe_allow_html=True)
-        
-        spec_tab1, spec_tab2, spec_tab3 = st.tabs([
-            "📊 Premium Pay Analizi",
-            "📈 Premiumlaşma Trendi",
-            "🌍 Coğrafi Dağılım"
-        ])
-        
-        with spec_tab1:
-            # Specialty metrikleri
-            spec_metrics = analytics.calculate_specialty_metrics(filtered_df)
-            
-            if spec_metrics:
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    specialty_pct_2024 = spec_metrics.get('specialty_pct_2024', 0)
-                    specialty_pct_2023 = spec_metrics.get('specialty_pct_2023', 0)
-                    st.metric(
-                        "2024 Specialty Payı",
-                        f"{specialty_pct_2024:.1f}%",
-                        delta=f"{specialty_pct_2024 - specialty_pct_2023:.1f}%"
-                    )
-                
-                with col2:
-                    specialty_total_2024 = spec_metrics.get('specialty_total_2024', 0)
-                    st.metric(
-                        "2024 Specialty USD MNF",
-                        f"${specialty_total_2024:,.0f}M"
-                    )
-                
-                with col3:
-                    non_specialty_total_2024 = spec_metrics.get('non_specialty_total_2024', 0)
-                    st.metric(
-                        "2024 Non-Specialty USD MNF",
-                        f"${non_specialty_total_2024:,.0f}M"
-                    )
-                
-                # Pay dağılımı
-                st.markdown("##### 📊 Pay Dağılımı (2024)")
-                
-                fig_pie = px.pie(
-                    values=[spec_metrics['specialty_total_2024'], spec_metrics['non_specialty_total_2024']],
-                    names=['Specialty', 'Non-Specialty'],
-                    title="Specialty vs Non-Specialty Pay Dağılımı (2024)",
-                    color=['Specialty', 'Non-Specialty'],
-                    color_discrete_map={'Specialty': '#3B82F6', 'Non-Specialty': '#10B981'}
-                )
-                
-                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                fig_pie.update_layout(height=400)
-                
-                st.plotly_chart(fig_pie, use_container_width=True)
-                
-                # Üç yıllık karşılaştırma
-                st.markdown("##### 📈 Üç Yıllık Karşılaştırma")
-                
-                years = [2022, 2023, 2024]
-                specialty_values = [spec_metrics[f'specialty_total_{year}'] for year in years]
-                non_specialty_values = [spec_metrics[f'non_specialty_total_{year}'] for year in years]
-                specialty_pcts = [spec_metrics[f'specialty_pct_{year}'] for year in years]
-                
-                fig_bar = go.Figure()
-                
-                fig_bar.add_trace(go.Bar(
-                    x=years,
-                    y=specialty_values,
-                    name='Specialty',
-                    marker_color='#3B82F6',
-                    text=[f'{pct:.1f}%' for pct in specialty_pcts],
-                    textposition='auto'
-                ))
-                
-                fig_bar.add_trace(go.Bar(
-                    x=years,
-                    y=non_specialty_values,
-                    name='Non-Specialty',
-                    marker_color='#10B981'
-                ))
-                
-                fig_bar.update_layout(
-                    title="Specialty vs Non-Specialty - Üç Yıllık Trend",
-                    barmode='stack',
-                    height=500,
-                    xaxis_title="Yıl",
-                    yaxis_title="USD MNF"
-                )
-                
-                st.plotly_chart(fig_bar, use_container_width=True)
-                
-                # Specialty büyüme analizi
-                st.markdown("##### ⚡ Specialty Büyüme Analizi")
-                
-                specialty_growth_22_23 = ((spec_metrics['specialty_total_2023'] - spec_metrics['specialty_total_2022']) / 
-                                         spec_metrics['specialty_total_2022'] * 100) if spec_metrics['specialty_total_2022'] > 0 else 0
-                
-                specialty_growth_23_24 = ((spec_metrics['specialty_total_2024'] - spec_metrics['specialty_total_2023']) / 
-                                         spec_metrics['specialty_total_2023'] * 100) if spec_metrics['specialty_total_2023'] > 0 else 0
-                
-                non_specialty_growth_22_23 = ((spec_metrics['non_specialty_total_2023'] - spec_metrics['non_specialty_total_2022']) / 
-                                             spec_metrics['non_specialty_total_2022'] * 100) if spec_metrics['non_specialty_total_2022'] > 0 else 0
-                
-                non_specialty_growth_23_24 = ((spec_metrics['non_specialty_total_2024'] - spec_metrics['non_specialty_total_2023']) / 
-                                             spec_metrics['non_specialty_total_2023'] * 100) if spec_metrics['non_specialty_total_2023'] > 0 else 0
-                
-                growth_data = pd.DataFrame({
-                    'Segment': ['Specialty', 'Specialty', 'Non-Specialty', 'Non-Specialty'],
-                    'Dönem': ['2022→2023', '2023→2024', '2022→2023', '2023→2024'],
-                    'Büyüme (%)': [specialty_growth_22_23, specialty_growth_23_24, 
-                                  non_specialty_growth_22_23, non_specialty_growth_23_24]
-                })
-                
-                fig_growth = px.bar(
-                    growth_data,
-                    x='Segment',
-                    y='Büyüme (%)',
-                    color='Dönem',
-                    barmode='group',
-                    title="Segment Büyüme Karşılaştırması",
-                    color_discrete_sequence=['#3B82F6', '#10B981']
-                )
-                
-                fig_growth.update_layout(height=500)
-                st.plotly_chart(fig_growth, use_container_width=True)
-        
-        with spec_tab2:
-            # Premiumlaşma trendi
-            st.markdown("##### 📈 Premiumlaşma Trendi (2022 → 2024)")
-            
-            # Ülke bazlı premiumlaşma analizi
-            country_premium = []
-            
-            for country in filtered_df['Country'].unique():
-                country_df_spec = filtered_df[filtered_df['Country'] == country]
-                
-                spec_metrics_country = analytics.calculate_specialty_metrics(country_df_spec)
-                
-                if spec_metrics_country:
-                    premium_change = spec_metrics_country.get('specialty_pct_2024', 0) - spec_metrics_country.get('specialty_pct_2022', 0)
-                    
-                    country_premium.append({
-                        'Country': country,
-                        'Specialty_Pct_2022': spec_metrics_country.get('specialty_pct_2022', 0),
-                        'Specialty_Pct_2023': spec_metrics_country.get('specialty_pct_2023', 0),
-                        'Specialty_Pct_2024': spec_metrics_country.get('specialty_pct_2024', 0),
-                        'Premium_Change_22_24': premium_change
-                    })
-            
-            if country_premium:
-                premium_df = pd.DataFrame(country_premium)
-                
-                # En çok premiumlaşan ülkeler
-                top_premium_gainers = premium_df.nlargest(10, 'Premium_Change_22_24')
-                top_premium_losers = premium_df.nsmallest(10, 'Premium_Change_22_24')
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("**⬆️ En Çok Premiumlaşan Ülkeler**")
-                    
-                    for _, row in top_premium_gainers.iterrows():
-                        st.write(f"**{row['Country']}**: +{row['Premium_Change_22_24']:.1f}% (2022: {row['Specialty_Pct_2022']:.1f}% → 2024: {row['Specialty_Pct_2024']:.1f}%)")
-                
-                with col2:
-                    st.markdown("**⬇️ En Çok Premium Kaybeden Ülkeler**")
-                    
-                    for _, row in top_premium_losers.iterrows():
-                        st.write(f"**{row['Country']}**: {row['Premium_Change_22_24']:.1f}% (2022: {row['Specialty_Pct_2022']:.1f}% → 2024: {row['Specialty_Pct_2024']:.1f}%)")
-                
-                # Premiumlaşma haritası
-                st.markdown("##### 🌍 Premiumlaşma Haritası (2022 → 2024)")
-                
-                premium_df['ISO_A3'] = premium_df['Country'].apply(map_handler.country_mapper.get_country_code)
-                premium_df = premium_df.dropna(subset=['ISO_A3'])
-                
-                if not premium_df.empty:
-                    def premium_category(x):
-                        if pd.isna(x):
-                            return 'Veri Yok'
-                        elif x > 10:
-                            return 'Çok Yüksek Artış (>10%)'
-                        elif x > 5:
-                            return 'Yüksek Artış (5-10%)'
-                        elif x > 0:
-                            return 'Orta Artış (0-5%)'
-                        elif x > -5:
-                            return 'Hafif Düşüş (0- -5%)'
-                        else:
-                            return 'Keskin Düşüş (<-5%)'
-                    
-                    premium_df['Premium_Category'] = premium_df['Premium_Change_22_24'].apply(premium_category)
-                    
-                    color_discrete_map_premium = {
-                        'Çok Yüksek Artış (>10%)': '#10B981',
-                        'Yüksek Artış (5-10%)': '#34D399',
-                        'Orta Artış (0-5%)': '#60A5FA',
-                        'Hafif Düşüş (0- -5%)': '#FBBF24',
-                        'Keskin Düşüş (<-5%)': '#DC2626',
-                        'Veri Yok': '#9CA3AF'
-                    }
-                    
-                    fig = px.choropleth(
-                        premium_df,
-                        locations='ISO_A3',
-                        color='Premium_Category',
-                        hover_name='Country',
-                        hover_data={
-                            'Premium_Change_22_24': ':.1f%',
-                            'Specialty_Pct_2022': ':.1f%',
-                            'Specialty_Pct_2024': ':.1f%'
-                        },
-                        color_discrete_map=color_discrete_map_premium,
-                        category_orders={
-                            'Premium_Category': [
-                                'Çok Yüksek Artış (>10%)',
-                                'Yüksek Artış (5-10%)',
-                                'Orta Artış (0-5%)',
-                                'Hafif Düşüş (0- -5%)',
-                                'Keskin Düşüş (<-5%)',
-                                'Veri Yok'
-                            ]
-                        },
-                        title="Premiumlaşma Değişimi (2022 → 2024)"
-                    )
-                    
-                    fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Premiumlaşma trend grafiği
-                st.markdown("##### 📊 Global Premiumlaşma Trendi")
-                
-                global_premium_trend = pd.DataFrame({
-                    'Yıl': [2022, 2023, 2024],
-                    'Specialty_Payı': [
-                        spec_metrics['specialty_pct_2022'],
-                        spec_metrics['specialty_pct_2023'],
-                        spec_metrics['specialty_pct_2024']
-                    ]
-                })
-                
-                fig_trend = px.line(
-                    global_premium_trend,
-                    x='Yıl',
-                    y='Specialty_Payı',
-                    markers=True,
-                    title="Global Specialty Payı Trendi"
-                )
-                
-                fig_trend.update_layout(
-                    height=400,
-                    yaxis_title="Specialty Payı (%)",
-                    yaxis_range=[0, max(global_premium_trend['Specialty_Payı']) * 1.2]
-                )
-                
-                # Trend çizgisi ekle
-                fig_trend.add_trace(go.Scatter(
-                    x=global_premium_trend['Yıl'],
-                    y=global_premium_trend['Specialty_Payı'],
-                    mode='lines',
-                    line=dict(color='#EF4444', width=3, dash='dash'),
-                    showlegend=False
-                ))
-                
-                st.plotly_chart(fig_trend, use_container_width=True)
-        
-        with spec_tab3:
-            # Coğrafi dağılım
-            year_for_spec_map = st.selectbox("Harita Yılı", [2024, 2023, 2022], key="spec_map_year")
-            
-            # Ülke bazlı specialty payı
-            country_spec_data = []
-            
-            for country in filtered_df['Country'].unique():
-                country_df_spec_map = filtered_df[filtered_df['Country'] == country]
-                
-                spec_metrics_country_map = analytics.calculate_specialty_metrics(country_df_spec_map)
-                
-                if spec_metrics_country_map:
-                    specialty_pct = spec_metrics_country_map.get(f'specialty_pct_{year_for_spec_map}', 0)
-                    
-                    country_spec_data.append({
-                        'Country': country,
-                        'Specialty_Pct': specialty_pct,
-                        'Specialty_USD': spec_metrics_country_map.get(f'specialty_total_{year_for_spec_map}', 0),
-                        'Non_Specialty_USD': spec_metrics_country_map.get(f'non_specialty_total_{year_for_spec_map}', 0)
-                    })
-            
-            if country_spec_data:
-                spec_map_df = pd.DataFrame(country_spec_data)
-                
-                # Harita
-                spec_map_df['ISO_A3'] = spec_map_df['Country'].apply(map_handler.country_mapper.get_country_code)
-                spec_map_df = spec_map_df.dropna(subset=['ISO_A3'])
-                
-                if not spec_map_df.empty:
-                    def spec_category(x):
-                        if pd.isna(x):
-                            return 'Veri Yok'
-                        elif x > 30:
-                            return 'Çok Yüksek (>30%)'
-                        elif x > 20:
-                            return 'Yüksek (20-30%)'
-                        elif x > 10:
-                            return 'Orta (10-20%)'
-                        elif x > 0:
-                            return 'Düşük (0-10%)'
-                        else:
-                            return 'Yok'
-                    
-                    spec_map_df['Spec_Category'] = spec_map_df['Specialty_Pct'].apply(spec_category)
-                    
-                    color_discrete_map_spec = {
-                        'Çok Yüksek (>30%)': '#1E3A8A',
-                        'Yüksek (20-30%)': '#3B82F6',
-                        'Orta (10-20%)': '#60A5FA',
-                        'Düşük (0-10%)': '#93C5FD',
-                        'Yok': '#E5E7EB',
-                        'Veri Yok': '#9CA3AF'
-                    }
-                    
-                    fig = px.choropleth(
-                        spec_map_df,
-                        locations='ISO_A3',
-                        color='Spec_Category',
-                        hover_name='Country',
-                        hover_data={
-                            'Specialty_Pct': ':.1f%',
-                            'Specialty_USD': ':.2f',
-                            'Non_Specialty_USD': ':.2f'
-                        },
-                        color_discrete_map=color_discrete_map_spec,
-                        category_orders={
-                            'Spec_Category': [
-                                'Çok Yüksek (>30%)',
-                                'Yüksek (20-30%)',
-                                'Orta (10-20%)',
-                                'Düşük (0-10%)',
-                                'Yok',
-                                'Veri Yok'
-                            ]
-                        },
-                        title=f"Specialty Payı Coğrafi Dağılımı ({year_for_spec_map})"
-                    )
-                    
-                    fig.update_layout(height=600, margin={"r":0,"t":50,"l":0,"b":0})
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Ülke sıralaması
-                st.markdown(f"##### 🏆 En Yüksek Specialty Payı - {year_for_spec_map}")
-                
-                top_spec_countries = spec_map_df.nlargest(10, 'Specialty_Pct')
-                
-                fig_bar_spec = go.Figure()
-                
-                fig_bar_spec.add_trace(go.Bar(
-                    x=top_spec_countries['Country'],
-                    y=top_spec_countries['Specialty_Pct'],
-                    marker_color='#3B82F6',
-                    text=top_spec_countries['Specialty_Pct'].apply(lambda x: f'{x:.1f}%'),
-                    textposition='auto'
-                ))
-                
-                fig_bar_spec.update_layout(
-                    title=f"Top 10 Ülke - Specialty Payı ({year_for_spec_map})",
-                    height=500,
-                    xaxis_tickangle=-45,
-                    yaxis_title="Specialty Payı (%)"
-                )
-                
-                st.plotly_chart(fig_bar_spec, use_container_width=True)
-                
-                # Molekül bazlı specialty analizi
-                st.markdown("##### 💊 Molekül Bazlı Specialty Analizi")
-                
-                # Specialty molekülleri
-                specialty_molecules = filtered_df[
-                    filtered_df['Specialty Product'].astype(str).str.contains('Specialty', case=False, na=False)
-                ]['Molecule'].unique()
-                
-                if len(specialty_molecules) > 0:
-                    mol_spec_data = []
-                    
-                    for molecule in list(specialty_molecules)[:10]:  # İlk 10 molekül
-                        mol_df_spec = filtered_df[filtered_df['Molecule'] == molecule]
-                        
-                        if len(mol_df_spec) > 0:
-                            if year_for_spec_map == 2022:
-                                usd_col = 'MAT Q3 2022\nUSD MNF'
-                            elif year_for_spec_map == 2023:
-                                usd_col = 'MAT Q3 2023\nUSD MNF'
-                            else:
-                                usd_col = 'MAT Q3 2024\nUSD MNF'
-                            
-                            total_usd = mol_df_spec[usd_col].sum()
-                            
-                            mol_spec_data.append({
-                                'Molecule': molecule,
-                                'USD_MNF': total_usd
-                            })
-                    
-                    if mol_spec_data:
-                        mol_spec_df = pd.DataFrame(mol_spec_data)
-                        mol_spec_df = mol_spec_df.sort_values('USD_MNF', ascending=False)
-                        
-                        fig_mol_spec = px.bar(
-                            mol_spec_df,
-                            x='Molecule',
-                            y='USD_MNF',
-                            title=f"Top Specialty Moleküller ({year_for_spec_map})",
-                            color_discrete_sequence=['#3B82F6']
-                        )
-                        
-                        fig_mol_spec.update_layout(
-                            height=500,
-                            xaxis_tickangle=-45,
-                            yaxis_title="USD MNF"
-                        )
-                        
-                        st.plotly_chart(fig_mol_spec, use_container_width=True)
-    
-    # ============================================
-    # TAB 7: Fiyat – Volume – Mix
-    # ============================================
-    with tab7:
-        st.markdown('<h2 class="sub-header">📈 Fiyat – Volume – Mix Ayrıştırması</h2>', unsafe_allow_html=True)
-        
-        pvm_tab1, pvm_tab2, pvm_tab3 = st.tabs([
-            "2022 → 2023 Ayrıştırma",
-            "2023 → 2024 Ayrıştırma",
-            "Zincir Özet"
-        ])
-        
-        with pvm_tab1:
-            st.markdown("##### 📊 2022 → 2023 Price-Volume-Mix Ayrıştırması")
-            
-            pvm_22_23 = analytics.price_volume_mix_analysis(filtered_df, 2022, 2023)
-            
-            if pvm_22_23:
-                # Ayrıştırma grafiği
-                effects = ['Fiyat Etkisi', 'Volume Etkisi', 'Mix Etkisi']
-                values_pct = [pvm_22_23['price_effect_pct'], pvm_22_23['volume_effect_pct'], pvm_22_23['mix_effect_pct']]
-                values_abs = [pvm_22_23['price_effect'], pvm_22_23['volume_effect'], pvm_22_23['mix_effect']]
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    fig_pie = px.pie(
-                        values=values_pct,
-                        names=effects,
-                        title="Katkı Payları (%)",
-                        color=effects,
-                        color_discrete_map={
-                            'Fiyat Etkisi': '#3B82F6',
-                            'Volume Etkisi': '#10B981',
-                            'Mix Etkisi': '#F59E0B'
-                        }
-                    )
-                    
-                    fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                    fig_pie.update_layout(height=400)
-                    
-                    st.plotly_chart(fig_pie, use_container_width=True)
-                
-                with col2:
-                    fig_bar = go.Figure()
-                    
-                    colors = ['#3B82F6', '#10B981', '#F59E0B']
-                    
-                    for i, (effect, value_pct, value_abs, color) in enumerate(zip(effects, values_pct, values_abs, colors)):
-                        fig_bar.add_trace(go.Bar(
-                            x=[effect],
-                            y=[value_pct],
-                            name=effect,
-                            marker_color=color,
-                            text=[f'{value_pct:.1f}%<br>${value_abs:,.0f}M'],
-                            textposition='auto'
-                        ))
-                    
-                    fig_bar.update_layout(
-                        title="Ayrıştırma Katkıları",
-                        height=400,
-                        yaxis_title="Katkı (%)",
-                        showlegend=False
-                    )
-                    
-                    st.plotly_chart(fig_bar, use_container_width=True)
-                
-                # Detaylı metrikler
-                st.markdown("##### 📈 Detaylı Metrikler")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    total_start = filtered_df['MAT Q3 2022\nUSD MNF'].sum()
-                    if total_start > 0:
-                        total_growth_pct = (pvm_22_23['total_growth'] / total_start * 100)
-                    else:
-                        total_growth_pct = 0
-                    st.metric("Toplam Büyüme", f"{total_growth_pct:.1f}%", f"${pvm_22_23['total_growth']:,.0f}M")
-                
-                with col2:
-                    st.metric("Fiyat Etkisi", f"{pvm_22_23['price_effect_pct']:.1f}%", f"${pvm_22_23['price_effect']:,.0f}M")
-                
-                with col3:
-                    st.metric("Volume Etkisi", f"{pvm_22_23['volume_effect_pct']:.1f}%", f"${pvm_22_23['volume_effect']:,.0f}M")
-                
-                with col4:
-                    st.metric("Mix Etkisi", f"{pvm_22_23['mix_effect_pct']:.1f}%", f"${pvm_22_23['mix_effect']:,.0f}M")
-                
-                # Fiyat ve volume trendi
-                st.markdown("##### 📊 Fiyat ve Volume Trendi")
-                
-                if pvm_22_23['weighted_price_start'] > 0:
-                    price_change = ((pvm_22_23['weighted_price_end'] - pvm_22_23['weighted_price_start']) / 
-                                   pvm_22_23['weighted_price_start'] * 100)
-                else:
-                    price_change = 0
-                
-                volume_change = pvm_22_23.get('unit_growth_pct', 0)
-                
-                fig_trend = go.Figure()
-                
-                fig_trend.add_trace(go.Indicator(
-                    mode="gauge+number+delta",
-                    value=price_change,
-                    title={'text': "Ortalama Fiyat Değişimi"},
-                    delta={'reference': 0},
-                    gauge={
-                        'axis': {'range': [min(price_change, 0) - 10, max(price_change, 0) + 10]},
-                        'bar': {'color': "#3B82F6"},
-                        'steps': [
-                            {'range': [-100, 0], 'color': "#FEE2E2"},
-                            {'range': [0, 100], 'color': "#DCFCE7"}
-                        ]
-                    },
-                    domain={'row': 0, 'column': 0}
-                ))
-                
-                fig_trend.add_trace(go.Indicator(
-                    mode="gauge+number+delta",
-                    value=volume_change,
-                    title={'text': "Volume Değişimi"},
-                    delta={'reference': 0},
-                    gauge={
-                        'axis': {'range': [min(volume_change, 0) - 10, max(volume_change, 0) + 10]},
-                        'bar': {'color': "#10B981"},
-                        'steps': [
-                            {'range': [-100, 0], 'color': "#FEE2E2"},
-                            {'range': [0, 100], 'color': "#DCFCE7"}
-                        ]
-                    },
-                    domain={'row': 0, 'column': 1}
-                ))
-                
-                fig_trend.update_layout(
-                    grid={'rows': 1, 'columns': 2, 'pattern': "independent"},
-                    height=300
-                )
-                
-                st.plotly_chart(fig_trend, use_container_width=True)
-                
-                # Ülke bazlı ayrıştırma
-                st.markdown("##### 🌍 Ülke Bazlı Ayrıştırma")
-                
-                country_pvm_data = []
-                
-                for country in list(filtered_df['Country'].unique())[:10]:  # İlk 10 ülke
-                    country_df_pvm = filtered_df[filtered_df['Country'] == country]
-                    pvm_country = analytics.price_volume_mix_analysis(country_df_pvm, 2022, 2023)
-                    
-                    if pvm_country:
-                        country_start = country_df_pvm['MAT Q3 2022\nUSD MNF'].sum()
-                        if country_start > 0:
-                            total_growth_pct = (pvm_country.get('total_growth', 0) / country_start * 100)
-                        else:
-                            total_growth_pct = 0
-                        
-                        country_pvm_data.append({
-                            'Country': country,
-                            'Price_Effect': pvm_country.get('price_effect_pct', 0),
-                            'Volume_Effect': pvm_country.get('volume_effect_pct', 0),
-                            'Mix_Effect': pvm_country.get('mix_effect_pct', 0),
-                            'Total_Growth': total_growth_pct
-                        })
-                
-                if country_pvm_data:
-                    country_pvm_df = pd.DataFrame(country_pvm_data)
-                    
-                    fig_country = go.Figure()
-                    
-                    fig_country.add_trace(go.Bar(
-                        name='Fiyat',
-                        x=country_pvm_df['Country'],
-                        y=country_pvm_df['Price_Effect'],
-                        marker_color='#3B82F6'
-                    ))
-                    
-                    fig_country.add_trace(go.Bar(
-                        name='Volume',
-                        x=country_pvm_df['Country'],
-                        y=country_pvm_df['Volume_Effect'],
-                        marker_color='#10B981'
-                    ))
-                    
-                    fig_country.add_trace(go.Bar(
-                        name='Mix',
-                        x=country_pvm_df['Country'],
-                        y=country_pvm_df['Mix_Effect'],
-                        marker_color='#F59E0B'
-                    ))
-                    
-                    fig_country.add_trace(go.Scatter(
-                        name='Toplam Büyüme',
-                        x=country_pvm_df['Country'],
-                        y=country_pvm_df['Total_Growth'],
-                        mode='lines+markers',
-                        line=dict(color='#EF4444', width=3),
-                        yaxis='y2'
-                    ))
-                    
-                    fig_country.update_layout(
-                        title="Ülke Bazlı Ayrıştırma (2022 → 2023)",
-                        barmode='relative',
-                        height=600,
-                        xaxis_tickangle=-45,
-                        yaxis_title="Katkı (%)",
-                        yaxis2=dict(
-                            title="Toplam Büyüme (%)",
-                            overlaying='y',
-                            side='right'
-                        )
-                    )
-                    
-                    st.plotly_chart(fig_country, use_container_width=True)
-        
-        with pvm_tab2:
-            st.markdown("##### 📊 2023 → 2024 Price-Volume-Mix Ayrıştırması")
-            
-            pvm_23_24 = analytics.price_volume_mix_analysis(filtered_df, 2023, 2024)
-            
-            if pvm_23_24:
-                # Ayrıştırma grafiği
-                effects = ['Fiyat Etkisi', 'Volume Etkisi', 'Mix Etkisi']
-                values_pct = [pvm_23_24['price_effect_pct'], pvm_23_24['volume_effect_pct'], pvm_23_24['mix_effect_pct']]
-                values_abs = [pvm_23_24['price_effect'], pvm_23_24['volume_effect'], pvm_23_24['mix_effect']]
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    fig_pie = px.pie(
-                        values=values_pct,
-                        names=effects,
-                        title="Katkı Payları (%)",
-                        color=effects,
-                        color_discrete_map={
-                            'Fiyat Etkisi': '#3B82F6',
-                            'Volume Etkisi': '#10B981',
-                            'Mix Etkisi': '#F59E0B'
-                        }
-                    )
-                    
-                    fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                    fig_pie.update_layout(height=400)
-                    
-                    st.plotly_chart(fig_pie, use_container_width=True)
-                
-                with col2:
-                    fig_bar = go.Figure()
-                    
-                    colors = ['#3B82F6', '#10B981', '#F59E0B']
-                    
-                    for i, (effect, value_pct, value_abs, color) in enumerate(zip(effects, values_pct, values_abs, colors)):
-                        fig_bar.add_trace(go.Bar(
-                            x=[effect],
-                            y=[value_pct],
-                            name=effect,
-                            marker_color=color,
-                            text=[f'{value_pct:.1f}%<br>${value_abs:,.0f}M'],
-                            textposition='auto'
-                        ))
-                    
-                    fig_bar.update_layout(
-                        title="Ayrıştırma Katkıları",
-                        height=400,
-                        yaxis_title="Katkı (%)",
-                        showlegend=False
-                    )
-                    
-                    st.plotly_chart(fig_bar, use_container_width=True)
-                
-                # Detaylı metrikler
-                st.markdown("##### 📈 Detaylı Metrikler")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    total_start = filtered_df['MAT Q3 2023\nUSD MNF'].sum()
-                    if total_start > 0:
-                        total_growth_pct = (pvm_23_24['total_growth'] / total_start * 100)
-                    else:
-                        total_growth_pct = 0
-                    st.metric("Toplam Büyüme", f"{total_growth_pct:.1f}%", f"${pvm_23_24['total_growth']:,.0f}M")
-                
-                with col2:
-                    st.metric("Fiyat Etkisi", f"{pvm_23_24['price_effect_pct']:.1f}%", f"${pvm_23_24['price_effect']:,.0f}M")
-                
-                with col3:
-                    st.metric("Volume Etkisi", f"{pvm_23_24['volume_effect_pct']:.1f}%", f"${pvm_23_24['volume_effect']:,.0f}M")
-                
-                with col4:
-                    st.metric("Mix Etkisi", f"{pvm_23_24['mix_effect_pct']:.1f}%", f"${pvm_23_24['mix_effect']:,.0f}M")
-                
-                # Trend karşılaştırması
-                st.markdown("##### 📊 2022→2023 vs 2023→2024 Karşılaştırması")
-                
-                pvm_22_23 = analytics.price_volume_mix_analysis(filtered_df, 2022, 2023)
-                
-                if pvm_22_23:
-                    comparison_data = pd.DataFrame({
-                        'Dönem': ['2022→2023', '2023→2024'],
-                        'Fiyat Etkisi': [pvm_22_23.get('price_effect_pct', 0), pvm_23_24.get('price_effect_pct', 0)],
-                        'Volume Etkisi': [pvm_22_23.get('volume_effect_pct', 0), pvm_23_24.get('volume_effect_pct', 0)],
-                        'Mix Etkisi': [pvm_22_23.get('mix_effect_pct', 0), pvm_23_24.get('mix_effect_pct', 0)]
-                    })
-                    
-                    fig_comp = go.Figure()
-                    
-                    fig_comp.add_trace(go.Bar(
-                        name='Fiyat Etkisi',
-                        x=comparison_data['Dönem'],
-                        y=comparison_data['Fiyat Etkisi'],
-                        marker_color='#3B82F6'
-                    ))
-                    
-                    fig_comp.add_trace(go.Bar(
-                        name='Volume Etkisi',
-                        x=comparison_data['Dönem'],
-                        y=comparison_data['Volume Etkisi'],
-                        marker_color='#10B981'
-                    ))
-                    
-                    fig_comp.add_trace(go.Bar(
-                        name='Mix Etkisi',
-                        x=comparison_data['Dönem'],
-                        y=comparison_data['Mix Etkisi'],
-                        marker_color='#F59E0B'
-                    ))
-                    
-                    fig_comp.update_layout(
-                        title="Ayrıştırma Karşılaştırması",
-                        barmode='group',
-                        height=500,
-                        yaxis_title="Katkı (%)"
-                    )
-                    
-                    st.plotly_chart(fig_comp, use_container_width=True)
-                    
-                    # Büyüme kaynakları analizi
-                    st.markdown("##### 🔍 Büyüme Kaynakları Analizi")
-                    
-                    price_contribution_change = pvm_23_24['price_effect_pct'] - pvm_22_23['price_effect_pct']
-                    volume_contribution_change = pvm_23_24['volume_effect_pct'] - pvm_22_23['volume_effect_pct']
-                    mix_contribution_change = pvm_23_24['mix_effect_pct'] - pvm_22_23['mix_effect_pct']
-                    
-                    insights = []
-                    
-                    if price_contribution_change > 5:
-                        insights.append("💰 **Fiyat katkısı arttı:** Son dönemde fiyat etkisi daha belirleyici oldu.")
-                    elif price_contribution_change < -5:
-                        insights.append("📉 **Fiyat katkısı azaldı:** Fiyat artışları yavaşladı.")
-                    
-                    if volume_contribution_change > 5:
-                        insights.append("📦 **Volume katkısı arttı:** Satış hacmi büyümede daha etkili.")
-                    elif volume_contribution_change < -5:
-                        insights.append("🚫 **Volume katkısı azaldı:** Hacim büyümesi yavaşladı.")
-                    
-                    if mix_contribution_change > 5:
-                        insights.append("🔄 **Mix katkısı arttı:** Ürün mix değişiklikleri büyümeye daha çok katkı sağladı.")
-                    elif mix_contribution_change < -5:
-                        insights.append("⚖️ **Mix katkısı azaldı:** Ürün mix stabil hale geldi.")
-                    
-                    if insights:
-                        for insight in insights:
-                            st.info(insight)
-        
-        with pvm_tab3:
-            st.markdown("##### 📊 Zincir Özet (2022 → 2024)")
-            
-            # Zincir büyüme hesaplama
-            growth_22_24_pct, growth_22_24_abs = analytics.calculate_growth(filtered_df, 2022, 2024)
-            
-            # Zincir ayrıştırma (22→23 + 23→24)
-            pvm_22_23 = analytics.price_volume_mix_analysis(filtered_df, 2022, 2023)
-            pvm_23_24 = analytics.price_volume_mix_analysis(filtered_df, 2023, 2024)
-            
-            if pvm_22_23 and pvm_23_24:
-                chain_price = pvm_22_23['price_effect'] + pvm_23_24['price_effect']
-                chain_volume = pvm_22_23['volume_effect'] + pvm_23_24['volume_effect']
-                chain_mix = pvm_22_23['mix_effect'] + pvm_23_24['mix_effect']
-                
-                total_start = filtered_df['MAT Q3 2022\nUSD MNF'].sum()
-                
-                if total_start > 0:
-                    chain_price_pct = (chain_price / total_start * 100)
-                    chain_volume_pct = (chain_volume / total_start * 100)
-                    chain_mix_pct = (chain_mix / total_start * 100)
-                else:
-                    chain_price_pct = 0
-                    chain_volume_pct = 0
-                    chain_mix_pct = 0
-            
-            st.markdown("##### 📈 Zincir Büyüme Özeti")
-            
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3 = st.columns(3)
             
             with col1:
                 st.metric(
-                    "2022→2024 Büyüme",
-                    f"{growth_22_24_pct:.1f}%",
-                    f"${growth_22_24_abs:,.0f}M"
+                    label=f"💰 {selected_country} - 2022 USD MNF",
+                    value=format_number(usd_2022_country),
+                    delta=None
+                )
+                st.metric(
+                    label=f"💰 {selected_country} - 2023 USD MNF",
+                    value=format_number(usd_2023_country),
+                    delta=f"{growth_22_23_country:.2f}%"
+                )
+                st.metric(
+                    label=f"💰 {selected_country} - 2024 USD MNF",
+                    value=format_number(usd_2024_country),
+                    delta=f"{growth_23_24_country:.2f}%"
                 )
             
             with col2:
                 st.metric(
-                    "Zincir Fiyat Etkisi",
-                    f"{chain_price_pct:.1f}%",
-                    f"${chain_price:,.0f}M"
+                    label="🎯 Global Pay - 2022",
+                    value=f"{global_share_2022:.2f}%",
+                    delta=None
+                )
+                st.metric(
+                    label="🎯 Global Pay - 2023",
+                    value=f"{global_share_2023:.2f}%",
+                    delta=f"{global_share_2023 - global_share_2022:.2f} pp"
+                )
+                st.metric(
+                    label="🎯 Global Pay - 2024",
+                    value=f"{global_share_2024:.2f}%",
+                    delta=f"{global_share_2024 - global_share_2023:.2f} pp"
+                )
+            
+            with col3:
+                contribution_22_23 = usd_2023_country - usd_2022_country
+                contribution_23_24 = usd_2024_country - usd_2023_country
+                
+                st.metric(
+                    label="📊 Katkı 22→23",
+                    value=format_number(contribution_22_23),
+                    delta=None
+                )
+                st.metric(
+                    label="📊 Katkı 23→24",
+                    value=format_number(contribution_23_24),
+                    delta=None
+                )
+                
+                total_contribution = contribution_22_23 + contribution_23_24
+                st.metric(
+                    label="📊 Toplam Katkı (22→24)",
+                    value=format_number(total_contribution),
+                    delta=None
+                )
+            
+            st.markdown("---")
+            
+            st.markdown(f"### 📈 {selected_country} - 3 Yıllık Satış Trendi")
+            
+            country_trend = pd.DataFrame({
+                'Yıl': ['2022', '2023', '2024'],
+                'USD MNF': [usd_2022_country, usd_2023_country, usd_2024_country]
+            })
+            
+            fig_country_trend = px.line(
+                country_trend,
+                x='Yıl',
+                y='USD MNF',
+                markers=True,
+                title=f'{selected_country} - USD MNF Trendi',
+                text='USD MNF'
+            )
+            
+            fig_country_trend.update_traces(
+                texttemplate='%{text:.2s}',
+                textposition='top center',
+                line=dict(width=3, color='#ff7f0e'),
+                marker=dict(size=12)
+            )
+            
+            fig_country_trend.update_layout(height=400, hovermode='x unified')
+            
+            st.plotly_chart(fig_country_trend, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown(f"### 💹 {selected_country} - Price-Volume-Mix Ayrıştırması")
+            
+            st.markdown("#### 2022 → 2023")
+            
+            pvm_22_23 = price_volume_mix_decomposition(country_df, 2022, 2023)
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Toplam Değişim", format_number(pvm_22_23['total_change']))
+            with col2:
+                st.metric("Volume Etkisi", format_number(pvm_22_23['volume_effect']))
+            with col3:
+                st.metric("Price Etkisi", format_number(pvm_22_23['price_effect']))
+            with col4:
+                st.metric("Mix Etkisi", format_number(pvm_22_23['mix_effect']))
+            
+            pvm_22_23_df = pd.DataFrame({
+                'Bileşen': ['Volume', 'Price', 'Mix'],
+                'Katkı': [pvm_22_23['volume_effect'], pvm_22_23['price_effect'], pvm_22_23['mix_effect']]
+            })
+            
+            fig_pvm_22_23 = px.bar(
+                pvm_22_23_df,
+                x='Bileşen',
+                y='Katkı',
+                title=f'{selected_country} - PVM Ayrıştırması (2022 → 2023)',
+                text='Katkı',
+                color='Bileşen',
+                color_discrete_sequence=['#1f77b4', '#ff7f0e', '#2ca02c']
+            )
+            
+            fig_pvm_22_23.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+            fig_pvm_22_23.update_layout(height=400, showlegend=False)
+            
+            st.plotly_chart(fig_pvm_22_23, use_container_width=True)
+            
+            st.markdown("#### 2023 → 2024")
+            
+            pvm_23_24 = price_volume_mix_decomposition(country_df, 2023, 2024)
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Toplam Değişim", format_number(pvm_23_24['total_change']))
+            with col2:
+                st.metric("Volume Etkisi", format_number(pvm_23_24['volume_effect']))
+            with col3:
+                st.metric("Price Etkisi", format_number(pvm_23_24['price_effect']))
+            with col4:
+                st.metric("Mix Etkisi", format_number(pvm_23_24['mix_effect']))
+            
+            pvm_23_24_df = pd.DataFrame({
+                'Bileşen': ['Volume', 'Price', 'Mix'],
+                'Katkı': [pvm_23_24['volume_effect'], pvm_23_24['price_effect'], pvm_23_24['mix_effect']]
+            })
+            
+            fig_pvm_23_24 = px.bar(
+                pvm_23_24_df,
+                x='Bileşen',
+                y='Katkı',
+                title=f'{selected_country} - PVM Ayrıştırması (2023 → 2024)',
+                text='Katkı',
+                color='Bileşen',
+                color_discrete_sequence=['#1f77b4', '#ff7f0e', '#2ca02c']
+            )
+            
+            fig_pvm_23_24.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+            fig_pvm_23_24.update_layout(height=400, showlegend=False)
+            
+            st.plotly_chart(fig_pvm_23_24, use_container_width=True)
+            
+            st.markdown("#### Zincir Özet (2022 → 2024)")
+            
+            total_change_chain = pvm_22_23['total_change'] + pvm_23_24['total_change']
+            volume_chain = pvm_22_23['volume_effect'] + pvm_23_24['volume_effect']
+            price_chain = pvm_22_23['price_effect'] + pvm_23_24['price_effect']
+            mix_chain = pvm_22_23['mix_effect'] + pvm_23_24['mix_effect']
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Toplam Değişim (Zincir)", format_number(total_change_chain))
+            with col2:
+                st.metric("Volume Etkisi (Zincir)", format_number(volume_chain))
+            with col3:
+                st.metric("Price Etkisi (Zincir)", format_number(price_chain))
+            with col4:
+                st.metric("Mix Etkisi (Zincir)", format_number(mix_chain))
+            
+            st.markdown("---")
+            
+            st.markdown(f"### ⚗️ {selected_country} - Top 10 Moleküller")
+            
+            molecule_country = country_df.groupby('Molecule').agg({
+                "MAT Q3 2022\nUSD MNF": 'sum',
+                "MAT Q3 2023\nUSD MNF": 'sum',
+                "MAT Q3 2024\nUSD MNF": 'sum'
+            }).reset_index()
+            
+            molecule_country['Growth_22_23'] = molecule_country.apply(
+                lambda row: calculate_growth_rate(row["MAT Q3 2023\nUSD MNF"], row["MAT Q3 2022\nUSD MNF"]),
+                axis=1
+            )
+            
+            molecule_country['Growth_23_24'] = molecule_country.apply(
+                lambda row: calculate_growth_rate(row["MAT Q3 2024\nUSD MNF"], row["MAT Q3 2023\nUSD MNF"]),
+                axis=1
+            )
+            
+            top_molecules_country = molecule_country.nlargest(10, "MAT Q3 2024\nUSD MNF")
+            
+            fig_mol_country = px.bar(
+                top_molecules_country,
+                x='Molecule',
+                y="MAT Q3 2024\nUSD MNF",
+                title=f'{selected_country} - Top 10 Moleküller (2024)',
+                text="MAT Q3 2024\nUSD MNF",
+                color='Growth_23_24',
+                color_continuous_scale='RdYlGn'
+            )
+            
+            fig_mol_country.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+            fig_mol_country.update_layout(height=500)
+            
+            st.plotly_chart(fig_mol_country, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown(f"### 🧠 {selected_country} - Otomatik İçgörüler")
+            
+            country_insights = generate_country_insights(filtered_df, selected_country)
+            
+            for insight in country_insights:
+                st.markdown(f"<div class='insight-box'>💡 {insight}</div>", unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 4: MOLEKÜL & ÜRÜN
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    with tab4:
+        st.markdown("<h2 class='sub-header'>⚗️ Molekül & Ürün Analizi</h2>", unsafe_allow_html=True)
+        
+        available_molecules = sorted(filtered_df['Molecule'].unique())
+        
+        selected_molecule = st.selectbox(
+            "Molekül Seçin",
+            options=available_molecules,
+            key="molecule_analysis"
+        )
+        
+        molecule_df = filtered_df[filtered_df['Molecule'] == selected_molecule]
+        
+        if len(molecule_df) == 0:
+            st.warning("Seçilen molekül için veri bulunmuyor.")
+        else:
+            usd_2022_mol = molecule_df["MAT Q3 2022\nUSD MNF"].sum()
+            usd_2023_mol = molecule_df["MAT Q3 2023\nUSD MNF"].sum()
+            usd_2024_mol = molecule_df["MAT Q3 2024\nUSD MNF"].sum()
+            
+            growth_22_23_mol = calculate_growth_rate(usd_2023_mol, usd_2022_mol)
+            growth_23_24_mol = calculate_growth_rate(usd_2024_mol, usd_2023_mol)
+            
+            global_share_2024_mol = (usd_2024_mol / usd_2024) * 100
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    label=f"💰 {selected_molecule} - 2022 USD MNF",
+                    value=format_number(usd_2022_mol),
+                    delta=None
+                )
+                st.metric(
+                    label=f"💰 {selected_molecule} - 2023 USD MNF",
+                    value=format_number(usd_2023_mol),
+                    delta=f"{growth_22_23_mol:.2f}%"
+                )
+                st.metric(
+                    label=f"💰 {selected_molecule} - 2024 USD MNF",
+                    value=format_number(usd_2024_mol),
+                    delta=f"{growth_23_24_mol:.2f}%"
+                )
+            
+            with col2:
+                units_2022_mol = molecule_df["MAT Q3 2022\nUnits"].sum()
+                units_2023_mol = molecule_df["MAT Q3 2023\nUnits"].sum()
+                units_2024_mol = molecule_df["MAT Q3 2024\nUnits"].sum()
+                
+                growth_units_22_23_mol = calculate_growth_rate(units_2023_mol, units_2022_mol)
+                growth_units_23_24_mol = calculate_growth_rate(units_2024_mol, units_2023_mol)
+                
+                st.metric(
+                    label="📦 Units - 2022",
+                    value=f"{units_2022_mol:,.0f}",
+                    delta=None
+                )
+                st.metric(
+                    label="📦 Units - 2023",
+                    value=f"{units_2023_mol:,.0f}",
+                    delta=f"{growth_units_22_23_mol:.2f}%"
+                )
+                st.metric(
+                    label="📦 Units - 2024",
+                    value=f"{units_2024_mol:,.0f}",
+                    delta=f"{growth_units_23_24_mol:.2f}%"
                 )
             
             with col3:
                 st.metric(
-                    "Zincir Volume Etkisi",
-                    f"{chain_volume_pct:.1f}%",
-                    f"${chain_volume:,.0f}M"
+                    label="🎯 Global Pay - 2024",
+                    value=f"{global_share_2024_mol:.2f}%",
+                    delta=None
                 )
-            
-            with col4:
+                
+                avg_price_2022_mol = safe_division(usd_2022_mol, molecule_df["MAT Q3 2022\nStandard Units"].sum())
+                avg_price_2023_mol = safe_division(usd_2023_mol, molecule_df["MAT Q3 2023\nStandard Units"].sum())
+                avg_price_2024_mol = safe_division(usd_2024_mol, molecule_df["MAT Q3 2024\nStandard Units"].sum())
+                
+                price_growth_22_23 = calculate_growth_rate(avg_price_2023_mol, avg_price_2022_mol)
+                price_growth_23_24 = calculate_growth_rate(avg_price_2024_mol, avg_price_2023_mol)
+                
                 st.metric(
-                    "Zincir Mix Etkisi",
-                    f"{chain_mix_pct:.1f}%",
-                    f"${chain_mix:,.0f}M"
+                    label="💵 Avg Price - 2023",
+                    value=f"${avg_price_2023_mol:.2f}",
+                    delta=f"{price_growth_22_23:.2f}%"
+                )
+                st.metric(
+                    label="💵 Avg Price - 2024",
+                    value=f"${avg_price_2024_mol:.2f}",
+                    delta=f"{price_growth_23_24:.2f}%"
                 )
             
-            # Zincir ayrıştırma grafiği
-            st.markdown("##### 📊 Zincir Ayrıştırma")
+            st.markdown("---")
             
-            chain_effects = ['Fiyat Etkisi', 'Volume Etkisi', 'Mix Etkisi']
-            chain_values_pct = [chain_price_pct, chain_volume_pct, chain_mix_pct]
-            chain_values_abs = [chain_price, chain_volume, chain_mix]
+            st.markdown(f"### 📈 {selected_molecule} - 3 Yıllık Satış Trendi")
             
-            fig_chain = go.Figure()
-            
-            fig_chain.add_trace(go.Bar(
-                x=chain_effects,
-                y=chain_values_pct,
-                marker_color=['#3B82F6', '#10B981', '#F59E0B'],
-                text=[f'{pct:.1f}%<br>${abs:,.0f}M' for pct, abs in zip(chain_values_pct, chain_values_abs)],
-                textposition='auto'
-            ))
-            
-            fig_chain.update_layout(
-                title="Zincir Ayrıştırma Katkıları (2022 → 2024)",
-                height=500,
-                yaxis_title="Katkı (%)"
-            )
-            
-            st.plotly_chart(fig_chain, use_container_width=True)
-            
-            # Dönemsel katkılar
-            st.markdown("##### 📅 Dönemsel Katkılar")
-            
-            period_data = pd.DataFrame({
-                'Dönem': ['2022→2023', '2023→2024'],
-                'Fiyat Katkısı': [pvm_22_23.get('price_effect_pct', 0), pvm_23_24.get('price_effect_pct', 0)],
-                'Volume Katkısı': [pvm_22_23.get('volume_effect_pct', 0), pvm_23_24.get('volume_effect_pct', 0)],
-                'Mix Katkısı': [pvm_22_23.get('mix_effect_pct', 0), pvm_23_24.get('mix_effect_pct', 0)]
+            mol_trend = pd.DataFrame({
+                'Yıl': ['2022', '2023', '2024'],
+                'USD MNF': [usd_2022_mol, usd_2023_mol, usd_2024_mol]
             })
             
-            fig_period = go.Figure()
-            
-            for col in ['Fiyat Katkısı', 'Volume Katkısı', 'Mix Katkısı']:
-                fig_period.add_trace(go.Scatter(
-                    x=period_data['Dönem'],
-                    y=period_data[col],
-                    mode='lines+markers',
-                    name=col,
-                    line=dict(width=3)
-                ))
-            
-            fig_period.update_layout(
-                title="Dönemsel Katkı Trendleri",
-                height=500,
-                yaxis_title="Katkı (%)",
-                xaxis_title="Dönem"
+            fig_mol_trend = px.line(
+                mol_trend,
+                x='Yıl',
+                y='USD MNF',
+                markers=True,
+                title=f'{selected_molecule} - USD MNF Trendi',
+                text='USD MNF'
             )
             
-            st.plotly_chart(fig_period, use_container_width=True)
+            fig_mol_trend.update_traces(
+                texttemplate='%{text:.2s}',
+                textposition='top center',
+                line=dict(width=3, color='#2ca02c'),
+                marker=dict(size=12)
+            )
             
-            # Zincir içgörüler
-            st.markdown("##### 🧠 Zincir İçgörüler")
+            fig_mol_trend.update_layout(height=400, hovermode='x unified')
             
-            insights_chain = []
+            st.plotly_chart(fig_mol_trend, use_container_width=True)
             
-            if chain_price_pct > chain_volume_pct and chain_price_pct > chain_mix_pct:
-                insights_chain.append("💰 **Fiyat odaklı büyüme:** İki yıllık dönemde büyümenin ana kaynağı fiyat artışları oldu.")
+            st.markdown("---")
             
-            if chain_volume_pct > chain_price_pct and chain_volume_pct > chain_mix_pct:
-                insights_chain.append("📦 **Volume odaklı büyüme:** İki yıllık dönemde büyümenin ana kaynağı satış hacmi artışı oldu.")
+            st.markdown(f"### 🌍 {selected_molecule} - Ülke Bazlı Dağılım (2024)")
             
-            if chain_mix_pct > chain_price_pct and chain_mix_pct > chain_volume_pct:
-                insights_chain.append("🔄 **Mix odaklı büyüme:** İki yıllık dönemde büyümenin ana kaynağı ürün mix değişiklikleri oldu.")
+            country_mol = molecule_df.groupby('Country').agg({
+                "MAT Q3 2022\nUSD MNF": 'sum',
+                "MAT Q3 2023\nUSD MNF": 'sum',
+                "MAT Q3 2024\nUSD MNF": 'sum'
+            }).reset_index()
             
-            if chain_price_pct < 0:
-                insights_chain.append("⚠️ **Fiyat erozyonu:** İki yıllık dönemde fiyatlar genel olarak düştü.")
+            country_mol['Growth_23_24'] = country_mol.apply(
+                lambda row: calculate_growth_rate(row["MAT Q3 2024\nUSD MNF"], row["MAT Q3 2023\nUSD MNF"]),
+                axis=1
+            )
             
-            if chain_volume_pct < 0:
-                insights_chain.append("⚠️ **Volume kaybı:** İki yıllık dönemde satış hacmi azaldı.")
+            country_mol['Share_2024'] = (country_mol["MAT Q3 2024\nUSD MNF"] / usd_2024_mol) * 100
             
-            if growth_22_24_pct > 20:
-                insights_chain.append(f"🚀 **Güçlü büyüme:** İki yılda %{growth_22_24_pct:.1f} büyüme kaydedildi.")
-            elif growth_22_24_pct < 0:
-                insights_chain.append(f"📉 **Küçülme:** İki yılda %{abs(growth_22_24_pct):.1f} küçülme yaşandı.")
+            top_countries_mol = country_mol.nlargest(10, "MAT Q3 2024\nUSD MNF")
             
-            if insights_chain:
-                for insight in insights_chain:
-                    st.info(insight)
+            fig_country_mol = px.bar(
+                top_countries_mol,
+                x='Country',
+                y="MAT Q3 2024\nUSD MNF",
+                title=f'{selected_molecule} - Top 10 Ülkeler (2024)',
+                text="MAT Q3 2024\nUSD MNF",
+                color='Growth_23_24',
+                color_continuous_scale='RdYlGn'
+            )
+            
+            fig_country_mol.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+            fig_country_mol.update_layout(height=500)
+            
+            st.plotly_chart(fig_country_mol, use_container_width=True)
+            
+            st.markdown("### 📋 Ülke Detayları")
+            
+            display_country_mol = top_countries_mol[[
+                'Country',
+                'MAT Q3 2024\nUSD MNF',
+                'Share_2024',
+                'Growth_23_24'
+            ]].copy()
+            
+            display_country_mol.columns = ['Ülke', '2024 USD MNF', 'Molekül İçi Pay (%)', 'Büyüme 23→24 (%)']
+            
+            st.dataframe(
+                display_country_mol.style.format({
+                    '2024 USD MNF': '{:,.0f}',
+                    'Molekül İçi Pay (%)': '{:.2f}',
+                    'Büyüme 23→24 (%)': '{:.2f}'
+                }),
+                use_container_width=True,
+                height=400
+            )
+            
+            st.markdown("---")
+            
+            st.markdown(f"### 🏛️ {selected_molecule} - Corporation Dağılımı")
+            
+            corp_mol = molecule_df.groupby('Corporation').agg({
+                "MAT Q3 2022\nUSD MNF": 'sum',
+                "MAT Q3 2023\nUSD MNF": 'sum',
+                "MAT Q3 2024\nUSD MNF": 'sum'
+            }).reset_index()
+            
+            corp_mol['Share_2024'] = (corp_mol["MAT Q3 2024\nUSD MNF"] / usd_2024_mol) * 100
+            corp_mol = corp_mol.sort_values("MAT Q3 2024\nUSD MNF", ascending=False).head(10)
+            
+            fig_corp_mol = px.pie(
+                corp_mol,
+                names='Corporation',
+                values="MAT Q3 2024\nUSD MNF",
+                title=f'{selected_molecule} - Corporation Pazar Payı (2024)',
+                hole=0.4
+            )
+            
+            fig_corp_mol.update_traces(textposition='inside', textinfo='percent+label')
+            fig_corp_mol.update_layout(height=500)
+            
+            st.plotly_chart(fig_corp_mol, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown(f"### 🧠 {selected_molecule} - Otomatik İçgörüler")
+            
+            molecule_insights = generate_molecule_insights(filtered_df, selected_molecule)
+            
+            for insight in molecule_insights:
+                st.markdown(f"<div class='insight-box'>💡 {insight}</div>", unsafe_allow_html=True)
     
-    # ============================================
-    # TAB 8: Otomatik İçgörü Motoru
-    # ============================================
-    with tab8:
-        st.markdown('<h2 class="sub-header">🤖 Otomatik İçgörü Motoru</h2>', unsafe_allow_html=True)
-        
-        insight_tab1, insight_tab2, insight_tab3 = st.tabs([
-            "🇹🇷 Ülke İçgörüleri",
-            "💊 Molekül İçgörüleri",
-            "🏢 Corporation İçgörüleri"
-        ])
-        
-        with insight_tab1:
-            st.markdown("##### 🌍 Ülke Bazlı Otomatik İçgörüler")
-            
-            country_for_insights = st.selectbox(
-                "İçgörü Alınacak Ülke",
-                options=sorted(filtered_df['Country'].unique())
-            )
-            
-            if country_for_insights:
-                insights = insight_engine.generate_country_insights(country_for_insights)
-                
-                if insights:
-                    st.markdown(f"### {country_for_insights} - Ana İçgörüler")
-                    
-                    for i, insight in enumerate(insights):
-                        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
-                    
-                    # Ek metrikler
-                    st.markdown("##### 📊 Ek Metrikler")
-                    
-                    country_insight_df = filtered_df[filtered_df['Country'] == country_for_insights]
-                    
-                    if len(country_insight_df) > 0:
-                        col1, col2, col3, col4 = st.columns(4)
-                        
-                        with col1:
-                            total_2024 = country_insight_df['MAT Q3 2024\nUSD MNF'].sum()
-                            st.metric("2024 Toplam", f"${total_2024:,.0f}M")
-                        
-                        with col2:
-                            global_share = (total_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
-                            st.metric("Global Pay", f"{global_share:.2f}%")
-                        
-                        with col3:
-                            molecule_count = country_insight_df['Molecule'].nunique()
-                            st.metric("Molekül Çeşidi", molecule_count)
-                        
-                        with col4:
-                            manufacturer_count = country_insight_df['Manufacturer'].nunique()
-                            st.metric("Üretici Sayısı", manufacturer_count)
-                        
-                        # Trend özeti
-                        st.markdown("##### 📈 Trend Özeti")
-                        
-                        trend_summary = pd.DataFrame({
-                            'Yıl': [2022, 2023, 2024],
-                            'USD MNF': [
-                                country_insight_df['MAT Q3 2022\nUSD MNF'].sum(),
-                                country_insight_df['MAT Q3 2023\nUSD MNF'].sum(),
-                                country_insight_df['MAT Q3 2024\nUSD MNF'].sum()
-                            ],
-                            'Units': [
-                                country_insight_df['MAT Q3 2022\nUnits'].sum(),
-                                country_insight_df['MAT Q3 2023\nUnits'].sum(),
-                                country_insight_df['MAT Q3 2024\nUnits'].sum()
-                            ]
-                        })
-                        
-                        fig_trend_summary = make_subplots(specs=[[{"secondary_y": True}]])
-                        
-                        fig_trend_summary.add_trace(
-                            go.Bar(x=trend_summary['Yıl'], y=trend_summary['USD MNF'],
-                                  name='USD MNF', marker_color='#3B82F6'),
-                            secondary_y=False,
-                        )
-                        
-                        fig_trend_summary.add_trace(
-                            go.Scatter(x=trend_summary['Yıl'], y=trend_summary['Units'],
-                                      name='Units', mode='lines+markers',
-                                      line=dict(color='#10B981', width=3)),
-                            secondary_y=True,
-                        )
-                        
-                        fig_trend_summary.update_layout(
-                            title=f"{country_for_insights} - Üç Yıllık Trend",
-                            height=400,
-                            showlegend=True
-                        )
-                        
-                        fig_trend_summary.update_yaxes(title_text="USD MNF", secondary_y=False)
-                        fig_trend_summary.update_yaxes(title_text="Units", secondary_y=True)
-                        
-                        st.plotly_chart(fig_trend_summary, use_container_width=True)
-                else:
-                    st.warning(f"{country_for_insights} için yeterli veri bulunamadı.")
-        
-        with insight_tab2:
-            st.markdown("##### 💊 Molekül Bazlı Otomatik İçgörüler")
-            
-            molecule_for_insights = st.selectbox(
-                "İçgörü Alınacak Molekül",
-                options=sorted(filtered_df['Molecule'].unique())
-            )
-            
-            if molecule_for_insights:
-                insights = insight_engine.generate_molecule_insights(molecule_for_insights)
-                
-                if insights:
-                    st.markdown(f"### {molecule_for_insights} - Ana İçgörüler")
-                    
-                    for i, insight in enumerate(insights):
-                        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
-                    
-                    # Ek metrikler
-                    st.markdown("##### 📊 Ek Metrikler")
-                    
-                    mol_insight_df = filtered_df[filtered_df['Molecule'] == molecule_for_insights]
-                    
-                    if len(mol_insight_df) > 0:
-                        col1, col2, col3, col4 = st.columns(4)
-                        
-                        with col1:
-                            total_2024 = mol_insight_df['MAT Q3 2024\nUSD MNF'].sum()
-                            st.metric("2024 Toplam", f"${total_2024:,.0f}M")
-                        
-                        with col2:
-                            global_share = (total_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
-                            st.metric("Global Pay", f"{global_share:.2f}%")
-                        
-                        with col3:
-                            country_count = mol_insight_df['Country'].nunique()
-                            st.metric("Ülke Sayısı", country_count)
-                        
-                        with col4:
-                            manufacturer_count = mol_insight_df['Manufacturer'].nunique()
-                            st.metric("Üretici Sayısı", manufacturer_count)
-                        
-                        # Coğrafi dağılım
-                        st.markdown("##### 🌍 Coğrafi Dağılım")
-                        
-                        country_dist_insight = mol_insight_df.groupby('Country').agg({
-                            'MAT Q3 2024\nUSD MNF': 'sum'
-                        }).reset_index()
-                        
-                        country_dist_insight = country_dist_insight.sort_values('MAT Q3 2024\nUSD MNF', ascending=False).head(10)
-                        
-                        fig_country_insight = px.bar(
-                            country_dist_insight,
-                            x='Country',
-                            y='MAT Q3 2024\nUSD MNF',
-                            title=f"{molecule_for_insights} - Top 10 Ülke (2024)",
-                            color_discrete_sequence=['#3B82F6']
-                        )
-                        
-                        fig_country_insight.update_layout(
-                            height=400,
-                            xaxis_tickangle=-45,
-                            yaxis_title="USD MNF"
-                        )
-                        
-                        st.plotly_chart(fig_country_insight, use_container_width=True)
-                else:
-                    st.warning(f"{molecule_for_insights} için yeterli veri bulunamadı.")
-        
-        with insight_tab3:
-            st.markdown("##### 🏢 Corporation Bazlı Otomatik İçgörüler")
-            
-            corp_for_insights = st.selectbox(
-                "İçgörü Alınacak Corporation",
-                options=sorted(filtered_df['Corporation'].unique())
-            )
-            
-            if corp_for_insights:
-                insights = insight_engine.generate_corporation_insights(corp_for_insights)
-                
-                if insights:
-                    st.markdown(f"### {corp_for_insights} - Ana İçgörüler")
-                    
-                    for i, insight in enumerate(insights):
-                        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
-                    
-                    # Ek metrikler
-                    st.markdown("##### 📊 Ek Metrikler")
-                    
-                    corp_insight_df = filtered_df[filtered_df['Corporation'] == corp_for_insights]
-                    
-                    if len(corp_insight_df) > 0:
-                        col1, col2, col3, col4 = st.columns(4)
-                        
-                        with col1:
-                            total_2024 = corp_insight_df['MAT Q3 2024\nUSD MNF'].sum()
-                            st.metric("2024 Toplam", f"${total_2024:,.0f}M")
-                        
-                        with col2:
-                            global_share = (total_2024 / filtered_df['MAT Q3 2024\nUSD MNF'].sum() * 100) if filtered_df['MAT Q3 2024\nUSD MNF'].sum() > 0 else 0
-                            st.metric("Global Pay", f"{global_share:.2f}%")
-                        
-                        with col3:
-                            country_count = corp_insight_df['Country'].nunique()
-                            st.metric("Ülke Sayısı", country_count)
-                        
-                        with col4:
-                            molecule_count = corp_insight_df['Molecule'].nunique()
-                            st.metric("Molekül Çeşidi", molecule_count)
-                        
-                        # Pazar payı trendi
-                        st.markdown("##### 📈 Pazar Payı Trendi")
-                        
-                        share_trend = []
-                        for year in [2022, 2023, 2024]:
-                            if year == 2022:
-                                usd_col = 'MAT Q3 2022\nUSD MNF'
-                            elif year == 2023:
-                                usd_col = 'MAT Q3 2023\nUSD MNF'
-                            else:
-                                usd_col = 'MAT Q3 2024\nUSD MNF'
-                            
-                            corp_total = corp_insight_df[usd_col].sum()
-                            global_total = filtered_df[usd_col].sum()
-                            if global_total > 0:
-                                share = (corp_total / global_total * 100)
-                            else:
-                                share = 0
-                            
-                            share_trend.append({
-                                'Yıl': year,
-                                'Pazar Payı': share
-                            })
-                        
-                        share_trend_df = pd.DataFrame(share_trend)
-                        
-                        fig_share_trend = px.line(
-                            share_trend_df,
-                            x='Yıl',
-                            y='Pazar Payı',
-                            markers=True,
-                            title=f"{corp_for_insights} - Pazar Payı Trendi"
-                        )
-                        
-                        fig_share_trend.update_layout(
-                            height=400,
-                            yaxis_title="Pazar Payı (%)",
-                            yaxis_range=[0, max(share_trend_df['Pazar Payı']) * 1.5 if len(share_trend_df) > 0 else 100]
-                        )
-                        
-                        st.plotly_chart(fig_share_trend, use_container_width=True)
-                else:
-                    st.warning(f"{corp_for_insights} için yeterli veri bulunamadı.")
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 5: CORPORATION & REKABET
+    # ═══════════════════════════════════════════════════════════════════════════
     
-    # ============================================
-    # FOOTER
-    # ============================================
+    with tab5:
+        st.markdown("<h2 class='sub-header'>🏛️ Corporation & Rekabet Analizi</h2>", unsafe_allow_html=True)
+        
+        st.markdown("### 📊 Global Corporation Pazar Payları")
+        
+        corp_global = filtered_df.groupby('Corporation').agg({
+            "MAT Q3 2022\nUSD MNF": 'sum',
+            "MAT Q3 2023\nUSD MNF": 'sum',
+            "MAT Q3 2024\nUSD MNF": 'sum'
+        }).reset_index()
+        
+        corp_global['Share_2022'] = (corp_global["MAT Q3 2022\nUSD MNF"] / usd_2022) * 100
+        corp_global['Share_2023'] = (corp_global["MAT Q3 2023\nUSD MNF"] / usd_2023) * 100
+        corp_global['Share_2024'] = (corp_global["MAT Q3 2024\nUSD MNF"] / usd_2024) * 100
+        
+        corp_global['Share_Change_22_23'] = corp_global['Share_2023'] - corp_global['Share_2022']
+        corp_global['Share_Change_23_24'] = corp_global['Share_2024'] - corp_global['Share_2023']
+        
+        corp_global_sorted = corp_global.sort_values("MAT Q3 2024\nUSD MNF", ascending=False).head(15)
+        
+        fig_corp_share = px.bar(
+            corp_global_sorted,
+            x='Corporation',
+            y='Share_2024',
+            title='Top 15 Corporation - Pazar Payı (2024)',
+            text='Share_2024',
+            color='Share_Change_23_24',
+            color_continuous_scale='RdYlGn',
+            color_continuous_midpoint=0
+        )
+        
+        fig_corp_share.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+        fig_corp_share.update_layout(height=500)
+        
+        st.plotly_chart(fig_corp_share, use_container_width=True)
+        
+        st.markdown("### 📋 Corporation Detayları")
+        
+        display_corp = corp_global_sorted[[
+            'Corporation',
+            'Share_2022',
+            'Share_2023',
+            'Share_2024',
+            'Share_Change_22_23',
+            'Share_Change_23_24'
+        ]].copy()
+        
+        display_corp.columns = [
+            'Corporation',
+            'Pay 2022 (%)',
+            'Pay 2023 (%)',
+            'Pay 2024 (%)',
+            'Pay Değişimi 22→23 (pp)',
+            'Pay Değişimi 23→24 (pp)'
+        ]
+        
+        st.dataframe(
+            display_corp.style.format({
+                'Pay 2022 (%)': '{:.2f}',
+                'Pay 2023 (%)': '{:.2f}',
+                'Pay 2024 (%)': '{:.2f}',
+                'Pay Değişimi 22→23 (pp)': '{:.2f}',
+                'Pay Değişimi 23→24 (pp)': '{:.2f}'
+            }),
+            use_container_width=True,
+            height=500
+        )
+        
+        st.markdown("---")
+        
+        st.markdown("### 📈 Corporation Pazar Payı Trendi")
+        
+        corp_trend_data = []
+        for _, row in corp_global_sorted.iterrows():
+            corp_trend_data.append({'Corporation': row['Corporation'], 'Yıl': '2022', 'Pay (%)': row['Share_2022']})
+            corp_trend_data.append({'Corporation': row['Corporation'], 'Yıl': '2023', 'Pay (%)': row['Share_2023']})
+            corp_trend_data.append({'Corporation': row['Corporation'], 'Yıl': '2024', 'Pay (%)': row['Share_2024']})
+        
+        corp_trend_df = pd.DataFrame(corp_trend_data)
+        
+        fig_corp_trend = px.line(
+            corp_trend_df,
+            x='Yıl',
+            y='Pay (%)',
+            color='Corporation',
+            markers=True,
+            title='Top 15 Corporation - Pazar Payı Trendi'
+        )
+        
+        fig_corp_trend.update_layout(height=600, hovermode='x unified')
+        
+        st.plotly_chart(fig_corp_trend, use_container_width=True)
+        
+        st.markdown("---")
+        
+        st.markdown("### 🔍 Corporation Derinlemesine Analiz")
+        
+        available_corporations = sorted(filtered_df['Corporation'].unique())
+        
+        selected_corporation = st.selectbox(
+            "Corporation Seçin",
+            options=available_corporations,
+            key="corporation_analysis"
+        )
+        
+        corp_df = filtered_df[filtered_df['Corporation'] == selected_corporation]
+        
+        if len(corp_df) == 0:
+            st.warning("Seçilen corporation için veri bulunmuyor.")
+        else:
+            usd_2022_corp = corp_df["MAT Q3 2022\nUSD MNF"].sum()
+            usd_2023_corp = corp_df["MAT Q3 2023\nUSD MNF"].sum()
+            usd_2024_corp = corp_df["MAT Q3 2024\nUSD MNF"].sum()
+            
+            growth_22_23_corp = calculate_growth_rate(usd_2023_corp, usd_2022_corp)
+            growth_23_24_corp = calculate_growth_rate(usd_2024_corp, usd_2023_corp)
+            
+            share_2022_corp = (usd_2022_corp / usd_2022) * 100
+            share_2023_corp = (usd_2023_corp / usd_2023) * 100
+            share_2024_corp = (usd_2024_corp / usd_2024) * 100
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric(
+                    label=f"💰 {selected_corporation} - 2024 USD MNF",
+                    value=format_number(usd_2024_corp),
+                    delta=f"{growth_23_24_corp:.2f}%"
+                )
+                st.metric(
+                    label="🎯 Pazar Payı - 2024",
+                    value=f"{share_2024_corp:.2f}%",
+                    delta=f"{share_2024_corp - share_2023_corp:.2f} pp"
+                )
+            
+            with col2:
+                st.metric(
+                    label="📊 Büyüme 22→23",
+                    value=f"{growth_22_23_corp:.2f}%",
+                    delta=None
+                )
+                st.metric(
+                    label="📊 Büyüme 23→24",
+                    value=f"{growth_23_24_corp:.2f}%",
+                    delta=None
+                )
+            
+            st.markdown(f"#### {selected_corporation} - Top 10 Ülkeler")
+            
+            country_corp = corp_df.groupby('Country')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False).head(10)
+            
+            fig_country_corp = px.bar(
+                x=country_corp.index,
+                y=country_corp.values,
+                title=f'{selected_corporation} - Top 10 Ülkeler (2024)',
+                labels={'x': 'Ülke', 'y': 'USD MNF'},
+                text=country_corp.values
+            )
+            
+            fig_country_corp.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+            fig_country_corp.update_layout(height=400)
+            
+            st.plotly_chart(fig_country_corp, use_container_width=True)
+            
+            st.markdown(f"#### {selected_corporation} - Top 10 Moleküller")
+            
+            molecule_corp = corp_df.groupby('Molecule')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False).head(10)
+            
+            fig_molecule_corp = px.bar(
+                x=molecule_corp.index,
+                y=molecule_corp.values,
+                title=f'{selected_corporation} - Top 10 Moleküller (2024)',
+                labels={'x': 'Molekül', 'y': 'USD MNF'},
+                text=molecule_corp.values
+            )
+            
+            fig_molecule_corp.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+            fig_molecule_corp.update_layout(height=400)
+            
+            st.plotly_chart(fig_molecule_corp, use_container_width=True)
+            
+            st.markdown("---")
+            
+            st.markdown(f"### 🧠 {selected_corporation} - Otomatik İçgörüler")
+            
+            corp_insights = generate_corporation_insights(filtered_df, selected_corporation)
+            
+            for insight in corp_insights:
+                st.markdown(f"<div class='insight-box'>💡 {insight}</div>", unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 6: SPECIALTY VS NON-SPECIALTY
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    with tab6:
+        st.markdown("<h2 class='sub-header'>💎 Specialty vs Non-Specialty Analizi</h2>", unsafe_allow_html=True)
+        
+        specialty_agg = filtered_df.groupby('Specialty Product').agg({
+            "MAT Q3 2022\nUSD MNF": 'sum',
+            "MAT Q3 2023\nUSD MNF": 'sum',
+            "MAT Q3 2024\nUSD MNF": 'sum',
+            "MAT Q3 2022\nStandard Units": 'sum',
+            "MAT Q3 2023\nStandard Units": 'sum',
+            "MAT Q3 2024\nStandard Units": 'sum'
+        }).reset_index()
+        
+        specialty_agg['Share_2022'] = (specialty_agg["MAT Q3 2022\nUSD MNF"] / usd_2022) * 100
+        specialty_agg['Share_2023'] = (specialty_agg["MAT Q3 2023\nUSD MNF"] / usd_2023) * 100
+        specialty_agg['Share_2024'] = (specialty_agg["MAT Q3 2024\nUSD MNF"] / usd_2024) * 100
+        
+        specialty_agg['Growth_22_23'] = specialty_agg.apply(
+            lambda row: calculate_growth_rate(row["MAT Q3 2023\nUSD MNF"], row["MAT Q3 2022\nUSD MNF"]),
+            axis=1
+        )
+        
+        specialty_agg['Growth_23_24'] = specialty_agg.apply(
+            lambda row: calculate_growth_rate(row["MAT Q3 2024\nUSD MNF"], row["MAT Q3 2023\nUSD MNF"]),
+            axis=1
+        )
+        
+        specialty_agg['Avg_Price_2022'] = specialty_agg.apply(
+            lambda row: safe_division(row["MAT Q3 2022\nUSD MNF"], row["MAT Q3 2022\nStandard Units"]),
+            axis=1
+        )
+        
+        specialty_agg['Avg_Price_2023'] = specialty_agg.apply(
+            lambda row: safe_division(row["MAT Q3 2023\nUSD MNF"], row["MAT Q3 2023\nStandard Units"]),
+            axis=1
+        )
+        
+        specialty_agg['Avg_Price_2024'] = specialty_agg.apply(
+            lambda row: safe_division(row["MAT Q3 2024\nUSD MNF"], row["MAT Q3 2024\nStandard Units"]),
+            axis=1
+        )
+        
+        st.markdown("### 📊 Specialty vs Non-Specialty - USD MNF Karşılaştırması")
+        
+        specialty_comparison = specialty_agg.melt(
+            id_vars=['Specialty Product'],
+            value_vars=["MAT Q3 2022\nUSD MNF", "MAT Q3 2023\nUSD MNF", "MAT Q3 2024\nUSD MNF"],
+            var_name='Yıl',
+            value_name='USD MNF'
+        )
+        
+        specialty_comparison['Yıl'] = specialty_comparison['Yıl'].str.replace('MAT Q3 ', '').str.replace('\nUSD MNF', '')
+        
+        fig_specialty_comp = px.bar(
+            specialty_comparison,
+            x='Yıl',
+            y='USD MNF',
+            color='Specialty Product',
+            barmode='group',
+            title='Specialty vs Non-Specialty - USD MNF Karşılaştırması',
+            text='USD MNF'
+        )
+        
+        fig_specialty_comp.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+        fig_specialty_comp.update_layout(height=500)
+        
+        st.plotly_chart(fig_specialty_comp, use_container_width=True)
+        
+        st.markdown("### 📋 Specialty vs Non-Specialty - Detaylı Tablo")
+        
+        display_specialty = specialty_agg[[
+            'Specialty Product',
+            'MAT Q3 2024\nUSD MNF',
+            'Share_2024',
+            'Growth_22_23',
+            'Growth_23_24',
+            'Avg_Price_2024'
+        ]].copy()
+        
+        display_specialty.columns = [
+            'Kategori',
+            '2024 USD MNF',
+            'Pazar Payı (%)',
+            'Büyüme 22→23 (%)',
+            'Büyüme 23→24 (%)',
+            'Ortalama Fiyat'
+        ]
+        
+        st.dataframe(
+            display_specialty.style.format({
+                '2024 USD MNF': '{:,.0f}',
+                'Pazar Payı (%)': '{:.2f}',
+                'Büyüme 22→23 (%)': '{:.2f}',
+                'Büyüme 23→24 (%)': '{:.2f}',
+                'Ortalama Fiyat': '{:.2f}'
+            }),
+            use_container_width=True,
+            height=300
+        )
+        
+        st.markdown("---")
+        
+        st.markdown("### 📈 Specialty Pay Trendi")
+        
+        specialty_trend_data = []
+        for _, row in specialty_agg.iterrows():
+            specialty_trend_data.append({'Kategori': row['Specialty Product'], 'Yıl': '2022', 'Pay (%)': row['Share_2022']})
+            specialty_trend_data.append({'Kategori': row['Specialty Product'], 'Yıl': '2023', 'Pay (%)': row['Share_2023']})
+            specialty_trend_data.append({'Kategori': row['Specialty Product'], 'Yıl': '2024', 'Pay (%)': row['Share_2024']})
+        
+        specialty_trend_df = pd.DataFrame(specialty_trend_data)
+        
+        fig_specialty_trend = px.line(
+            specialty_trend_df,
+            x='Yıl',
+            y='Pay (%)',
+            color='Kategori',
+            markers=True,
+            title='Specialty vs Non-Specialty - Pazar Payı Trendi'
+        )
+        
+        fig_specialty_trend.update_layout(height=400, hovermode='x unified')
+        
+        st.plotly_chart(fig_specialty_trend, use_container_width=True)
+        
+        st.markdown("---")
+        
+        st.markdown("### 💵 Ortalama Fiyat Karşılaştırması")
+        
+        price_comparison = specialty_agg.melt(
+            id_vars=['Specialty Product'],
+            value_vars=['Avg_Price_2022', 'Avg_Price_2023', 'Avg_Price_2024'],
+            var_name='Yıl',
+            value_name='Avg Price'
+        )
+        
+        price_comparison['Yıl'] = price_comparison['Yıl'].str.replace('Avg_Price_', '')
+        
+        fig_price_comp = px.bar(
+            price_comparison,
+            x='Yıl',
+            y='Avg Price',
+            color='Specialty Product',
+            barmode='group',
+            title='Specialty vs Non-Specialty - Ortalama Fiyat Karşılaştırması',
+            text='Avg Price'
+        )
+        
+        fig_price_comp.update_traces(texttemplate='$%{text:.2f}', textposition='outside')
+        fig_price_comp.update_layout(height=500)
+        
+        st.plotly_chart(fig_price_comp, use_container_width=True)
+        
+        st.markdown("---")
+        
+        st.markdown("### 🧠 Otomatik İçgörüler")
+        
+        specialty_insights = []
+        
+        if len(specialty_agg) >= 2:
+            specialty_row = specialty_agg[specialty_agg['Specialty Product'].str.contains('Specialty', case=False, na=False)]
+            if len(specialty_row) > 0:
+                specialty_row = specialty_row.iloc[0]
+                specialty_insights.append(
+                    f"Specialty ürünlerin pazar payı 2024'te %{specialty_row['Share_2024']:.2f} seviyesinde."
+                )
+                specialty_insights.append(
+                    f"Specialty ürünler 2023'ten 2024'e {get_trend_indicator(specialty_row['Growth_23_24'])} %{abs(specialty_row['Growth_23_24']):.2f} büyüdü."
+                )
+        
+        for insight in specialty_insights:
+            st.markdown(f"<div class='insight-box'>💡 {insight}</div>", unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TAB 7: FİYAT-VOLUME-MIX
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    with tab7:
+        st.markdown("<h2 class='sub-header'>📈 Fiyat-Volume-Mix Ayrıştırması</h2>", unsafe_allow_html=True)
+        
+        st.markdown("### 🔍 Global Price-Volume-Mix Analizi")
+        
+        st.markdown("#### 2022 → 2023")
+        
+        pvm_global_22_23 = price_volume_mix_decomposition(filtered_df, 2022, 2023)
+        
+        col1, col2, col3,col4 = st.columns(4)
+        with col1:
+        st.metric("Toplam Değişim", format_number(pvm_global_22_23['total_change']))
+    with col2:
+        st.metric("Volume Etkisi", format_number(pvm_global_22_23['volume_effect']))
+    with col3:
+        st.metric("Price Etkisi", format_number(pvm_global_22_23['price_effect']))
+    with col4:
+        st.metric("Mix Etkisi", format_number(pvm_global_22_23['mix_effect']))
+    
+    pvm_global_22_23_df = pd.DataFrame({
+        'Bileşen': ['Volume', 'Price', 'Mix'],
+        'Katkı': [
+            pvm_global_22_23['volume_effect'],
+            pvm_global_22_23['price_effect'],
+            pvm_global_22_23['mix_effect']
+        ]
+    })
+    
+    fig_pvm_global_22_23 = px.bar(
+        pvm_global_22_23_df,
+        x='Bileşen',
+        y='Katkı',
+        title='Global PVM Ayrıştırması (2022 → 2023)',
+        text='Katkı',
+        color='Bileşen',
+        color_discrete_sequence=['#1f77b4', '#ff7f0e', '#2ca02c']
+    )
+    
+    fig_pvm_global_22_23.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+    fig_pvm_global_22_23.update_layout(height=450, showlegend=False)
+    
+    st.plotly_chart(fig_pvm_global_22_23, use_container_width=True)
+    
+    st.markdown("#### 2023 → 2024")
+    
+    pvm_global_23_24 = price_volume_mix_decomposition(filtered_df, 2023, 2024)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Toplam Değişim", format_number(pvm_global_23_24['total_change']))
+    with col2:
+        st.metric("Volume Etkisi", format_number(pvm_global_23_24['volume_effect']))
+    with col3:
+        st.metric("Price Etkisi", format_number(pvm_global_23_24['price_effect']))
+    with col4:
+        st.metric("Mix Etkisi", format_number(pvm_global_23_24['mix_effect']))
+    
+    pvm_global_23_24_df = pd.DataFrame({
+        'Bileşen': ['Volume', 'Price', 'Mix'],
+        'Katkı': [
+            pvm_global_23_24['volume_effect'],
+            pvm_global_23_24['price_effect'],
+            pvm_global_23_24['mix_effect']
+        ]
+    })
+    
+    fig_pvm_global_23_24 = px.bar(
+        pvm_global_23_24_df,
+        x='Bileşen',
+        y='Katkı',
+        title='Global PVM Ayrıştırması (2023 → 2024)',
+        text='Katkı',
+        color='Bileşen',
+        color_discrete_sequence=['#1f77b4', '#ff7f0e', '#2ca02c']
+    )
+    
+    fig_pvm_global_23_24.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+    fig_pvm_global_23_24.update_layout(height=450, showlegend=False)
+    
+    st.plotly_chart(fig_pvm_global_23_24, use_container_width=True)
+    
+    st.markdown("#### Zincir Özet (2022 → 2024)")
+    
+    total_change_global_chain = pvm_global_22_23['total_change'] + pvm_global_23_24['total_change']
+    volume_global_chain = pvm_global_22_23['volume_effect'] + pvm_global_23_24['volume_effect']
+    price_global_chain = pvm_global_22_23['price_effect'] + pvm_global_23_24['price_effect']
+    mix_global_chain = pvm_global_22_23['mix_effect'] + pvm_global_23_24['mix_effect']
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Toplam Değişim (Zincir)", format_number(total_change_global_chain))
+    with col2:
+        st.metric("Volume Etkisi (Zincir)", format_number(volume_global_chain))
+    with col3:
+        st.metric("Price Etkisi (Zincir)", format_number(price_global_chain))
+    with col4:
+        st.metric("Mix Etkisi (Zincir)", format_number(mix_global_chain))
+    
+    pvm_chain_df = pd.DataFrame({
+        'Bileşen': ['Volume', 'Price', 'Mix'],
+        'Katkı': [volume_global_chain, price_global_chain, mix_global_chain]
+    })
+    
+    fig_pvm_chain = px.bar(
+        pvm_chain_df,
+        x='Bileşen',
+        y='Katkı',
+        title='Global PVM Zincir Özet (2022 → 2024)',
+        text='Katkı',
+        color='Bileşen',
+        color_discrete_sequence=['#1f77b4', '#ff7f0e', '#2ca02c']
+    )
+    
+    fig_pvm_chain.update_traces(texttemplate='%{text:.2s}', textposition='outside')
+    fig_pvm_chain.update_layout(height=450, showlegend=False)
+    
+    st.plotly_chart(fig_pvm_chain, use_container_width=True)
+    
     st.markdown("---")
-    st.markdown('<div class="footer">© 2024 Pharma Commercial Analytics Suite | Enterprise Streamlit Application</div>', unsafe_allow_html=True)
+    
+    st.markdown("### 🌍 Ülke Bazlı PVM Analizi")
+    
+    pvm_country_22_23 = price_volume_mix_decomposition(filtered_df, 2022, 2023, groupby_cols=['Country'])
+    pvm_country_23_24 = price_volume_mix_decomposition(filtered_df, 2023, 2024, groupby_cols=['Country'])
+    
+    pvm_country_22_23 = pvm_country_22_23.sort_values('total_change', ascending=False).head(10)
+    pvm_country_23_24 = pvm_country_23_24.sort_values('total_change', ascending=False).head(10)
+    
+    st.markdown("#### Top 10 Ülkeler - PVM Ayrıştırması (2022 → 2023)")
+    
+    fig_pvm_country_22_23 = go.Figure()
+    
+    fig_pvm_country_22_23.add_trace(go.Bar(
+        name='Volume',
+        x=pvm_country_22_23['Country'],
+        y=pvm_country_22_23['volume_effect'],
+        marker_color='#1f77b4'
+    ))
+    
+    fig_pvm_country_22_23.add_trace(go.Bar(
+        name='Price',
+        x=pvm_country_22_23['Country'],
+        y=pvm_country_22_23['price_effect'],
+        marker_color='#ff7f0e'
+    ))
+    
+    fig_pvm_country_22_23.add_trace(go.Bar(
+        name='Mix',
+        x=pvm_country_22_23['Country'],
+        y=pvm_country_22_23['mix_effect'],
+        marker_color='#2ca02c'
+    ))
+    
+    fig_pvm_country_22_23.update_layout(
+        barmode='stack',
+        title='Top 10 Ülkeler - PVM Ayrıştırması (2022 → 2023)',
+        xaxis_title='Ülke',
+        yaxis_title='Katkı (USD MNF)',
+        height=500
+    )
+    
+    st.plotly_chart(fig_pvm_country_22_23, use_container_width=True)
+    
+    st.markdown("#### Top 10 Ülkeler - PVM Ayrıştırması (2023 → 2024)")
+    
+    fig_pvm_country_23_24 = go.Figure()
+    
+    fig_pvm_country_23_24.add_trace(go.Bar(
+        name='Volume',
+        x=pvm_country_23_24['Country'],
+        y=pvm_country_23_24['volume_effect'],
+        marker_color='#1f77b4'
+    ))
+    
+    fig_pvm_country_23_24.add_trace(go.Bar(
+        name='Price',
+        x=pvm_country_23_24['Country'],
+        y=pvm_country_23_24['price_effect'],
+        marker_color='#ff7f0e'
+    ))
+    
+    fig_pvm_country_23_24.add_trace(go.Bar(
+        name='Mix',
+        x=pvm_country_23_24['Country'],
+        y=pvm_country_23_24['mix_effect'],
+        marker_color='#2ca02c'
+    ))
+    
+    fig_pvm_country_23_24.update_layout(
+        barmode='stack',
+        title='Top 10 Ülkeler - PVM Ayrıştırması (2023 → 2024)',
+        xaxis_title='Ülke',
+        yaxis_title='Katkı (USD MNF)',
+        height=500
+    )
+    
+    st.plotly_chart(fig_pvm_country_23_24, use_container_width=True)
+    
+    st.markdown("---")
+    
+    st.markdown("### ⚗️ Molekül Bazlı PVM Analizi")
+    
+    pvm_molecule_22_23 = price_volume_mix_decomposition(filtered_df, 2022, 2023, groupby_cols=['Molecule'])
+    pvm_molecule_23_24 = price_volume_mix_decomposition(filtered_df, 2023, 2024, groupby_cols=['Molecule'])
+    
+    pvm_molecule_22_23 = pvm_molecule_22_23.sort_values('total_change', ascending=False).head(10)
+    pvm_molecule_23_24 = pvm_molecule_23_24.sort_values('total_change', ascending=False).head(10)
+    
+    st.markdown("#### Top 10 Moleküller - PVM Ayrıştırması (2022 → 2023)")
+    
+    fig_pvm_molecule_22_23 = go.Figure()
+    
+    fig_pvm_molecule_22_23.add_trace(go.Bar(
+        name='Volume',
+        x=pvm_molecule_22_23['Molecule'],
+        y=pvm_molecule_22_23['volume_effect'],
+        marker_color='#1f77b4'
+    ))
+    
+    fig_pvm_molecule_22_23.add_trace(go.Bar(
+        name='Price',
+        x=pvm_molecule_22_23['Molecule'],
+        y=pvm_molecule_22_23['price_effect'],
+        marker_color='#ff7f0e'
+    ))
+    
+    fig_pvm_molecule_22_23.add_trace(go.Bar(
+        name='Mix',
+        x=pvm_molecule_22_23['Molecule'],
+        y=pvm_molecule_22_23['mix_effect'],
+        marker_color='#2ca02c'
+    ))
+    
+    fig_pvm_molecule_22_23.update_layout(
+        barmode='stack',
+        title='Top 10 Moleküller - PVM Ayrıştırması (2022 → 2023)',
+        xaxis_title='Molekül',
+        yaxis_title='Katkı (USD MNF)',
+        height=500
+    )
+    
+    st.plotly_chart(fig_pvm_molecule_22_23, use_container_width=True)
+    
+    st.markdown("#### Top 10 Moleküller - PVM Ayrıştırması (2023 → 2024)")
+    
+    fig_pvm_molecule_23_24 = go.Figure()
+    
+    fig_pvm_molecule_23_24.add_trace(go.Bar(
+        name='Volume',
+        x=pvm_molecule_23_24['Molecule'],
+        y=pvm_molecule_23_24['volume_effect'],
+        marker_color='#1f77b4'
+    ))
+    
+    fig_pvm_molecule_23_24.add_trace(go.Bar(
+        name='Price',
+        x=pvm_molecule_23_24['Molecule'],
+        y=pvm_molecule_23_24['price_effect'],
+        marker_color='#ff7f0e'
+    ))
+    
+    fig_pvm_molecule_23_24.add_trace(go.Bar(
+        name='Mix',
+        x=pvm_molecule_23_24['Molecule'],
+        y=pvm_molecule_23_24['mix_effect'],
+        marker_color='#2ca02c'
+    ))
+    
+    fig_pvm_molecule_23_24.update_layout(
+        barmode='stack',
+        title='Top 10 Moleküller - PVM Ayrıştırması (2023 → 2024)',
+        xaxis_title='Molekül',
+        yaxis_title='Katkı (USD MNF)',
+        height=500
+    )
+    
+    st.plotly_chart(fig_pvm_molecule_23_24, use_container_width=True)
 
-if __name__ == "__main__":
-    main()
+# ═══════════════════════════════════════════════════════════════════════════
+# TAB 8: OTOMATİK İÇGÖRÜ MOTORU
+# ═══════════════════════════════════════════════════════════════════════════
+
+with tab8:
+    st.markdown("<h2 class='sub-header'>🧠 Otomatik İçgörü Motoru</h2>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    Bu bölüm, verilerinizden otomatik olarak anlamlı içgörüler üretir.
+    Ülke, molekül veya corporation bazlı analizler yaparak stratejik kararlarınızı destekler.
+    """)
+    
+    st.markdown("---")
+    
+    insight_type = st.selectbox(
+        "İçgörü Tipi Seçin",
+        options=["Global Özet", "Ülke Bazlı", "Molekül Bazlı", "Corporation Bazlı"],
+        key="insight_type"
+    )
+    
+    if insight_type == "Global Özet":
+        st.markdown("### 🌍 Global Pazar İçgörüleri")
+        
+        global_insights = generate_executive_insights(filtered_df)
+        
+        for insight in global_insights:
+            st.markdown(f"<div class='success-box'>✅ {insight}</div>", unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        st.markdown("### 📊 Ek Stratejik İçgörüler")
+        
+        units_2022 = filtered_df["MAT Q3 2022\nUnits"].sum()
+        units_2023 = filtered_df["MAT Q3 2023\nUnits"].sum()
+        units_2024 = filtered_df["MAT Q3 2024\nUnits"].sum()
+        
+        volume_growth_22_23 = calculate_growth_rate(units_2023, units_2022)
+        volume_growth_23_24 = calculate_growth_rate(units_2024, units_2023)
+        
+        avg_price_2022_global = safe_division(usd_2022, filtered_df["MAT Q3 2022\nStandard Units"].sum())
+        avg_price_2023_global = safe_division(usd_2023, filtered_df["MAT Q3 2023\nStandard Units"].sum())
+        avg_price_2024_global = safe_division(usd_2024, filtered_df["MAT Q3 2024\nStandard Units"].sum())
+        
+        price_growth_22_23 = calculate_growth_rate(avg_price_2023_global, avg_price_2022_global)
+        price_growth_23_24 = calculate_growth_rate(avg_price_2024_global, avg_price_2023_global)
+        
+        st.markdown(f"<div class='info-box'>📦 Global hacim 2022'den 2023'e {get_trend_indicator(volume_growth_22_23)} %{abs(volume_growth_22_23):.2f} değişti.</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-box'>📦 Global hacim 2023'ten 2024'e {get_trend_indicator(volume_growth_23_24)} %{abs(volume_growth_23_24):.2f} değişti.</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-box'>💵 Ortalama fiyat 2022'den 2023'e {get_trend_indicator(price_growth_22_23)} %{abs(price_growth_22_23):.2f} değişti.</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-box'>💵 Ortalama fiyat 2023'ten 2024'e {get_trend_indicator(price_growth_23_24)} %{abs(price_growth_23_24):.2f} değişti.</div>", unsafe_allow_html=True)
+        
+        region_2024 = filtered_df.groupby('Region')["MAT Q3 2024\nUSD MNF"].sum().sort_values(ascending=False)
+        if len(region_2024) > 0:
+            top_region = region_2024.index[0]
+            top_region_share = (region_2024.iloc[0] / usd_2024) * 100
+            st.markdown(f"<div class='info-box'>🗺️ En büyük bölge {top_region} olup, global satışların %{top_region_share:.2f}'sini oluşturuyor.</div>", unsafe_allow_html=True)
+    
+    elif insight_type == "Ülke Bazlı":
+        st.markdown("### 🏳️ Ülke Bazlı İçgörüler")
+        
+        available_countries_insight = sorted(filtered_df['Country'].unique())
+        
+        selected_country_insight = st.selectbox(
+            "Ülke Seçin",
+            options=available_countries_insight,
+            key="country_insight"
+        )
+        
+        country_insights = generate_country_insights(filtered_df, selected_country_insight)
+        
+        for insight in country_insights:
+            st.markdown(f"<div class='success-box'>✅ {insight}</div>", unsafe_allow_html=True)
+    
+    elif insight_type == "Molekül Bazlı":
+        st.markdown("### ⚗️ Molekül Bazlı İçgörüler")
+        
+        available_molecules_insight = sorted(filtered_df['Molecule'].unique())
+        
+        selected_molecule_insight = st.selectbox(
+            "Molekül Seçin",
+            options=available_molecules_insight,
+            key="molecule_insight"
+        )
+        
+        molecule_insights = generate_molecule_insights(filtered_df, selected_molecule_insight)
+        
+        for insight in molecule_insights:
+            st.markdown(f"<div class='success-box'>✅ {insight}</div>", unsafe_allow_html=True)
+    
+    elif insight_type == "Corporation Bazlı":
+        st.markdown("### 🏛️ Corporation Bazlı İçgörüler")
+        
+        available_corporations_insight = sorted(filtered_df['Corporation'].unique())
+        
+        selected_corporation_insight = st.selectbox(
+            "Corporation Seçin",
+            options=available_corporations_insight,
+            key="corporation_insight"
+        )
+        
+        corp_insights = generate_corporation_insights(filtered_df, selected_corporation_insight)
+        
+        for insight in corp_insights:
+            st.markdown(f"<div class='success-box'>✅ {insight}</div>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    st.markdown("### 💡 İçgörü Özeti")
+    
+    st.info("""
+    **Otomatik İçgörü Motoru Özellikleri:**
+    
+    - 🔍 Verinizden otomatik olarak anlamlı pattern'ler keşfeder
+    - 📊 3 yıllık trend analizleri yapar
+    - 🎯 Büyüme ve pazar payı değişimlerini raporlar
+    - 🌍 Global ve lokal karşılaştırmalar sunar
+    - 💬 Doğal Türkçe dilde içgörüler üretir
+    """)
+    if name == "main":
+main()
