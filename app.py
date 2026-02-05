@@ -108,7 +108,7 @@ def inject_css():
         font-size: 0.9rem;
     }
     </style>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 inject_css()
 
