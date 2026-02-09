@@ -2016,7 +2016,7 @@ class StrategicAnalysisEngine:
             # Relative Market Share: >1 = Yüksek, <1 = Düşük
             # Growth Rate: >10% = Yüksek, <10% = Düşük
             share_threshold = 1.0  # Industry average
-            growth_threshold = 10.0  % # Industry average growth
+            growth_threshold = 10.0  #  % Industry average growth
             
             # BCG Kategorileri
             conditions = [
@@ -3715,3 +3715,4 @@ if __name__ == "__main__":
     # Dashboard'u başlat
     dashboard = PharmaIntelligenceDashboard()
     dashboard.run()
+
