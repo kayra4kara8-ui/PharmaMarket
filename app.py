@@ -2183,7 +2183,7 @@ class StrategicAnalysisEngine:
                 company_dominance = intl_market.groupby('Company')['Market_Share'].sum().nlargest(3)
                 
                 for company, share in company_dominance.items():
-                    if share > 50:  % # %50'den fazla pay
+                    if share > 50:  # %  %50'den fazla pay
                         insight = {
                             'type': 'info',
                             'title': f'International Pazar Hakimiyeti: {company}',
@@ -3715,4 +3715,5 @@ if __name__ == "__main__":
     # Dashboard'u başlat
     dashboard = PharmaIntelligenceDashboard()
     dashboard.run()
+
 
