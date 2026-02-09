@@ -1769,7 +1769,7 @@ class ProfesyonelGorsellestirme:
             st.warning(f"Pazar payı grafiği hatası: {str(e)}")
             return None
     
-    @staticmethod
+        @staticmethod
     def fiyat_hacim_analizi(df):
         """Fiyat-hacim analiz grafikleri"""
         try:
@@ -1784,6 +1784,7 @@ class ProfesyonelGorsellestirme:
                 son_birim_sutun = birim_sutunlari[-1]
                 
                 if son_satis_sutun in df.columns and son_birim_sutun in df.columns:
+                    df = df.copy()  # DataFrame'in kopyasını al
                     df['Hesaplanan_Ort_Fiyat'] = np.where(
                         df[son_birim_sutun] != 0,
                         df[son_satis_sutun] / df[son_birim_sutun],
@@ -1798,10 +1799,18 @@ class ProfesyonelGorsellestirme:
             son_fiyat_sutun = fiyat_sutunlari[-1]
             son_birim_sutun = birim_sutunlari[-1]
             
-            # Veri hazırlama
-            ornek_df = df[
-                (df[son_fiyat_sutun] > 0) & 
-                (df[son_birim_sutun] > 0)
+            # Benzersiz sütun isimleri oluştur
+            temp_fiyat_sutun = 'Fiyat_' + str(hash(son_fiyat_sutun))[:6]
+            temp_birim_sutun = 'Hacim_' + str(hash(son_birim_sutun))[:6]
+            
+            # Veri hazırlama - DataFrame'in kopyasını al
+            ornek_df = df.copy()
+            ornek_df[temp_fiyat_sutun] = ornek_df[son_fiyat_sutun]
+            ornek_df[temp_birim_sutun] = ornek_df[son_birim_sutun]
+            
+            ornek_df = ornek_df[
+                (ornek_df[temp_fiyat_sutun] > 0) & 
+                (ornek_df[temp_birim_sutun] > 0)
             ].copy()
             
             if len(ornek_df) == 0:
@@ -1811,18 +1820,25 @@ class ProfesyonelGorsellestirme:
             if len(ornek_df) > 10000:
                 ornek_df = ornek_df.sample(10000, random_state=42)
             
+            # Hover için isim belirle
+            hover_columns = []
+            if 'Molekül' in ornek_df.columns:
+                hover_columns.append('Molekül')
+            elif 'Şirket' in ornek_df.columns:
+                hover_columns.append('Şirket')
+            
             # Scatter plot
             fig = px.scatter(
                 ornek_df,
-                x=son_fiyat_sutun,
-                y=son_birim_sutun,
-                size=son_birim_sutun,
-                color=son_fiyat_sutun,
-                hover_name='Molekül' if 'Molekül' in ornek_df.columns else ('Şirket' if 'Şirket' in ornek_df.columns else None),
+                x=temp_fiyat_sutun,
+                y=temp_birim_sutun,
+                size=temp_birim_sutun,
+                color=temp_fiyat_sutun,
+                hover_name=hover_columns[0] if hover_columns else None,
                 title='Fiyat-Hacim İlişkisi',
                 labels={
-                    son_fiyat_sutun: 'Fiyat (USD)',
-                    son_birim_sutun: 'Hacim (Birim)'
+                    temp_fiyat_sutun: 'Fiyat (USD)',
+                    temp_birim_sutun: 'Hacim (Birim)'
                 },
                 color_continuous_scale='Viridis'
             )
@@ -1840,6 +1856,7 @@ class ProfesyonelGorsellestirme:
             
         except Exception as e:
             st.warning(f"Fiyat-hacim grafiği hatası: {str(e)}")
+            st.error(f"Detay: {traceback.format_exc()}")
             return None
     
     @staticmethod
@@ -2146,16 +2163,30 @@ class ProfesyonelGorsellestirme:
             st.warning(f"Rekabet analizi grafiği hatası: {str(e)}")
             return None
     
-    @staticmethod
+        @staticmethod
     def lorenz_egrisi_olustur(sirket_satis):
         """Lorenz Eğrisi - Pazar Tekelleşme Analizi"""
         try:
+            # Eğer sirket_satis Series değilse dönüştür
+            if isinstance(sirket_satis, pd.DataFrame):
+                st.warning("Sirket satışları DataFrame olarak geldi, Series'e dönüştürülüyor")
+                sirket_satis = sirket_satis.iloc[:, 0]  # İlk sütunu al
+            
             sorted_sales = np.sort(sirket_satis.values)
             cum_sales = np.cumsum(sorted_sales)
+            
+            # Eğer toplam sıfırsa hata vermeyi önle
+            if cum_sales[-1] == 0:
+                st.info("Lorenz eğrisi için sıfır olmayan satış verisi gerekiyor")
+                return None
+            
             cum_percentage_sales = cum_sales / cum_sales[-1]
             
             perfect_line = np.linspace(0, 1, len(cum_percentage_sales))
-            gini_coefficient = 1 - 2 * np.trapz(cum_percentage_sales) / (len(cum_percentage_sales) - 1)
+            
+            # Gini katsayısını hesapla - scipy.integrate.trapz kullan
+            from scipy import integrate
+            gini_coefficient = 1 - 2 * integrate.trapz(cum_percentage_sales, perfect_line)
             
             fig = go.Figure()
             
@@ -2199,6 +2230,7 @@ class ProfesyonelGorsellestirme:
             
         except Exception as e:
             st.warning(f"Lorenz eğrisi oluşturma hatası: {str(e)}")
+            st.error(f"Detay: {traceback.format_exc()}")
             return None
     
     @staticmethod
@@ -2636,49 +2668,61 @@ def fiyat_analizi_tab_goster(df):
     else:
         st.info("Fiyat esnekliği analizi için yeterli veri bulunamadı.")
 
-def rekabet_analizi_tab_goster(df, metrikler):
-    """Rekabet Analizi tab'ını göster"""
-    st.markdown('<h2 class="section-title">Rekabet Analizi ve Pazar Yapısı</h2>', unsafe_allow_html=True)
-    
-    st.markdown('<h3 class="subsection-title">📊 Rekabet Yoğunluğu Metrikleri</h3>', unsafe_allow_html=True)
-    
-    rekabet_sutunlar = st.columns(4)
-    
-    with rekabet_sutunlar[0]:
-        hhi = metrikler.get('HHI_Indeksi', 0)
-        if hhi > 2500:
-            hhi_durum = "Monopolistik"
-        elif hhi > 1800:
-            hhi_durum = "Oligopol"
-        else:
-            hhi_durum = "Rekabetçi"
-        st.metric("HHI İndeksi", f"{hhi:.0f}", hhi_durum)
-    
-    with rekabet_sutunlar[1]:
-        top3_payi = metrikler.get('Top_3_Pay', 0)
-        if top3_payi > 50:
-            konsantrasyon = "Yüksek"
-        elif top3_payi > 30:
-            konsantrasyon = "Orta"
-        else:
-            konsantrasyon = "Düşük"
-        st.metric("Top 3 Payı", f"{top3_payi:.1f}%", konsantrasyon)
-    
-    with rekabet_sutunlar[2]:
-        top5_payi = metrikler.get('Top_5_Pay', 0)
-        st.metric("Top 5 Payı", f"{top5_payi:.1f}%")
-    
-    with rekabet_sutunlar[3]:
-        top10_molekul = metrikler.get('Top_10_Molekul_Payı', 0)
-        st.metric("Top 10 Molekül Payı", f"{top10_molekul:.1f}%")
-    
-    st.markdown('<h3 class="subsection-title">📈 Rekabet Analizi Grafikleri</h3>', unsafe_allow_html=True)
+def fiyat_analizi_tab_goster(df):
+    """Fiyat Analizi tab'ını göster"""
+    st.markdown('<h2 class="section-title">Fiyat Analizi ve Optimizasyon</h2>', unsafe_allow_html=True)
     
     gorsellestirme = ProfesyonelGorsellestirme()
-    rekabet_grafik = gorsellestirme.rekabet_analizi_grafikleri(df)
     
-    if rekabet_grafik:
-        st.plotly_chart(rekabet_grafik, use_container_width=True, config={'displayModeBar': True})
+    st.markdown('<h3 class="subsection-title">💰 Fiyat-Hacim İlişkisi</h3>', unsafe_allow_html=True)
+    fiyat_hacim_grafik = gorsellestirme.fiyat_hacim_analizi(df)
+    if fiyat_hacim_grafik:
+        st.plotly_chart(fiyat_hacim_grafik, use_container_width=True, config={'displayModeBar': True})
+    else:
+        # Alternatif analiz göster
+        st.info("Fiyat-hacim analizi için alternatif yaklaşım:")
+        
+        # Fiyat sütunlarını kontrol et
+        fiyat_sutunlari = [sutun for sutun in df.columns if 'Fiyat' in sutun or 'Price' in sutun]
+        birim_sutunlari = [sutun for sutun in df.columns if 'Birim' in sutun or 'Unit' in sutun]
+        
+        if fiyat_sutunlari and birim_sutunlari:
+            st.write(f"Mevcut fiyat sütunları: {fiyat_sutunlari}")
+            st.write(f"Mevcut birim sütunları: {birim_sutunlari}")
+            
+            # Basit bir scatter plot oluştur
+            import plotly.express as px
+            
+            try:
+                # İlk fiyat ve birim sütununu kullan
+                fiyat_sutun = fiyat_sutunlari[0]
+                birim_sutun = birim_sutunlari[0]
+                
+                # Veriyi filtrele
+                filtered_df = df[
+                    (df[fiyat_sutun] > 0) & 
+                    (df[birim_sutun] > 0) &
+                    (df[fiyat_sutun] < df[fiyat_sutun].quantile(0.95))  # Aykırı değerleri filtrele
+                ].copy()
+                
+                if len(filtered_df) > 0:
+                    fig = px.scatter(
+                        filtered_df.head(1000),  # İlk 1000 kayıt
+                        x=fiyat_sutun,
+                        y=birim_sutun,
+                        title=f'{fiyat_sutun} vs {birim_sutun}',
+                        labels={fiyat_sutun: 'Fiyat', birim_sutun: 'Hacim'}
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.warning(f"Basit fiyat-hacim grafiği oluşturulamadı: {e}")
+    
+    st.markdown('<h3 class="subsection-title">📉 Fiyat Esnekliği Analizi</h3>', unsafe_allow_html=True)
+    esneklik_grafik = gorsellestirme.fiyat_esneklik_analizi(df)
+    if esneklik_grafik:
+        st.plotly_chart(esneklik_grafik, use_container_width=True, config={'displayModeBar': True})
+    else:
+        st.info("Fiyat esnekliği analizi için yeterli veri bulunamadı.")
     
     # Lorenz Eğrisi
     if 'Şirket' in df.columns:
@@ -2950,4 +2994,5 @@ if __name__ == "__main__":
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
+
 
