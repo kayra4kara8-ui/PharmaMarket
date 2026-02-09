@@ -1,9 +1,22 @@
-# PharmaIntelligence Pro - Minimal Requirements
+# PharmaIntelligence Enterprise - Requirements
+# Professional Pharmaceutical Market Analytics Platform
+
+# Core Framework
 streamlit>=1.28.0
+
+# Data Processing
 pandas>=2.1.0
 numpy>=1.24.0
-plotly>=5.17.0
-scikit-learn>=1.3.0
-scipy>=1.11.0
 openpyxl>=3.1.0
 pyarrow>=12.0.0
+
+# Visualization
+plotly>=5.17.0
+
+# Machine Learning & Analytics
+scikit-learn>=1.3.0
+scipy>=1.11.0
+statsmodels>=0.14.0
+
+# Performance
+psutil>=5.9.0
