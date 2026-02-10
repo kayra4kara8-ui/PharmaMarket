@@ -1,56 +1,9 @@
-# PharmaIntelligence Pro - Enterprise İlaç Analitik Platformu
-# Güncellenmiş versiyon - Prophet sorunu çözüldü
-
-# Temel Bağımlılıklar
-streamlit==1.31.0
-pandas==2.1.4
-numpy==1.24.3
-plotly==5.18.0
-
-# Gelişmiş Analitik
-scikit-learn==1.4.0
-statsmodels==0.14.1
-scipy==1.11.4
-
-# Excel İşleme
-openpyxl==3.1.2
-xlsxwriter==3.1.9
-
-# Veri Manipülasyonu
-lxml==4.9.3
-joblib==1.3.2
-python-dateutil==2.8.2
-pytz==2023.3.post1
-
-# Prophet Alternatifleri (Daha Kolay Kurulum)
-# NOT: Prophet yerine alternatif tahmin kütüphaneleri kullanıyoruz
-pmdarima==2.0.4  # ARIMA için
-tbats==1.1.3     # TBATS modeli için
-
-# Performans
-dask[dataframe]==2023.12.0
-
-# Görselleştirme
-seaborn==0.13.0
-matplotlib==3.8.2
-
-# Raporlama
-reportlab==4.0.4
-PyPDF2==3.0.1
-
-# Yardımcı Kütüphaneler
-tqdm==4.66.1
-click==8.1.7
-colorama==0.4.6
-Jinja2==3.1.2
-MarkupSafe==2.1.3
-
-# Streamlit Ekstralar
-streamlit-extras==0.4.2
-
-# Test
-pytest==7.4.3
-pytest-cov==4.1.0
-
-# Logging
-loguru==0.7.2
+streamlit>=1.28.0
+pandas>=2.1.0
+numpy>=1.24.0
+plotly>=5.17.0
+scikit-learn>=1.3.0
+openpyxl>=3.1.0
+scipy>=1.11.0
+statsmodels>=0.14.0
+pyarrow>=12.0.0
