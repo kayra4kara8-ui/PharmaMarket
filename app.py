@@ -65,9 +65,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'Yardım al': 'https://pharmaintelligence.com/kurumsal-destek',
-        'Hata bildir': "https://pharmaintelligence.com/kurumsal-hata-bildirimi",
-        'Hakkında': """
+        'Get Help': 'https://pharmaintelligence.com/kurumsal-destek',
+        'Report a bug': "https://pharmaintelligence.com/kurumsal-hata-bildirimi",
+        'About': """
         ### PharmaIntelligence Kurumsal v6.0
         • Yapay Zeka Destekli Tahminleme
         • Anomali Tespiti
@@ -3115,3 +3115,4 @@ if __name__ == "__main__":
             for anahtar in list(st.session_state.keys()):
                 del st.session_state[anahtar]
             st.rerun()
+
