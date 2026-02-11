@@ -3116,3 +3116,4 @@ if __name__ == "__main__":
                 del st.session_state[anahtar]
             st.rerun()
 
+
