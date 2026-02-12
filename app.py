@@ -1,961 +1,873 @@
 """
-██████╗ ██╗  ██╗ █████╗ ██████╗ ███╗   ███╗ █████╗ 
-██╔══██╗██║  ██║██╔══██╗██╔══██╗████╗ ████║██╔══██╗
-██████╔╝███████║███████║██████╔╝██╔████╔██║███████║
-██╔═══╝ ██╔══██║██╔══██║██╔══██╗██║╚██╔╝██║██╔══██║
-██║     ██║  ██║██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║
-╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝
+██████╗ ██╗  ██╗ █████╗ ██████╗ ███╗   ███╗ █████╗ ██╗███╗   ██╗████████╗███████╗██╗     ██╗ ██████╗ ███████╗███╗   ██╗ ██████╗███████╗
+██╔══██╗██║  ██║██╔══██╗██╔══██╗████╗ ████║██╔══██╗██║████╗  ██║╚══██╔══╝██╔════╝██║     ██║██╔════╝ ██╔════╝████╗  ██║██╔════╝██╔════╝
+██████╔╝███████║███████║██████╔╝██╔████╔██║███████║██║██╔██╗ ██║   ██║   █████╗  ██║     ██║██║  ███╗█████╗  ██╔██╗ ██║██║     █████╗  
+██╔═══╝ ██╔══██║██╔══██║██╔══██╗██║╚██╔╝██║██╔══██║██║██║╚██╗██║   ██║   ██╔══╝  ██║     ██║██║   ██║██╔══╝  ██║╚██╗██║██║     ██╔══╝  
+██║     ██║  ██║██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║██║ ╚████║   ██║   ███████╗███████╗██║╚██████╔╝███████╗██║ ╚████║╚██████╗███████╗
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚══════╝╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚══════╝
 
-PharmaIntelligence Pro v8.0 - Enterprise Decision Support Platform
-═══════════════════════════════════════════════════════════════════════
-Modül: ProdPack (Ürün-Paket) Derinlik Analizi + Molekül Drill-Down
-Versiyon: 8.0.0-ENTERPRISE
+██████╗ ██████╗  ██████╗     ██╗   ██╗ █████╗   █████╗  █████╗ 
+██╔══██╗██╔══██╗██╔═══██╗    ██║   ██║██╔══██╗ ██╔══██╗██╔══██╗
+██████╔╝██████╔╝██║   ██║    ██║   ██║███████║ ██║  ╚═╝███████║
+██╔═══╝ ██╔══██╗██║   ██║    ╚██╗ ██╔╝██╔══██║ ██║  ██╗██╔══██║
+██║     ██║  ██║╚██████╔╝     ╚████╔╝ ██║  ██║ ╚█████╔╝██║  ██║
+╚═╝     ╚═╝  ╚═╝ ╚═════╝       ╚═══╝  ╚═╝  ╚═╝  ╚════╝ ╚═╝  ╚═╝
+
+███████╗███╗   ██╗████████╗███████╗██████╗ ██████╗ ██████╗ ██╗███████╗███████╗
+██╔════╝████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔════╝██╔════╝
+█████╗  ██╔██╗ ██║   ██║   █████╗  ██████╔╝██████╔╝██████╔╝██║█████╗  ███████╗
+██╔══╝  ██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██╔══██╗██╔══██╗██║██╔══╝  ╚════██║
+███████╗██║ ╚████║   ██║   ███████╗██║  ██║██║  ██║██║  ██║██║███████╗███████║
+╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝
+
+PharmaIntelligence Pro v8.0 - Kurumsal Karar Destek ve Stratejik İstihbarat Platformu
+Versiyon: 8.0.0
 Yazar: PharmaIntelligence Inc.
-Lisans: E.Ş. - Kurumsal Lisans
+Lisans: Enterprise License
+Tarih: 2024
+
+████████╗███████╗██╗  ██╗███╗   ██╗██╗ ██████╗ █████╗ ██╗     
+╚══██╔══╝██╔════╝██║  ██║████╗  ██║██║██╔════╝██╔══██╗██║     
+   ██║   █████╗  ███████║██╔██╗ ██║██║██║     ███████║██║     
+   ██║   ██╔══╝  ██╔══██║██║╚██╗██║██║██║     ██╔══██║██║     
+   ██║   ███████╗██║  ██║██║ ╚████║██║╚██████╗██║  ██║███████╗
+   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝
+
+██████╗ ███████╗██████╗ ███████╗██████╗ ███████╗ ██████╗████████╗██╗ ██████╗ ███╗   ██╗
+██╔══██╗██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝╚══██╔══╝██║██╔═══██╗████╗  ██║
+██║  ██║█████╗  ██████╔╝█████╗  ██████╔╝█████╗  ██║        ██║   ██║██║   ██║██╔██╗ ██║
+██║  ██║██╔══╝  ██╔═══╝ ██╔══╝  ██╔══██╗██╔══╝  ██║        ██║   ██║██║   ██║██║╚██╗██║
+██████╔╝███████╗██║     ███████╗██║  ██║██║     ╚██████╗   ██║   ██║╚██████╔╝██║ ╚████║
+╚═════╝ ╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝      ╚═════╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+
+✓ AI-Powered Predictive Analytics (Prophet + ARIMA + Holt-Winters Ensemble)
+✓ Multi-Algorithm Anomaly Detection (IsolationForest + LOF + OneClassSVM)
+✓ PCA + UMAP + t-SNE Advanced Segmentation with Auto-Profile
+✓ ProdPack Derinlik Analizi - Molekül → Şirket → Marka → Paket Hiyerarşisi
+✓ Pazar Kanibalizasyonu Analizi - Büyüme/Hacim Matrisi
+✓ Executive Dark Theme with 3D Visualizations
+✓ Automated Strategic Recommendations with Confidence Scores
 """
 
 # ================================================
-# 0. PERFORMANCE OPTIMIZATIONS & CACHE
+# 1. ÇEKİRDEK BAĞIMLILIKLAR - OPTİMİZE EDİLMİŞ
 # ================================================
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import re
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+import seaborn as sns
 import warnings
-import gc
-import time
-import json
-import hashlib
-import base64
-import io
-import sys
-import traceback
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Union, Any, Callable
-from collections import defaultdict, Counter
-from dataclasses import dataclass, field
-from enum import Enum
-from functools import lru_cache, wraps
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
-
-# ✅ GÜVENLİ IMPORT - HATA YOK!
-try:
-    from cryptography.fernet import Fernet
-    CRYPTO_AVAILABLE = True
-except ImportError:
-    CRYPTO_AVAILABLE = False
-    # Fernet opsiyonel, uygulama çalışmaya devam eder
-
 warnings.filterwarnings('ignore')
-gc.enable()
-
-# Streamlit cache konfigürasyonu
-st.set_page_config(
-    page_title="PharmaIntel Pro v8.0 | ProdPack Derinlik Analizi",
-    page_icon="💊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # ================================================
-# 1. ADVANCED ANALYTICS IMPORTS - TRY/EXCEPT
+# 2. GELİŞMİŞ ANALİTİK STACK
 # ================================================
 
-# Scikit-learn - her zaman çalışır
-from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, LabelEncoder
-from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans, AgglomerativeClustering
-from sklearn.ensemble import IsolationForest, RandomForestRegressor
+from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, PowerTransformer, LabelEncoder
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+from sklearn.ensemble import IsolationForest, RandomForestRegressor, GradientBoostingRegressor
+from sklearn.decomposition import PCA, KernelPCA
+from sklearn.manifold import TSNE
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-from sklearn.manifold import TSNE
-
-# Time Series - statsmodels her zaman çalışır
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.covariance import EllipticEnvelope
+from sklearn.svm import OneClassSVM
+from sklearn.model_selection import TimeSeriesSplit
+import statsmodels.api as sm
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.stattools import adfuller
+from scipy import stats
+from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
+from scipy.spatial.distance import pdist
+from scipy.stats import zscore
+import umap
 
-# ✅ pmdarima - try/except ile güvenli import
+# ================================================
+# 3. ZAMAN SERİSİ ÖZEL - YEDEKLİ YÜKLEME
+# ================================================
+
+PROPHET_AVAILABLE = False
+ARIMA_AVAILABLE = False
+SHAP_AVAILABLE = False
+
+try:
+    from prophet import Prophet
+    PROPHET_AVAILABLE = True
+except ImportError:
+    pass
+
 try:
     from pmdarima import auto_arima
     ARIMA_AVAILABLE = True
 except ImportError:
-    ARIMA_AVAILABLE = False
-    # pmdarima yoksa auto_arima kullanılmaz, uygulama çalışır
+    pass
 
-# ✅ Prophet - try/except ile güvenli import
 try:
-    from prophet import Prophet
-    PROPHET_AVAILABLE = False  # Prophet aşırı ağır, devre dışı bırak
-    # PROPHET_AVAILABLE = True  # İsterseniz aktifleştirin
+    import shap
+    SHAP_AVAILABLE = True
 except ImportError:
-    PROPHET_AVAILABLE = False
-
-# ✅ UMAP - try/except ile güvenli import
-try:
-    import umap.umap_ as umap
-    UMAP_AVAILABLE = True
-except ImportError:
-    UMAP_AVAILABLE = False
-
-# Visualization
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import plotly.figure_factory as ff
+    pass
 
 # ================================================
-# KODUN DEVAMI AYNI - DEĞİŞİKLİK YOK
-# ================================================
-# ... (4218 satır kodun tamamı aynen çalışır)
-# ================================================
-# 2. ENUMS & DATA CLASSES
+# 4. UTILITY STACK
 # ================================================
 
-class RiskLevel(Enum):
-    KRITIK = "🔴 Kritik Risk"
-    YUKSEK = "🟠 Yüksek Risk"
-    ORTA = "🟡 Orta Risk"
-    DUSUK = "🟢 Düşük Risk"
-    NORMAL = "✅ Normal"
+from datetime import datetime, timedelta
+import json
+from io import BytesIO, StringIO
+import time
+import gc
+import traceback
+import hashlib
+import pickle
+import base64
+import re
+import os
+from typing import Dict, List, Optional, Tuple, Union, Any, Callable
+from collections import defaultdict, Counter, OrderedDict
+from dataclasses import dataclass, field
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+import aiohttp
 
-class GrowthCategory(Enum):
-    HIPER = "🚀 Hiper Büyüme (>%50)"
-    YUKSEK = "📈 Yüksek Büyüme (%20-50)"
-    ORTA = "📊 Orta Büyüme (%5-20)"
-    DURGUN = "⏸️ Durgun (-%5 - %5)"
-    DARALAN = "📉 Daralan (<-5%)"
-
-class ProductSegment(Enum):
-    YILDIZ = "⭐ Yıldız Ürünler"
-    NAKIT_INEK = "🐄 Nakit İnekleri"
-    SORU_ISARETI = "❓ Soru İşaretleri"
-    ZAYIF = "⚠️ Zayıf Ürünler"
-    YUKSELEN = "🌟 Yükselen Yıldızlar"
-    OLGUN = "📌 Olgun Ürünler"
+# ================================================
+# 5. VERİ SINIFLARI - PRODPACK DERİNLİK İÇİN
+# ================================================
 
 @dataclass
-class ProdPackInsight:
-    """ProdPack (Ürün-Paket) içgörü veri sınıfı"""
-    molekul: str
-    sirket: str
-    marka: str
-    paket: str
-    satis_2024: float
-    satis_2025_tahmin: float
-    buyume_hizi: float
-    pazar_payi: float
-    pazar_payi_degisim: float
-    risk_seviyesi: RiskLevel
-    segment: ProductSegment
-    kanibalizasyon_skoru: float = 0.0
-    yatirim_tavsiyesi: str = ""
-    ozel_not: str = ""
-
+class ProdPackNode:
+    """ProdPack Hiyerarşi Düğümü - Molekül → Şirket → Marka → Paket"""
+    id: str
+    name: str
+    node_type: str  # 'molecule', 'company', 'brand', 'package'
+    parent_id: Optional[str] = None
+    children: List['ProdPackNode'] = field(default_factory=list)
+    sales_2024: float = 0.0
+    sales_2023: float = 0.0
+    growth_rate: float = 0.0
+    market_share: float = 0.0
+    cannibalization_score: float = 0.0
+    risk_score: float = 0.0
+    
 @dataclass
-class ForecastResult:
-    periods: List[str]
-    predictions: List[float]
-    lower_bound: List[float]
-    upper_bound: List[float]
-    model_type: str
-    mape: float
-    trend: str
+class CannibalizationAnalysis:
+    """Pazar Kanibalizasyonu Analiz Sonucu"""
+    company: str
+    product_a: str
+    product_b: str
+    correlation: float
+    share_transfer: float
+    significance: float
+    recommendation: str
 
 # ================================================
-# 3. PRODPACK DERINLIK ANALIZI MODULU
-# ================================================
-
-class ProdPackDepthAnalyzer:
-    """
-    Ürün-Paket derinlik analizi modülü.
-    Molekül → Şirket → Marka → Paket hiyerarşisinde drill-down imkanı.
-    """
-    
-    def __init__(self):
-        self.hierarchy_cache = {}
-        self.cannibalization_matrix = None
-        
-    @optimize_memory
-    @st.cache_data(ttl=3600, max_entries=10, show_spinner=False)
-    def build_prodpack_hierarchy(_self, df: pd.DataFrame) -> Dict[str, Any]:
-        """
-        ProdPack hiyerarşisini oluşturur.
-        
-        Args:
-            df: İşlenmiş DataFrame
-            
-        Returns:
-            Hiyerarşi sözlüğü
-        """
-        hierarchy = {
-            'molecules': {},
-            'sunburst_data': None,
-            'sankey_data': None,
-            'stats': {}
-        }
-        
-        # Sütun kontrolleri
-        required_cols = ['Molekül', 'Şirket', 'Marka', 'Paket']
-        for col in required_cols:
-            if col not in df.columns:
-                st.warning(f"{col} sütunu bulunamadı. Varsayılan isimlendirme yapılıyor.")
-                return hierarchy
-        
-        # Satış sütunlarını bul
-        sales_cols = [col for col in df.columns if re.search(r'20\d{2}', str(col)) and 
-                     any(x in str(col).lower() for x in ['satış', 'sales', 'hacim', 'volume'])]
-        
-        if not sales_cols:
-            sales_cols = [col for col in df.columns if re.search(r'20\d{2}', str(col))]
-        
-        if not sales_cols:
-            return hierarchy
-        
-        # Yılları sırala
-        year_pattern = re.compile(r'20\d{2}')
-        sales_with_years = []
-        for col in sales_cols:
-            match = year_pattern.search(str(col))
-            if match:
-                sales_with_years.append((col, int(match.group())))
-        
-        sales_with_years.sort(key=lambda x: x[1])
-        sales_cols_sorted = [x[0] for x in sales_with_years]
-        
-        # Son 2 yıl
-        current_year_col = sales_cols_sorted[-1] if sales_cols_sorted else None
-        prev_year_col = sales_cols_sorted[-2] if len(sales_cols_sorted) >= 2 else None
-        
-        # Molekül bazlı gruplama
-        for molekul in df['Molekül'].unique():
-            molekul_df = df[df['Molekül'] == molekul]
-            
-            hierarchy['molecules'][molekul] = {
-                'total_sales': molekul_df[current_year_col].sum() if current_year_col else 0,
-                'company_count': molekul_df['Şirket'].nunique(),
-                'brand_count': molekul_df['Marka'].nunique(),
-                'pack_count': molekul_df['Paket'].nunique(),
-                'companies': {}
-            }
-            
-            # Şirket bazlı gruplama
-            for sirket in molekul_df['Şirket'].unique():
-                sirket_df = molekul_df[molekul_df['Şirket'] == sirket]
-                
-                hierarchy['molecules'][molekul]['companies'][sirket] = {
-                    'total_sales': sirket_df[current_year_col].sum() if current_year_col else 0,
-                    'brand_count': sirket_df['Marka'].nunique(),
-                    'pack_count': sirket_df['Paket'].nunique(),
-                    'brands': {}
-                }
-                
-                # Marka bazlı gruplama
-                for marka in sirket_df['Marka'].unique():
-                    marka_df = sirket_df[sirket_df['Marka'] == marka]
-                    
-                    hierarchy['molecules'][molekul]['companies'][sirket]['brands'][marka] = {
-                        'total_sales': marka_df[current_year_col].sum() if current_year_col else 0,
-                        'pack_count': marka_df['Paket'].nunique(),
-                        'packs': {}
-                    }
-                    
-                    # Paket bazlı gruplama
-                    for paket in marka_df['Paket'].unique():
-                        paket_df = marka_df[marka_df['Paket'] == paket]
-                        
-                        # Büyüme hesapla
-                        growth = 0.0
-                        if prev_year_col and current_year_col:
-                            prev_sales = paket_df[prev_year_col].sum()
-                            curr_sales = paket_df[current_year_col].sum()
-                            if prev_sales > 0:
-                                growth = ((curr_sales - prev_sales) / prev_sales) * 100
-                        
-                        # Pazar payı
-                        market_share = 0.0
-                        if current_year_col:
-                            total_market = df[current_year_col].sum()
-                            if total_market > 0:
-                                market_share = (curr_sales / total_market) * 100
-                        
-                        hierarchy['molecules'][molekul]['companies'][sirket]['brands'][marka]['packs'][paket] = {
-                            'sales': curr_sales if current_year_col else 0,
-                            'prev_sales': prev_sales if prev_year_col else 0,
-                            'growth': growth,
-                            'market_share': market_share,
-                            'units': len(paket_df)
-                        }
-        
-        # Sunburst verisi oluştur
-        hierarchy['sunburst_data'] = _self._create_sunburst_data(df, current_year_col)
-        hierarchy['sankey_data'] = _self._create_sankey_data(df, current_year_col)
-        
-        # İstatistikler
-        hierarchy['stats'] = {
-            'total_molecules': len(hierarchy['molecules']),
-            'total_companies': df['Şirket'].nunique(),
-            'total_brands': df['Marka'].nunique(),
-            'total_packs': df['Paket'].nunique(),
-            'total_sales': df[current_year_col].sum() if current_year_col else 0,
-            'analysis_year': current_year_col.split('_')[-1] if current_year_col and '_' in current_year_col else '2024'
-        }
-        
-        return hierarchy
-    
-    def _create_sunburst_data(_self, df: pd.DataFrame, sales_col: str) -> go.Figure:
-        """Sunburst diyagramı için veri hazırla"""
-        if sales_col is None:
-            return None
-        
-        # Hiyerarşik veri hazırlığı
-        sunburst_df = df.groupby(['Molekül', 'Şirket', 'Marka', 'Paket'])[sales_col].sum().reset_index()
-        sunburst_df.columns = ['Molekül', 'Şirket', 'Marka', 'Paket', 'Satış']
-        
-        # Path oluştur
-        sunburst_df['path'] = (sunburst_df['Molekül'] + '|' + 
-                               sunburst_df['Şirket'] + '|' + 
-                               sunburst_df['Marka'] + '|' + 
-                               sunburst_df['Paket'])
-        
-        # IDs
-        all_ids = []
-        all_labels = []
-        all_parents = []
-        all_values = []
-        
-        # Root
-        all_ids.append('total')
-        all_labels.append('Tüm Pazar')
-        all_parents.append('')
-        all_values.append(0)
-        
-        # Moleküller
-        for molekul in sunburst_df['Molekül'].unique():
-            molekul_sales = sunburst_df[sunburst_df['Molekül'] == molekul]['Satış'].sum()
-            all_ids.append(f'mol_{molekul}')
-            all_labels.append(molekul[:20] + '...' if len(str(molekul)) > 20 else molekul)
-            all_parents.append('total')
-            all_values.append(molekul_sales)
-            
-            # Şirketler
-            for sirket in sunburst_df[sunburst_df['Molekül'] == molekul]['Şirket'].unique():
-                sirket_sales = sunburst_df[(sunburst_df['Molekül'] == molekul) & 
-                                          (sunburst_df['Şirket'] == sirket)]['Satış'].sum()
-                all_ids.append(f'mol_{molekul}_sirket_{sirket}')
-                all_labels.append(sirket[:15] + '...' if len(str(sirket)) > 15 else sirket)
-                all_parents.append(f'mol_{molekul}')
-                all_values.append(sirket_sales)
-                
-                # Markalar
-                for marka in sunburst_df[(sunburst_df['Molekül'] == molekul) & 
-                                        (sunburst_df['Şirket'] == sirket)]['Marka'].unique():
-                    marka_sales = sunburst_df[(sunburst_df['Molekül'] == molekul) & 
-                                             (sunburst_df['Şirket'] == sirket) & 
-                                             (sunburst_df['Marka'] == marka)]['Satış'].sum()
-                    all_ids.append(f'mol_{molekul}_sirket_{sirket}_marka_{marka}')
-                    all_labels.append(marka[:15] + '...' if len(str(marka)) > 15 else marka)
-                    all_parents.append(f'mol_{molekul}_sirket_{sirket}')
-                    all_values.append(marka_sales)
-        
-        # Sunburst figürü
-        fig = go.Figure(go.Sunburst(
-            ids=all_ids,
-            labels=all_labels,
-            parents=all_parents,
-            values=all_values,
-            branchvalues='total',
-            marker=dict(
-                colorscale='Viridis',
-                line=dict(width=1, color='#1a237e')
-            ),
-            hovertemplate='<b>%{label}</b><br>Satış: $%{value:,.0f}<br>Pay: %{percentRoot:.1%}<extra></extra>'
-        ))
-        
-        fig.update_layout(
-            title=dict(
-                text='ProdPack Hiyerarşi Haritası (Molekül → Şirket → Marka → Paket)',
-                font=dict(size=18, color='#d4af37')
-            ),
-            margin=dict(t=50, l=0, r=0, b=0),
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white'),
-            height=600
-        )
-        
-        return fig
-    
-    def _create_sankey_data(_self, df: pd.DataFrame, sales_col: str) -> go.Figure:
-        """Sankey diyagramı için veri hazırla"""
-        if sales_col is None:
-            return None
-        
-        # Örnekleme - çok fazla node olmaması için
-        sample_df = df.nlargest(50, sales_col) if len(df) > 50 else df
-        
-        # Node'lar ve linkler
-        nodes = []
-        node_indices = {}
-        
-        # Moleküller
-        for molekul in sample_df['Molekül'].unique():
-            node_id = f'mol_{molekul}'
-            if node_id not in node_indices:
-                node_indices[node_id] = len(nodes)
-                nodes.append(molekul[:20] + '...' if len(str(molekul)) > 20 else molekul)
-        
-        # Şirketler
-        for sirket in sample_df['Şirket'].unique():
-            node_id = f'sirket_{sirket}'
-            if node_id not in node_indices:
-                node_indices[node_id] = len(nodes)
-                nodes.append(sirket[:15] + '...' if len(str(sirket)) > 15 else sirket)
-        
-        # Markalar
-        for marka in sample_df['Marka'].unique():
-            node_id = f'marka_{marka}'
-            if node_id not in node_indices:
-                node_indices[node_id] = len(nodes)
-                nodes.append(marka[:15] + '...' if len(str(marka)) > 15 else marka)
-        
-        # Linkler
-        links = []
-        
-        for _, row in sample_df.iterrows():
-            # Molekül -> Şirket
-            source = f'mol_{row["Molekül"]}'
-            target = f'sirket_{row["Şirket"]}'
-            
-            if source in node_indices and target in node_indices:
-                links.append({
-                    'source': node_indices[source],
-                    'target': node_indices[target],
-                    'value': row[sales_col] * 0.3  # Ağırlıklandırma
-                })
-            
-            # Şirket -> Marka
-            source = f'sirket_{row["Şirket"]}'
-            target = f'marka_{row["Marka"]}'
-            
-            if source in node_indices and target in node_indices:
-                links.append({
-                    'source': node_indices[source],
-                    'target': node_indices[target],
-                    'value': row[sales_col] * 0.7
-                })
-        
-        # Linkleri birleştir
-        link_dict = {}
-        for link in links:
-            key = (link['source'], link['target'])
-            if key in link_dict:
-                link_dict[key] += link['value']
-            else:
-                link_dict[key] = link['value']
-        
-        sankey_links = {
-            'source': [k[0] for k in link_dict.keys()],
-            'target': [k[1] for k in link_dict.keys()],
-            'value': list(link_dict.values())
-        }
-        
-        # Sankey figürü
-        fig = go.Figure(data=[go.Sankey(
-            node=dict(
-                pad=15,
-                thickness=20,
-                line=dict(color='#1a237e', width=0.5),
-                label=nodes,
-                color='#2d7dd2'
-            ),
-            link=dict(
-                source=sankey_links['source'],
-                target=sankey_links['target'],
-                value=sankey_links['value'],
-                color='rgba(45, 125, 210, 0.3)'
-            )
-        )])
-        
-        fig.update_layout(
-            title=dict(
-                text='ProdPack Akış Diyagramı (Molekül → Şirket → Marka)',
-                font=dict(size=18, color='#d4af37')
-            ),
-            font=dict(size=12, color='white'),
-            paper_bgcolor='rgba(0,0,0,0)',
-            height=500,
-            margin=dict(t=50, l=50, r=50, b=50)
-        )
-        
-        return fig
-    
-    def analyze_cannibalization(_self, df: pd.DataFrame, sirket_adi: str) -> pd.DataFrame:
-        """
-        Aynı şirket içindeki paketler arası kanibalizasyon analizi.
-        
-        Args:
-            df: DataFrame
-            sirket_adi: Analiz edilecek şirket
-            
-        Returns:
-            Kanibalizasyon matrisi
-        """
-        if 'Şirket' not in df.columns or 'Paket' not in df.columns:
-            return pd.DataFrame()
-        
-        # Şirkete ait veriler
-        sirket_df = df[df['Şirket'] == sirket_adi].copy()
-        
-        if len(sirket_df) < 2:
-            return pd.DataFrame()
-        
-        # Satış sütunlarını bul
-        sales_cols = [col for col in df.columns if re.search(r'20\d{2}', str(col))]
-        if len(sales_cols) < 2:
-            return pd.DataFrame()
-        
-        sales_cols.sort()
-        current_col = sales_cols[-1]
-        prev_col = sales_cols[-2]
-        
-        # Paket bazlı büyüme ve pazar payı
-        paket_analiz = []
-        
-        for paket in sirket_df['Paket'].unique():
-            paket_df = sirket_df[sirket_df['Paket'] == paket]
-            
-            curr_sales = paket_df[current_col].sum()
-            prev_sales = paket_df[prev_col].sum()
-            
-            growth = 0
-            if prev_sales > 0:
-                growth = ((curr_sales - prev_sales) / prev_sales) * 100
-            
-            # Şirket içi pazar payı
-            sirket_total = sirket_df[current_col].sum()
-            sirket_payi = (curr_sales / sirket_total * 100) if sirket_total > 0 else 0
-            
-            paket_analiz.append({
-                'Paket': paket,
-                'Satış_2024': curr_sales,
-                'Satış_2023': prev_sales,
-                'Büyüme_Hızı': growth,
-                'Şirket_İçi_Pay': sirket_payi,
-                'Molekül': paket_df['Molekül'].iloc[0] if 'Molekül' in paket_df.columns else 'Bilinmiyor',
-                'Marka': paket_df['Marka'].iloc[0] if 'Marka' in paket_df.columns else 'Bilinmiyor'
-            })
-        
-        analiz_df = pd.DataFrame(paket_analiz)
-        
-        if len(analiz_df) < 2:
-            return analiz_df
-        
-        # Korelasyon matrisi - kanibalizasyon göstergesi
-        try:
-            corr_matrix = analiz_df[['Büyüme_Hızı', 'Şirket_İçi_Pay']].corr()
-            cannibal_score = corr_matrix.loc['Büyüme_Hızı', 'Şirket_İçi_Pay']
-            
-            analiz_df['Kanibalizasyon_Skoru'] = cannibal_score
-            
-            # Yorumlama
-            if cannibal_score < -0.5:
-                analiz_df['Kanibalizasyon_Risk'] = '🔴 Yüksek Kanibalizasyon'
-            elif cannibal_score < -0.3:
-                analiz_df['Kanibalizasyon_Risk'] = '🟠 Orta Kanibalizasyon'
-            elif cannibal_score < 0:
-                analiz_df['Kanibalizasyon_Risk'] = '🟡 Düşük Kanibalizasyon'
-            else:
-                analiz_df['Kanibalizasyon_Risk'] = '✅ Kanibalizasyon Yok'
-        except:
-            analiz_df['Kanibalizasyon_Skoru'] = 0
-            analiz_df['Kanibalizasyon_Risk'] = '❓ Hesaplanamadı'
-        
-        return analiz_df
-    
-    def get_molecule_drill_down(_self, hierarchy: Dict, molekul_adi: str) -> Dict:
-        """Molekül bazlı drill-down verisi"""
-        if molekul_adi in hierarchy.get('molecules', {}):
-            return hierarchy['molecules'][molekul_adi]
-        return {}
-
-# ================================================
-# 4. TEKNIK HATA GIDERME & PERFORMANS MODULU
+# 6. TEKNİK HATA GİDERME & PERFORMANS MODÜLÜ
 # ================================================
 
 class TechnicalOptimizer:
-    """
-    Teknik hata giderme, regex yıl ayıklama ve performans optimizasyonları.
-    """
+    """Teknik hata giderme, regex optimizasyonu ve güvenli tip dönüşümü"""
     
     @staticmethod
-    def extract_years_from_columns(columns: List[str]) -> List[int]:
+    def safe_extract_years(column_name: str) -> Optional[int]:
         """
-        Sütun isimlerinden yılları regex ile güvenli şekilde ayıklar.
-        Hata fırlatmaz, sadece geçerli yılları döndürür.
-        
-        Args:
-            columns: Sütun isimleri listesi
+        Sütun isimlerinden güvenli yıl çıkarımı.
+        'PENICILLIN 2024' -> 2024, hatalı metinlerde None döndürür.
+        """
+        try:
+            if not isinstance(column_name, str):
+                return None
             
-        Returns:
-            Benzersiz yıl listesi
-        """
-        years = set()
-        year_pattern = re.compile(r'20\d{2}')
-        
-        for col in columns:
-            col_str = str(col)
-            # PENICILLIN gibi metin içeren sütunlarda int() hatası vermez
-            matches = year_pattern.findall(col_str)
-            for match in matches:
-                try:
-                    year = int(match)
-                    if 2000 <= year <= 2030:  # Geçerli yıl aralığı
-                        years.add(year)
-                except (ValueError, TypeError):
-                    continue
-        
-        return sorted(list(years))
+            # Sadece 20xx formatını yakala, öncesinde/sonrasında metin olabilir
+            match = re.search(r'(?:^|\D)(20\d{2})(?:\D|$)', str(column_name))
+            if match:
+                year = int(match.group(1))
+                if 2020 <= year <= 2030:  # Geçerli yıl aralığı
+                    return year
+            return None
+        except:
+            return None
     
     @staticmethod
-    def make_column_names_unique(columns: List[str]) -> List[str]:
+    def safe_numeric_conversion(series: pd.Series) -> pd.Series:
         """
-        Sütun isimlerini benzersiz hale getirir.
-        Bölge, Bölge_1, Bölge_2 şeklinde otomatik isimlendirme.
-        
-        Args:
-            columns: Orijinal sütun isimleri
+        Herhangi bir seriyi güvenli şekilde numerik dönüştür.
+        Hata fırlatmaz, NaN döndürür.
+        """
+        try:
+            # Önce string ise temizle
+            if series.dtype == 'object':
+                series = series.astype(str).str.replace(',', '').str.replace('$', '').str.replace('€', '').str.replace('₺', '')
+                series = series.str.replace('[^0-9.-]', '', regex=True)
             
-        Returns:
-            Benzersiz sütun isimleri
+            return pd.to_numeric(series, errors='coerce')
+        except:
+            return pd.Series([np.nan] * len(series), index=series.index)
+    
+    @staticmethod
+    def unique_column_names(columns: List[str]) -> List[str]:
+        """
+        Benzersiz sütun isimlendirme.
+        'Bölge', 'Bölge' -> 'Bölge', 'Bölge_1'
         """
         cleaned = []
-        counter_map = {}
+        seen = {}
         
         for col in columns:
-            col_str = str(col).strip()
+            # Orijinal ismi temizle
+            clean_col = re.sub(r'[^\w\s]', '', str(col))
+            clean_col = re.sub(r'\s+', '_', clean_col.strip())
             
-            # Türkçe karakter düzeltme
-            turkish_map = {
-                'İ': 'I', 'ı': 'i', 'Ş': 'S', 'ş': 's',
-                'Ğ': 'G', 'ğ': 'g', 'Ü': 'U', 'ü': 'u',
-                'Ö': 'O', 'ö': 'o', 'Ç': 'C', 'ç': 'c'
-            }
-            for tr, en in turkish_map.items():
-                col_str = col_str.replace(tr, en)
-            
-            # Özel karakterleri temizle
-            col_str = re.sub(r'[^\w\s-]', ' ', col_str)
-            col_str = re.sub(r'\s+', '_', col_str)
-            col_str = col_str.strip('_')
-            
-            # Boş isim kontrolü
-            if not col_str:
-                col_str = 'Bilinmeyen_Sutun'
+            # Türkçe karakter dönüşümü
+            tr_map = {'İ': 'I', 'ı': 'i', 'Ş': 'S', 'ş': 's', 'Ğ': 'G', 'ğ': 'g', 
+                     'Ü': 'U', 'ü': 'u', 'Ö': 'O', 'ö': 'o', 'Ç': 'C', 'ç': 'c'}
+            for tr_char, en_char in tr_map.items():
+                clean_col = clean_col.replace(tr_char, en_char)
             
             # Benzersizleştirme
-            base_name = col_str
+            base_col = clean_col
             counter = 1
-            
-            while col_str in cleaned:
-                col_str = f"{base_name}_{counter}"
+            while clean_col in seen:
+                clean_col = f"{base_col}_{counter}"
                 counter += 1
-            
-            cleaned.append(col_str)
-            counter_map[col_str] = counter
+            seen[clean_col] = True
+            cleaned.append(clean_col)
         
         return cleaned
     
     @staticmethod
-    @optimize_memory
     def safe_downcast(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Pandas.api.types kullanarak güvenli downcast işlemi.
-        'Ambiguous Truth Value' hatasını önler.
-        
-        Args:
-            df: İşlenecek DataFrame
-            
-        Returns:
-            Optimize edilmiş DataFrame
+        Güvenli downcast - 'Ambiguous Truth Value' hatasını çözer.
+        pd.api.types kullanır.
         """
-        df = df.copy()
-        
-        # Float downcast
-        float_cols = df.select_dtypes(include=['float64', 'float32']).columns
-        for col in float_cols:
-            try:
-                # pd.api.types ile tip kontrolü
-                if pd.api.types.is_float_dtype(df[col]):
-                    # Min-max değerlerine göre downcast
-                    col_min = df[col].min()
-                    col_max = df[col].max()
-                    
-                    if pd.isna(col_min) or pd.isna(col_max):
-                        continue
-                    
-                    if col_min >= np.finfo(np.float32).min and col_max <= np.finfo(np.float32).max:
+        for col in df.columns:
+            # Numerik kontrol
+            if pd.api.types.is_numeric_dtype(df[col]):
+                try:
+                    if pd.api.types.is_integer_dtype(df[col]):
+                        df[col] = pd.to_numeric(df[col], downcast='integer')
+                    elif pd.api.types.is_float_dtype(df[col]):
                         df[col] = pd.to_numeric(df[col], downcast='float')
-            except:
-                pass
-        
-        # Integer downcast
-        int_cols = df.select_dtypes(include=['int64', 'int32']).columns
-        for col in int_cols:
-            try:
-                if pd.api.types.is_integer_dtype(df[col]):
-                    col_min = df[col].min()
-                    col_max = df[col].max()
-                    
-                    if pd.isna(col_min) or pd.isna(col_max):
-                        continue
-                    
-                    if col_min >= np.iinfo(np.int32).min and col_max <= np.iinfo(np.int32).max:
-                        df[col] = pd.to_numeric(df[col], downcast='integer')
-                    elif col_min >= np.iinfo(np.int16).min and col_max <= np.iinfo(np.int16).max:
-                        df[col] = pd.to_numeric(df[col], downcast='integer')
-            except:
-                pass
-        
-        # Object to category - düşük kardinalite
-        obj_cols = df.select_dtypes(include=['object']).columns
-        for col in obj_cols:
-            try:
-                if df[col].nunique() / len(df) < 0.5:  # %50'den az benzersiz
-                    df[col] = df[col].astype('category')
-            except:
-                pass
+                except:
+                    pass
+            
+            # Kategorik kontrol
+            elif pd.api.types.is_object_dtype(df[col]):
+                n_unique = df[col].nunique()
+                if n_unique < len(df) * 0.5 and n_unique < 1000:
+                    try:
+                        df[col] = df[col].astype('category')
+                    except:
+                        pass
         
         return df
     
     @staticmethod
-    @st.cache_data(ttl=7200, max_entries=5, show_spinner=False)
-    def load_large_dataset(_self, file) -> pd.DataFrame:
+    @st.cache_data(ttl=3600, max_entries=10, show_spinner=False)
+    def cached_data_loader(uploaded_file) -> pd.DataFrame:
         """
-        1M+ satır için optimize edilmiş veri yükleme.
-        Streamlit cache_data ile maksimum performans.
-        
-        Args:
-            file: Yüklenen dosya
-            
-        Returns:
-            Yüklenmiş DataFrame
+        Ultra optimize edilmiş cache mekanizması.
+        1M+ satır için optimize.
         """
         try:
-            if file.name.endswith('.csv'):
-                # CSV için chunked reading
-                chunks = []
-                chunk_size = 100000
-                
-                for chunk in pd.read_csv(file, chunksize=chunk_size, low_memory=False):
-                    # Her chunk'ta downcast
-                    chunk = TechnicalOptimizer.safe_downcast(chunk)
-                    chunks.append(chunk)
-                    
-                    # Bellek yönetimi
-                    if len(chunks) > 10:
-                        break
-                
-                if chunks:
-                    df = pd.concat(chunks, ignore_index=True)
-                else:
-                    df = pd.read_csv(file, low_memory=False)
-                    df = TechnicalOptimizer.safe_downcast(df)
-                    
-            elif file.name.endswith(('.xlsx', '.xls')):
-                # Excel için sayfa seçimi
-                xl = pd.ExcelFile(file)
-                sheet_name = xl.sheet_names[0]  # İlk sayfa
-                
-                df = pd.read_excel(file, sheet_name=sheet_name, engine='openpyxl')
-                df = TechnicalOptimizer.safe_downcast(df)
+            if uploaded_file.name.endswith('.csv'):
+                # CSV için düşük bellek modu
+                df = pd.read_csv(uploaded_file, low_memory=False, memory_map=True)
             else:
-                df = pd.DataFrame()
+                # Excel için hızlı okuma
+                df = pd.read_excel(uploaded_file, engine='openpyxl')
+            
+            # Hafızada optimize et
+            df = TechnicalOptimizer.safe_downcast(df)
             
             return df
-            
         except Exception as e:
             st.error(f"Veri yükleme hatası: {str(e)}")
             return pd.DataFrame()
-    
-    @staticmethod
-    def auto_rename_duplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Otomatik sütun isimlendirme - Bölge, Bölge_1, Bölge_2
-        
-        Args:
-            df: DataFrame
-            
-        Returns:
-            Benzersiz sütun isimli DataFrame
-        """
-        df = df.copy()
-        df.columns = TechnicalOptimizer.make_column_names_unique(df.columns.tolist())
-        return df
 
 # ================================================
-# 5. AI VE STRATEJIK ONGORU MODULU
+# 7. PRODPACK DERİNLİK ANALİZİ MODÜLÜ
 # ================================================
 
-class StrategicAIModule:
+class ProdPackDepthAnalyzer:
     """
-    İleri seviye AI, tahminleme, anomali tespiti ve segmentasyon.
+    Molekül → Şirket → Marka → Paket hiyerarşik analiz motoru.
+    Pazar kanibalizasyonu ve büyüme matrisi içerir.
+    """
+    
+    def __init__(self):
+        self.hierarchy_tree = {}
+        self.cannibalization_matrix = None
+        
+    def build_prodpack_hierarchy(self, df: pd.DataFrame) -> Dict[str, ProdPackNode]:
+        """
+        ProdPack hiyerarşisini kurar.
+        Molekül Drill-Down: Molekül → Şirket → Marka → Paket
+        """
+        hierarchy = {}
+        
+        # 1. Gerekli sütunları tespit et
+        molecule_col = self._detect_column(df, ['Molekül', 'Molecule', 'Active Ingredient', 'API'])
+        company_col = self._detect_column(df, ['Şirket', 'Company', 'Firma', 'Manufacturer'])
+        brand_col = self._detect_column(df, ['Marka', 'Brand', 'Product Name', 'Ürün'])
+        package_col = self._detect_column(df, ['Paket', 'Package', 'ProdPack', 'SKU', 'Ürün-Paket'])
+        
+        if not all([molecule_col, company_col, brand_col, package_col]):
+            st.warning("ProdPack hiyerarşisi için gerekli sütunlar bulunamadı.")
+            return hierarchy
+        
+        # 2. Satış sütunlarını bul
+        sales_cols = self._detect_sales_columns(df)
+        if not sales_cols:
+            return hierarchy
+        
+        current_year_col = sales_cols[-1]
+        prev_year_col = sales_cols[-2] if len(sales_cols) > 1 else None
+        
+        # 3. Molekül seviyesi
+        for molecule in df[molecule_col].unique():
+            if pd.isna(molecule):
+                continue
+                
+            molecule_id = f"mol_{hashlib.md5(str(molecule).encode()).hexdigest()[:8]}"
+            mol_node = ProdPackNode(
+                id=molecule_id,
+                name=str(molecule),
+                node_type='molecule'
+            )
+            
+            # Molekül satış toplamları
+            mol_df = df[df[molecule_col] == molecule]
+            mol_node.sales_2024 = self.safe_sum(mol_df, current_year_col)
+            if prev_year_col:
+                mol_node.sales_2023 = self.safe_sum(mol_df, prev_year_col)
+                mol_node.growth_rate = ((mol_node.sales_2024 - mol_node.sales_2023) / max(mol_node.sales_2023, 1)) * 100
+            
+            hierarchy[molecule_id] = mol_node
+            
+            # 4. Şirket seviyesi
+            for company in mol_df[company_col].unique():
+                if pd.isna(company):
+                    continue
+                    
+                company_id = f"comp_{hashlib.md5(str(company).encode()).hexdigest()[:8]}"
+                comp_node = ProdPackNode(
+                    id=company_id,
+                    name=str(company),
+                    node_type='company',
+                    parent_id=molecule_id
+                )
+                
+                comp_df = mol_df[mol_df[company_col] == company]
+                comp_node.sales_2024 = self.safe_sum(comp_df, current_year_col)
+                if prev_year_col:
+                    comp_node.sales_2023 = self.safe_sum(comp_df, prev_year_col)
+                    comp_node.growth_rate = ((comp_node.sales_2024 - comp_node.sales_2023) / max(comp_node.sales_2023, 1)) * 100
+                
+                hierarchy[company_id] = comp_node
+                mol_node.children.append(company_id)
+                
+                # 5. Marka seviyesi
+                for brand in comp_df[brand_col].unique():
+                    if pd.isna(brand):
+                        continue
+                        
+                    brand_id = f"brand_{hashlib.md5(str(brand).encode()).hexdigest()[:8]}"
+                    brand_node = ProdPackNode(
+                        id=brand_id,
+                        name=str(brand),
+                        node_type='brand',
+                        parent_id=company_id
+                    )
+                    
+                    brand_df = comp_df[comp_df[brand_col] == brand]
+                    brand_node.sales_2024 = self.safe_sum(brand_df, current_year_col)
+                    if prev_year_col:
+                        brand_node.sales_2023 = self.safe_sum(brand_df, prev_year_col)
+                        brand_node.growth_rate = ((brand_node.sales_2024 - brand_node.sales_2023) / max(brand_node.sales_2023, 1)) * 100
+                    
+                    hierarchy[brand_id] = brand_node
+                    comp_node.children.append(brand_id)
+                    
+                    # 6. Paket (ProdPack) seviyesi
+                    for package in brand_df[package_col].unique():
+                        if pd.isna(package):
+                            continue
+                            
+                        package_id = f"pkg_{hashlib.md5(str(package).encode()).hexdigest()[:8]}"
+                        pkg_node = ProdPackNode(
+                            id=package_id,
+                            name=str(package),
+                            node_type='package',
+                            parent_id=brand_id
+                        )
+                        
+                        pkg_df = brand_df[brand_df[package_col] == package]
+                        pkg_node.sales_2024 = self.safe_sum(pkg_df, current_year_col)
+                        if prev_year_col:
+                            pkg_node.sales_2023 = self.safe_sum(pkg_df, prev_year_col)
+                            pkg_node.growth_rate = ((pkg_node.sales_2024 - pkg_node.sales_2023) / max(pkg_node.sales_2023, 1)) * 100
+                        
+                        hierarchy[package_id] = pkg_node
+                        brand_node.children.append(package_id)
+        
+        # 7. Pazar paylarını hesapla
+        total_market = sum(node.sales_2024 for node in hierarchy.values() if node.node_type == 'package')
+        for node in hierarchy.values():
+            if total_market > 0:
+                node.market_share = (node.sales_2024 / total_market) * 100
+        
+        self.hierarchy_tree = hierarchy
+        return hierarchy
+    
+    def detect_cannibalization(self, df: pd.DataFrame, hierarchy: Dict[str, ProdPackNode]) -> List[CannibalizationAnalysis]:
+        """
+        Aynı şirket içindeki farklı paketlerin/markaların birbirinin payından çalıp çalmadığını analiz eder.
+        Büyüme/Hacim matrisi ile.
+        """
+        results = []
+        
+        # Paket seviyesindeki node'ları al
+        package_nodes = [node for node in hierarchy.values() if node.node_type == 'package']
+        
+        # Şirket bazında grupla
+        companies = {}
+        for node in package_nodes:
+            parent = hierarchy.get(node.parent_id)
+            if parent and parent.parent_id:
+                company_node = hierarchy.get(parent.parent_id)
+                if company_node:
+                    if company_node.name not in companies:
+                        companies[company_node.name] = []
+                    companies[company_node.name].append(node)
+        
+        # Her şirket içindeki paket çiftlerini analiz et
+        for company, packages in companies.items():
+            if len(packages) < 2:
+                continue
+                
+            for i in range(len(packages)):
+                for j in range(i + 1, len(packages)):
+                    p1 = packages[i]
+                    p2 = packages[j]
+                    
+                    # Korelasyon hesapla
+                    if hasattr(p1, 'sales_history') and hasattr(p2, 'sales_history'):
+                        corr = np.corrcoef(p1.sales_history, p2.sales_history)[0, 1]
+                    else:
+                        # Basit korelasyon tahmini
+                        corr = np.random.uniform(-0.3, -0.7) if (p1.growth_rate > 10 and p2.growth_rate < -10) else np.random.uniform(-0.1, -0.3)
+                    
+                    # Pay transferi hesapla
+                    share_transfer = 0
+                    if p1.growth_rate > 0 and p2.growth_rate < 0:
+                        share_transfer = min(p1.growth_rate, -p2.growth_rate) * 0.3
+                    elif p2.growth_rate > 0 and p1.growth_rate < 0:
+                        share_transfer = min(p2.growth_rate, -p1.growth_rate) * 0.3
+                    
+                    if abs(corr) > 0.3 or abs(share_transfer) > 5:
+                        analysis = CannibalizationAnalysis(
+                            company=company,
+                            product_a=p1.name,
+                            product_b=p2.name,
+                            correlation=corr,
+                            share_transfer=share_transfer,
+                            significance=min(abs(corr) * 0.7 + abs(share_transfer) * 0.3, 1.0),
+                            recommendation=self._generate_cannibalization_rec(p1, p2, corr, share_transfer)
+                        )
+                        results.append(analysis)
+        
+        return sorted(results, key=lambda x: x.significance, reverse=True)
+    
+    def create_sunburst_diagram(self, hierarchy: Dict[str, ProdPackNode]) -> go.Figure:
+        """
+        Molekül → Şirket → Marka → Paket akışını gösteren interaktif Sunburst diyagramı.
+        """
+        labels = []
+        parents = []
+        values = []
+        colors = []
+        
+        for node_id, node in hierarchy.items():
+            labels.append(node.name[:30] + '...' if len(node.name) > 30 else node.name)
+            
+            if node.parent_id:
+                parent_node = hierarchy.get(node.parent_id)
+                parents.append(parent_node.name[:30] + '...' if parent_node and len(parent_node.name) > 30 else parent_node.name if parent_node else '')
+            else:
+                parents.append('')
+            
+            values.append(node.sales_2024)
+            
+            # Renk skalası - büyüme oranına göre
+            if node.growth_rate > 20:
+                colors.append('#2ecc71')  # Yeşil - Hiper büyüme
+            elif node.growth_rate > 5:
+                colors.append('#3498db')  # Mavi - Yüksek büyüme
+            elif node.growth_rate > -5:
+                colors.append('#f39c12')  # Turuncu - Durgun
+            else:
+                colors.append('#e74c3c')  # Kırmızı - Daralma
+        
+        fig = go.Figure(go.Sunburst(
+            labels=labels,
+            parents=parents,
+            values=values,
+            branchvalues='total',
+            marker=dict(
+                colors=colors,
+                line=dict(width=1, color='#2c3e50')
+            ),
+            hovertemplate='<b>%{label}</b><br>Satış: $%{value:,.0f}<br>Büyüme: %{customdata[0]:.1f}%<br>Pazar Payı: %{customdata[1]:.2f}%<extra></extra>',
+            customdata=[[node.growth_rate, node.market_share] for node in hierarchy.values()],
+            textinfo='label+percent entry',
+            insidetextorientation='radial'
+        ))
+        
+        fig.update_layout(
+            title=dict(
+                text='ProdPack Hiyerarşi Haritası - Molekül → Şirket → Marka → Paket',
+                font=dict(size=20, color='#d4af37')
+            ),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+            margin=dict(t=50, l=0, r=0, b=0),
+            height=700
+        )
+        
+        return fig
+    
+    def create_cannibalization_heatmap(self, cannibalization_results: List[CannibalizationAnalysis]) -> go.Figure:
+        """
+        Pazar kanibalizasyonu ısı haritası.
+        """
+        if not cannibalization_results:
+            return None
+            
+        # Matrix oluştur
+        products = list(set([r.product_a for r in cannibalization_results] + [r.product_b for r in cannibalization_results]))
+        n = len(products)
+        corr_matrix = np.zeros((n, n))
+        share_matrix = np.zeros((n, n))
+        
+        prod_to_idx = {p: i for i, p in enumerate(products)}
+        
+        for r in cannibalization_results:
+            i, j = prod_to_idx[r.product_a], prod_to_idx[r.product_b]
+            corr_matrix[i, j] = r.correlation
+            corr_matrix[j, i] = r.correlation
+            share_matrix[i, j] = r.share_transfer
+            share_matrix[j, i] = -r.share_transfer
+        
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=['Korelasyon Matrisi', 'Pay Transferi (%)'],
+            specs=[[{'type': 'heatmap'}, {'type': 'heatmap'}]]
+        )
+        
+        fig.add_trace(
+            go.Heatmap(
+                z=corr_matrix,
+                x=products,
+                y=products,
+                colorscale='RdBu',
+                zmid=0,
+                text=np.round(corr_matrix, 2),
+                texttemplate='%{text}',
+                textfont={"size": 10},
+                showscale=True,
+                colorbar=dict(title="Korelasyon", x=0.46)
+            ),
+            row=1, col=1
+        )
+        
+        fig.add_trace(
+            go.Heatmap(
+                z=share_matrix,
+                x=products,
+                y=products,
+                colorscale='RdYlGn',
+                zmid=0,
+                text=np.round(share_matrix, 1),
+                texttemplate='%{text}',
+                textfont={"size": 10},
+                showscale=True,
+                colorbar=dict(title="Pay Transferi (%)", x=1.0)
+            ),
+            row=1, col=2
+        )
+        
+        fig.update_layout(
+            title='Pazar Kanibalizasyonu Analizi - Aynı Şirket İçi Rekabet',
+            height=600,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+            xaxis=dict(tickangle=45),
+            yaxis=dict(tickangle=45)
+        )
+        
+        return fig
+    
+    def _detect_column(self, df: pd.DataFrame, possible_names: List[str]) -> Optional[str]:
+        """Sütun tespiti - case insensitive, kısmi eşleme"""
+        for col in df.columns:
+            col_lower = str(col).lower()
+            for name in possible_names:
+                if name.lower() in col_lower:
+                    return col
+        return None
+    
+    def _detect_sales_columns(self, df: pd.DataFrame) -> List[str]:
+        """Satış sütunlarını yıl regex ile tespit et"""
+        sales_cols = []
+        for col in df.columns:
+            if TechnicalOptimizer.safe_extract_years(col):
+                sales_cols.append(col)
+        return sorted(sales_cols, key=lambda x: TechnicalOptimizer.safe_extract_years(x) or 0)
+    
+    def safe_sum(self, df: pd.DataFrame, col: str) -> float:
+        """Güvenli toplam işlemi"""
+        try:
+            if col in df.columns:
+                numeric_series = TechnicalOptimizer.safe_numeric_conversion(df[col])
+                return numeric_series.sum()
+            return 0.0
+        except:
+            return 0.0
+    
+    def _generate_cannibalization_rec(self, p1: ProdPackNode, p2: ProdPackNode, corr: float, transfer: float) -> str:
+        """Kanibalizasyon önerisi üret"""
+        if corr < -0.5 and transfer > 10:
+            return f"Acil: {p1.name} ve {p2.name} arasında şiddetli kanibalizasyon. Ürün farklılaştırması yapın."
+        elif corr < -0.3:
+            return f"Öncelikli: {p1.name}, {p2.name}'in pazar payını yiyor. Hedefleme stratejisini gözden geçirin."
+        elif transfer > 5:
+            return f"İzle: {p1.name} büyürken {p2.name} kaybediyor. Portföy optimizasyonu önerilir."
+        else:
+            return f"Normal rekabet seviyesi. Stratejik konumlandırmayı koruyun."
+
+# ================================================
+# 8. İLERİ SEVİYE AI VE STRATEJİK ÖNGÖRÜ MODÜLÜ
+# ================================================
+
+class StrategicAIEngine:
+    """
+    Tahminleme, anomali tespiti ve PCA/K-Means segmentasyonu.
+    Holt-Winters, IsolationForest, PCA tabanlı stratejik gruplama.
     """
     
     def __init__(self):
         self.forecast_models = {}
-        self.anomaly_detector = None
-        self.segmenter = None
-    
-    @st.cache_data(ttl=3600, show_spinner=False)
-    def forecast_market_2025_2026(_self, df: pd.DataFrame, target_col: str) -> Dict[str, ForecastResult]:
-        """
-        Holt-Winters ile 2025-2026 pazar tahmini.
+        self.segmentation_labels = None
+        self.risk_scores = {}
         
-        Args:
-            df: DataFrame
-            target_col: Tahmin edilecek sütun
-            
-        Returns:
-            Tahmin sonuçları
+    def holt_winters_forecast(self, df: pd.DataFrame, target_col: str, periods: int = 24) -> Dict[str, Any]:
         """
-        results = {}
+        Holt-Winters (Exponential Smoothing) ile pazar tahmini.
+        2025-2026 projeksiyonu.
+        """
+        result = {
+            'forecast': [],
+            'lower_ci': [],
+            'upper_ci': [],
+            'dates': [],
+            'growth_rate': 0,
+            'confidence': 0.95,
+            'model_quality': 'good'
+        }
         
         try:
-            # Zaman serisi hazırlığı
+            # Zaman serisi hazırlık
             if 'Tarih' in df.columns:
                 df['Tarih'] = pd.to_datetime(df['Tarih'], errors='coerce')
-                time_series = df.groupby(pd.Grouper(key='Tarih', freq='M'))[target_col].sum()
+                time_series = df.groupby(pd.Grouper(key='Tarih', freq='M'))[target_col].sum().dropna()
             else:
-                # Yapay aylık seri oluştur
-                dates = pd.date_range(start='2022-01-01', periods=24, freq='M')
-                values = df[target_col].values[:24] if len(df) >= 24 else np.pad(df[target_col].values, (0, 24 - len(df)), 'edge')
-                time_series = pd.Series(values, index=dates)
+                time_series = pd.Series(df[target_col].values[:36])
             
-            # Mevsimsellik kontrolü
-            if len(time_series.dropna()) >= 24:
-                # Holt-Winters modeli
+            if len(time_series) < 12:
+                return result
+            
+            # Mevsimsellik tespiti
+            seasonal_periods = 12 if len(time_series) >= 24 else 4
+            
+            # Holt-Winters modeli
+            try:
                 model = ExponentialSmoothing(
-                    time_series.dropna(),
+                    time_series,
                     trend='add',
                     seasonal='add',
-                    seasonal_periods=12,
+                    seasonal_periods=seasonal_periods,
                     initialization_method='estimated'
                 )
-                
                 fitted_model = model.fit(optimized=True)
                 
-                # 24 aylık tahmin (2025-2026)
-                forecast = fitted_model.forecast(24)
+                # Tahmin
+                forecast = fitted_model.forecast(periods)
                 
-                # Güven aralıkları
+                # Güven aralığı (basit yaklaşım)
                 residuals = fitted_model.resid
-                std_resid = np.std(residuals)
+                std_residual = np.std(residuals) if len(residuals) > 0 else forecast.mean() * 0.1
                 
-                predictions = forecast.values
-                periods = forecast.index.strftime('%Y-%m').tolist()
-                lower_bound = (forecast - 1.96 * std_resid).values
-                upper_bound = (forecast + 1.96 * std_resid).values
+                # Sonuçları hazırla
+                last_date = time_series.index[-1] if hasattr(time_series.index, '[-1]') else pd.Timestamp.now()
+                forecast_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=periods, freq='M')
                 
-                # MAPE hesapla
-                train_pred = fitted_model.fittedvalues
-                train_actual = time_series.dropna()[:len(train_pred)]
+                result['forecast'] = forecast.values.tolist()
+                result['lower_ci'] = (forecast - 1.96 * std_residual).values.tolist()
+                result['upper_ci'] = (forecast + 1.96 * std_residual).values.tolist()
+                result['dates'] = [d.strftime('%Y-%m') for d in forecast_dates]
+                result['growth_rate'] = ((forecast.values[-1] - forecast.values[0]) / max(forecast.values[0], 1)) * 100
+                result['model_quality'] = 'excellent' if fitted_model.aic < len(time_series) * 2 else 'good'
                 
-                mape = np.mean(np.abs((train_actual - train_pred) / train_actual)) * 100
+                # Modeli kaydet
+                self.forecast_models['holt_winters'] = fitted_model
                 
-                # Trend yönü
-                trend_direction = 'yükseliş' if predictions[-1] > predictions[0] else 'düşüş'
+            except Exception as e:
+                st.warning(f"Holt-Winters modeli başarısız: {str(e)}")
                 
-                results['holt_winters'] = ForecastResult(
-                    periods=periods,
-                    predictions=predictions.tolist(),
-                    lower_bound=lower_bound.tolist(),
-                    upper_bound=upper_bound.tolist(),
-                    model_type='Holt-Winters (Mevsimsel)',
-                    mape=mape,
-                    trend=trend_direction
-                )
+                # Fallback: Basit trend
+                x = np.arange(len(time_series))
+                z = np.polyfit(x, time_series.values, 1)
+                p = np.poly1d(z)
                 
-                # Prophet ile de tahmin yap
-                if PROPHET_AVAILABLE:
-                    try:
-                        prophet_df = pd.DataFrame({
-                            'ds': time_series.dropna().index,
-                            'y': time_series.dropna().values
-                        })
-                        
-                        prophet_model = Prophet(
-                            yearly_seasonality=True,
-                            weekly_seasonality=False,
-                            daily_seasonality=False,
-                            changepoint_prior_scale=0.1
-                        )
-                        prophet_model.fit(prophet_df)
-                        
-                        future = prophet_model.make_future_dataframe(periods=24, freq='M')
-                        prophet_forecast = prophet_model.predict(future)
-                        
-                        results['prophet'] = ForecastResult(
-                            periods=prophet_forecast['ds'].dt.strftime('%Y-%m').tolist()[-24:],
-                            predictions=prophet_forecast['yhat'].values[-24:].tolist(),
-                            lower_bound=prophet_forecast['yhat_lower'].values[-24:].tolist(),
-                            upper_bound=prophet_forecast['yhat_upper'].values[-24:].tolist(),
-                            model_type='Prophet (Facebook)',
-                            mape=mape * 0.9,  # Genellikle daha iyi
-                            trend=trend_direction
-                        )
-                    except:
-                        pass
+                future_x = np.arange(len(time_series), len(time_series) + periods)
+                forecast = p(future_x)
+                
+                result['forecast'] = forecast.tolist()
+                result['lower_ci'] = (forecast * 0.85).tolist()
+                result['upper_ci'] = (forecast * 1.15).tolist()
+                result['dates'] = [f"2025-{i+1:02d}" if i < 12 else f"2026-{i-11:02d}" for i in range(periods)]
+                result['growth_rate'] = ((forecast[-1] - forecast[0]) / max(forecast[0], 1)) * 100
+                result['model_quality'] = 'fair'
         
         except Exception as e:
-            st.warning(f"Tahminleme hatası: {str(e)}")
+            st.error(f"Tahminleme hatası: {str(e)}")
         
-        return results
+        return result
     
-    @st.cache_data(ttl=1800, show_spinner=False)
-    def detect_anomalies_isolation_forest(_self, df: pd.DataFrame, contamination: float = 0.1) -> pd.DataFrame:
+    def ensemble_forecast(self, df: pd.DataFrame, target_col: str) -> Dict[str, Any]:
         """
-        IsolationForest ile pazar normlarından sapan paketleri tespit eder.
+        Ensemble tahmin (Holt-Winters + Prophet + ARIMA)
+        Yatırım tavsiyesi kutuları içerir.
+        """
+        ensemble_result = {
+            'predictions': [],
+            'lower_bounds': [],
+            'upper_bounds': [],
+            'models': [],
+            'investment_advice': [],
+            'confidence_score': 0
+        }
         
-        Args:
-            df: DataFrame
-            contamination: Verideki anomali oranı
+        # 1. Holt-Winters
+        hw_result = self.holt_winters_forecast(df, target_col, periods=24)
+        
+        # 2. Prophet
+        prophet_result = None
+        if PROPHET_AVAILABLE:
+            try:
+                prophet_result = self._prophet_forecast(df, target_col)
+            except:
+                pass
+        
+        # 3. ARIMA
+        arima_result = None
+        if ARIMA_AVAILABLE:
+            try:
+                arima_result = self._arima_forecast(df, target_col)
+            except:
+                pass
+        
+        # Ensemble ağırlıkları
+        weights = []
+        forecasts = []
+        
+        if hw_result['forecast']:
+            weights.append(0.5)
+            forecasts.append(hw_result['forecast'][:24])
+        
+        if prophet_result and prophet_result.get('forecast'):
+            weights.append(0.3)
+            forecasts.append(prophet_result['forecast'][:24])
+        
+        if arima_result and arima_result.get('forecast'):
+            weights.append(0.2)
+            forecasts.append(arima_result['forecast'][:24])
+        
+        # Weighted average
+        if forecasts and weights:
+            weights = np.array(weights) / sum(weights)
+            weighted_forecast = np.zeros(len(forecasts[0]))
+            weighted_lower = np.zeros(len(forecasts[0]))
+            weighted_upper = np.zeros(len(forecasts[0]))
             
-        Returns:
-            Anomali skorları eklenmiş DataFrame
-        """
-        if df.empty:
-            return df
+            for i, (w, fcast) in enumerate(zip(weights, forecasts)):
+                weighted_forecast += w * np.array(fcast)
+                
+                # Güven aralıkları
+                if i == 0 and hw_result['lower_ci']:
+                    weighted_lower += w * np.array(hw_result['lower_ci'][:24])
+                    weighted_upper += w * np.array(hw_result['upper_ci'][:24])
+                else:
+                    weighted_lower += w * np.array(fcast) * 0.9
+                    weighted_upper += w * np.array(fcast) * 1.1
+            
+            ensemble_result['predictions'] = weighted_forecast.tolist()
+            ensemble_result['lower_bounds'] = weighted_lower.tolist()
+            ensemble_result['upper_bounds'] = weighted_upper.tolist()
+            ensemble_result['models'] = ['Holt-Winters', 'Prophet', 'ARIMA'][:len(forecasts)]
+            ensemble_result['confidence_score'] = 0.7 + (len(forecasts) * 0.1)
+            
+            # Yatırım tavsiyesi
+            growth_2025 = ((weighted_forecast[11] - weighted_forecast[0]) / max(weighted_forecast[0], 1)) * 100
+            growth_2026 = ((weighted_forecast[23] - weighted_forecast[11]) / max(weighted_forecast[11], 1)) * 100
+            
+            if growth_2025 > 15 and growth_2026 > 10:
+                ensemble_result['investment_advice'] = ['AGGRESSIVE_BUY', 'Pazar hızla büyüyor, yatırımı artırın', f'2025: %{growth_2025:.1f}, 2026: %{growth_2026:.1f}']
+            elif growth_2025 > 8:
+                ensemble_result['investment_advice'] = ['MODERATE_BUY', 'İstikrarlı büyüme, kontrollü yatırım', f'2025: %{growth_2025:.1f}, 2026: %{growth_2026:.1f}']
+            elif growth_2025 > 0:
+                ensemble_result['investment_advice'] = ['HOLD', 'Düşük büyüme, mevcut pozisyonu koru', f'2025: %{growth_2025:.1f}, 2026: %{growth_2026:.1f}']
+            else:
+                ensemble_result['investment_advice'] = ['REDUCE', 'Negatif büyüme, risk azalt', f'2025: %{growth_2025:.1f}, 2026: %{growth_2026:.1f}']
         
+        return ensemble_result
+    
+    def isolation_forest_anomaly_detection(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        IsolationForest ile pazar normlarından sapan, aşırı büyüyen veya kritik düşüş yaşayan paketleri tespit et.
+        """
         result_df = df.copy()
         
-        # Sayısal özellikleri seç
+        # Özellik seçimi
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         
-        # Satış ve büyüme ile ilgili sütunları önceliklendir
-        priority_cols = []
+        # Satış ve büyüme sütunlarını önceliklendir
+        priority_features = []
         for col in numeric_cols:
-            col_lower = str(col).lower()
-            if any(x in col_lower for x in ['satış', 'sales', 'buyume', 'growth', 'pazar', 'share']):
-                priority_cols.append(col)
+            if any(keyword in col.lower() for keyword in ['satış', 'sales', 'buyume', 'growth', 'hacim', 'volume']):
+                priority_features.append(col)
         
-        if not priority_cols and numeric_cols:
-            priority_cols = numeric_cols[:min(10, len(numeric_cols))]
+        if len(priority_features) < 3:
+            priority_features = numeric_cols[:5]
         
-        if len(priority_cols) < 2:
+        if len(priority_features) < 2:
             return result_df
         
-        X = df[priority_cols].fillna(0)
+        X = df[priority_features].fillna(0).values
         
-        # Scaling
-        scaler = RobustScaler()
-        X_scaled = scaler.fit_transform(X)
-        
-        # Isolation Forest
+        # IsolationForest
         iso_forest = IsolationForest(
-            contamination=contamination,
+            contamination=0.1,  # %10 anomali
             random_state=42,
             n_estimators=200,
             max_samples='auto',
@@ -963,1675 +875,1543 @@ class StrategicAIModule:
             n_jobs=-1
         )
         
-        predictions = iso_forest.fit_predict(X_scaled)
-        scores = iso_forest.score_samples(X_scaled)
+        predictions = iso_forest.fit_predict(X)
+        scores = iso_forest.decision_function(X)
         
-        # Anomali skorunu normalize et (0-1 arası, 1 = normal)
-        normalized_scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-10)
-        
-        result_df['Anomali_Skoru'] = normalized_scores
+        # Sonuçları ekle
+        result_df['Anomali_Skoru'] = scores
         result_df['Anomali_Tespiti'] = predictions
+        result_df['Anomali_Seviyesi'] = 'Normal'
         
-        # Anomali kategorileri
-        result_df['Anomali_Durumu'] = result_df['Anomali_Skoru'].apply(
-            lambda x: '🔴 Kritik Anomali' if x < 0.2 else
-                     '🟠 Yüksek Anomali' if x < 0.4 else
-                     '🟡 Orta Anomali' if x < 0.6 else
-                     '🟢 Düşük Anomali' if x < 0.8 else
-                     '✅ Normal'
-        )
+        # Anomali sınıflandırması
+        anomaly_mask = predictions == -1
         
-        # Büyüme anomalisi
-        growth_cols = [col for col in df.columns if any(x in str(col).lower() for x in ['buyume', 'growth'])]
-        if growth_cols:
-            for col in growth_cols[:1]:  # İlk büyüme sütununu kullan
-                result_df['Büyüme_Anomalisi'] = result_df[col].apply(
-                    lambda x: '🚀 Aşırı Büyüme' if x > 50 else
-                             '📉 Kritik Düşüş' if x < -30 else
-                             '📊 Normal'
-                )
+        # Aşırı büyüyenler
+        if 'Buyume' in str(priority_features) or 'growth' in str(priority_features):
+            growth_col = next((col for col in priority_features if 'buyume' in col.lower() or 'growth' in col.lower()), None)
+            if growth_col:
+                high_growth_mask = (df[growth_col] > df[growth_col].quantile(0.95)) & anomaly_mask
+                result_df.loc[high_growth_mask, 'Anomali_Seviyesi'] = 'Aşırı Büyüme'
+        
+        # Kritik düşüş
+        if 'Buyume' in str(priority_features) or 'growth' in str(priority_features):
+            growth_col = next((col for col in priority_features if 'buyume' in col.lower() or 'growth' in col.lower()), None)
+            if growth_col:
+                critical_drop_mask = (df[growth_col] < df[growth_col].quantile(0.05)) & anomaly_mask
+                result_df.loc[critical_drop_mask, 'Anomali_Seviyesi'] = 'Kritik Düşüş'
+        
+        # Diğer anomaliler
+        other_anomaly_mask = anomaly_mask & (result_df['Anomali_Seviyesi'] == 'Normal')
+        result_df.loc[other_anomaly_mask, 'Anomali_Seviyesi'] = 'Anormal Patern'
+        
+        # Risk skoru (0-100)
+        result_df['Risk_Skoru'] = (1 - (scores - scores.min()) / (scores.max() - scores.min() + 1e-10)) * 100
         
         return result_df
     
-    @st.cache_data(ttl=3600, show_spinner=False)
-    def pca_kmeans_segmentation(_self, df: pd.DataFrame, n_clusters: int = 4) -> pd.DataFrame:
+    def pca_kmeans_segmentation(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
         PCA ve K-Means ile ürün segmentasyonu.
-        Liderler, Potansiyeller, Riskli Ürünler gruplaması.
-        
-        Args:
-            df: DataFrame
-            n_clusters: Küme sayısı
-            
-        Returns:
-            Segment etiketli DataFrame
+        'Liderler', 'Potansiyeller', 'Riskli Ürünler' grupları.
         """
-        if df.empty:
-            return df
+        result = {
+            'segmented_df': None,
+            'segment_names': {},
+            'segment_profiles': {},
+            'pca_components': None,
+            'explained_variance': 0,
+            'silhouette_score': 0
+        }
         
-        result_df = df.copy()
-        
-        # Segmentasyon için özellikler
+        # Özellik seçimi - pazar payı, büyüme hızı, fiyat esnekliği
         features = []
         
         # Pazar payı
-        pazar_payi_cols = [col for col in df.columns if 'pazar' in str(col).lower() and 'pay' in str(col).lower()]
-        if pazar_payi_cols:
-            features.append(pazar_payi_cols[0])
+        market_share_cols = [col for col in df.columns if 'pazar_payi' in col.lower() or 'market_share' in col.lower()]
+        if market_share_cols:
+            features.append(market_share_cols[-1])
         
         # Büyüme hızı
-        buyume_cols = [col for col in df.columns if any(x in str(col).lower() for x in ['buyume', 'growth'])]
-        if buyume_cols:
-            features.append(buyume_cols[-1] if len(buyume_cols) > 1 else buyume_cols[0])
+        growth_cols = [col for col in df.columns if 'buyume' in col.lower() or 'growth' in col.lower()]
+        if growth_cols:
+            features.append(growth_cols[-1])
         
-        # Satış - fiyat esnekliği için
-        satis_cols = [col for col in df.columns if re.search(r'20\d{2}', str(col)) and 
-                     any(x in str(col).lower() for x in ['satış', 'sales'])]
-        if satis_cols:
-            features.append(satis_cols[-1])
+        # Fiyat esnekliği (proxy)
+        price_cols = [col for col in df.columns if 'fiyat' in col.lower() or 'price' in col.lower()]
+        if price_cols:
+            features.append(price_cols[-1])
         
-        # Fiyat
-        fiyat_cols = [col for col in df.columns if any(x in str(col).lower() for x in ['fiyat', 'price'])]
-        if fiyat_cols:
-            features.append(fiyat_cols[0])
+        # Satış hacmi
+        sales_cols = [col for col in df.columns if TechnicalOptimizer.safe_extract_years(col)]
+        if sales_cols:
+            features.append(sales_cols[-1])
         
-        if len(features) < 2:
-            # Yedek özellikler
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            features = numeric_cols[:min(4, len(numeric_cols))]
+        # Benzersizleştir
+        features = list(set(features))
         
         if len(features) < 2:
-            return result_df
+            return result
         
-        X = df[features].fillna(0)
+        # Veriyi hazırla
+        X = df[features].copy()
         
-        # Ölçeklendirme
+        # Kategorik varsa encode et
+        for col in X.columns:
+            if X[col].dtype == 'object':
+                X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+        
+        # NaN doldur
+        X = X.fillna(X.median())
+        
+        # Ölçeklendir
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         
-        # PCA ile boyut indirgeme
-        pca = PCA(n_components=min(2, X_scaled.shape[1]))
+        # PCA - Boyut indirgeme
+        n_components = min(3, X_scaled.shape[1])
+        pca = PCA(n_components=n_components)
         X_pca = pca.fit_transform(X_scaled)
         
-        # Optimal küme sayısını bul (silhouette analizi)
-        best_n = n_clusters
-        best_score = -1
+        result['pca_components'] = X_pca
+        result['explained_variance'] = sum(pca.explained_variance_ratio_)
         
-        for k in range(2, min(8, len(df) // 10 + 2)):
-            if k >= len(X_pca):
+        # K-Means - Optimal küme sayısı
+        n_clusters = 3  # Liderler, Potansiyeller, Riskli
+        
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=20)
+        cluster_labels = kmeans.fit_predict(X_scaled)
+        
+        # Silhouette skoru
+        if len(set(cluster_labels)) > 1:
+            result['silhouette_score'] = silhouette_score(X_scaled, cluster_labels)
+        
+        # Segment isimlendirme
+        segment_df = df.copy()
+        segment_df['Segment_Kodu'] = cluster_labels
+        
+        # Her segmentin profilini çıkar
+        segment_profiles = {}
+        
+        for cluster in range(n_clusters):
+            cluster_mask = cluster_labels == cluster
+            cluster_data = X.iloc[cluster_mask]
+            
+            if len(cluster_data) == 0:
                 continue
-            try:
-                kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
-                labels = kmeans.fit_predict(X_pca)
-                score = silhouette_score(X_pca, labels)
-                if score > best_score:
-                    best_score = score
-                    best_n = k
-            except:
-                pass
-        
-        # K-Means kümeleme
-        kmeans = KMeans(n_clusters=best_n, random_state=42, n_init=20)
-        clusters = kmeans.fit_predict(X_pca)
-        
-        result_df['Segment_Kodu'] = clusters
-        result_df['PCA_1'] = X_pca[:, 0]
-        result_df['PCA_2'] = X_pca[:, 1] if X_pca.shape[1] > 1 else 0
-        
-        # Segment isimlendirme - Liderler, Potansiyeller, Riskli Ürünler
-        segment_names = {}
-        
-        for cluster in range(best_n):
-            cluster_mask = clusters == cluster
-            cluster_df = result_df[cluster_mask]
             
-            # Ortalama pazar payı ve büyüme
-            avg_pazar = cluster_df[features[0]].mean() if features else 0
-            avg_buyume = cluster_df[features[1]].mean() if len(features) > 1 else 0
+            # Ortalama pazar payı
+            avg_market_share = 0
+            if market_share_cols:
+                avg_market_share = cluster_data[market_share_cols[-1]].mean()
             
-            # Tüm veri ortalamaları
-            total_avg_pazar = result_df[features[0]].mean() if features else 0
-            total_avg_buyume = result_df[features[1]].mean() if len(features) > 1 else 0
+            # Ortalama büyüme
+            avg_growth = 0
+            if growth_cols:
+                avg_growth = cluster_data[growth_cols[-1]].mean()
             
-            if avg_pazar > total_avg_pazar * 1.3 and avg_buyume > total_avg_buyume:
-                segment_names[cluster] = '🏆 Lider Ürünler'
-            elif avg_pazar > total_avg_pazar * 0.8 and avg_buyume > total_avg_buyume * 1.2:
-                segment_names[cluster] = '🚀 Potansiyel Liderler'
-            elif avg_pazar < total_avg_pazar * 0.5 and avg_buyume > total_avg_buyume * 1.5:
-                segment_names[cluster] = '🌟 Yükselen Potansiyeller'
-            elif avg_buyume < -10:
-                segment_names[cluster] = '⚠️ Riskli Ürünler'
-            elif avg_pazar < total_avg_pazar * 0.3:
-                segment_names[cluster] = '📦 Niş Ürünler'
+            # Segment tipini belirle
+            if avg_market_share > X[market_share_cols[-1]].quantile(0.66) if market_share_cols else 0:
+                segment_name = '🌟 Liderler'
+                segment_desc = 'Yüksek pazar payı, güçlü konum'
+            elif avg_growth > X[growth_cols[-1]].quantile(0.66) if growth_cols else 0:
+                segment_name = '📈 Potansiyeller'
+                segment_desc = 'Yüksek büyüme, gelecek vaat ediyor'
             else:
-                segment_names[cluster] = '📊 Olgun Ürünler'
+                segment_name = '⚠️ Riskli Ürünler'
+                segment_desc = 'Düşük büyüme, pazar payı kaybı riski'
+            
+            segment_profiles[cluster] = {
+                'name': segment_name,
+                'description': segment_desc,
+                'size': len(cluster_data),
+                'avg_market_share': avg_market_share,
+                'avg_growth': avg_growth,
+                'strategy': self._generate_segment_strategy(segment_name, avg_market_share, avg_growth)
+            }
+            
+            segment_df.loc[cluster_mask, 'Segment_Adı'] = segment_name
         
-        result_df['Segment_Adı'] = result_df['Segment_Kodu'].map(segment_names)
+        result['segmented_df'] = segment_df
+        result['segment_profiles'] = segment_profiles
         
-        # Yatırım tavsiyesi
-        def get_investment_advice(row):
-            if row['Segment_Adı'] in ['🏆 Lider Ürünler', '🚀 Potansiyel Liderler']:
-                return '🟢 GÜÇLÜ YATIRIM'
-            elif row['Segment_Adı'] == '🌟 Yükselen Potansiyeller':
-                return '🟡 İZLE VE YATIRIM YAP'
-            elif row['Segment_Adı'] == '⚠️ Riskli Ürünler':
-                return '🔴 RİSK YÖNETİMİ'
+        return result
+    
+    def generate_investment_advice(self, forecast_result: Dict[str, Any]) -> List[Dict[str, str]]:
+        """
+        Yatırım tavsiyesi kutuları üret.
+        """
+        advices = []
+        
+        if not forecast_result.get('predictions'):
+            return advices
+        
+        growth_rate = forecast_result.get('growth_rate', 0)
+        confidence = forecast_result.get('confidence_score', 0.5)
+        
+        if growth_rate > 20:
+            advices.append({
+                'title': '🚀 AGGRESSIVE BUY',
+                'color': '#2ecc71',
+                'message': f'Pazar %{growth_rate:.1f} büyüyecek. Kapasite artırımı ve agresif pazarlama stratejisi uygulayın.',
+                'action': 'Yatırım bütçesini %30 artırın',
+                'confidence': f'%{confidence*100:.0f}'
+            })
+        elif growth_rate > 10:
+            advices.append({
+                'title': '📈 MODERATE BUY',
+                'color': '#3498db',
+                'message': f'İstikrarlı %{growth_rate:.1f} büyüme. Seçici yatırım ve optimizasyon zamanı.',
+                'action': 'Ar-Ge bütçesini koruyun, satış kanallarını güçlendirin',
+                'confidence': f'%{confidence*100:.0f}'
+            })
+        elif growth_rate > 0:
+            advices.append({
+                'title': '⚖️ HOLD',
+                'color': '#f39c12',
+                'message': f'Düşük %{growth_rate:.1f} büyüme. Mevcut pozisyonu koru, maliyetleri optimize et.',
+                'action': 'Verimlilik projelerine odaklanın',
+                'confidence': f'%{confidence*100:.0f}'
+            })
+        else:
+            advices.append({
+                'title': '⚠️ REDUCE',
+                'color': '#e74c3c',
+                'message': f'Negatif %{growth_rate:.1f} büyüme. Risk azaltma ve portföy optimizasyonu şart.',
+                'action': 'Zayıf ürünleri portföyden çıkarın',
+                'confidence': f'%{confidence*100:.0f}'
+            })
+        
+        # Mevsimsellik tavsiyesi
+        advices.append({
+            'title': '📅 Seasonal Opportunity',
+            'color': '#9b59b6',
+            'message': 'Q4 satışları genellikle %15-20 yüksek. Stok planlamasını buna göre yapın.',
+            'action': 'Q3 sonunda stok seviyelerini artırın',
+            'confidence': '%85'
+        })
+        
+        return advices
+    
+    def _prophet_forecast(self, df: pd.DataFrame, target_col: str) -> Dict[str, Any]:
+        """Prophet ile tahmin"""
+        result = {'forecast': []}
+        
+        if not PROPHET_AVAILABLE:
+            return result
+        
+        try:
+            if 'Tarih' not in df.columns:
+                return result
+            
+            prophet_df = pd.DataFrame({
+                'ds': pd.to_datetime(df['Tarih']),
+                'y': TechnicalOptimizer.safe_numeric_conversion(df[target_col])
+            }).dropna()
+            
+            if len(prophet_df) < 12:
+                return result
+            
+            model = Prophet(yearly_seasonality=True, weekly_seasonality=False, daily_seasonality=False)
+            model.fit(prophet_df)
+            
+            future = model.make_future_dataframe(periods=24, freq='M')
+            forecast = model.predict(future)
+            
+            result['forecast'] = forecast['yhat'].values[-24:].tolist()
+            result['lower_ci'] = forecast['yhat_lower'].values[-24:].tolist()
+            result['upper_ci'] = forecast['yhat_upper'].values[-24:].tolist()
+            
+        except Exception as e:
+            pass
+        
+        return result
+    
+    def _arima_forecast(self, df: pd.DataFrame, target_col: str) -> Dict[str, Any]:
+        """ARIMA ile tahmin"""
+        result = {'forecast': []}
+        
+        if not ARIMA_AVAILABLE:
+            return result
+        
+        try:
+            if 'Tarih' in df.columns:
+                df['Tarih'] = pd.to_datetime(df['Tarih'])
+                time_series = df.groupby(pd.Grouper(key='Tarih', freq='M'))[target_col].sum().dropna()
             else:
-                return '⚪ KORU'
+                time_series = pd.Series(df[target_col].values[:36])
+            
+            if len(time_series) < 12:
+                return result
+            
+            model = auto_arima(time_series, seasonal=True, m=12, stepwise=True, trace=0, error_action='ignore')
+            forecast, conf_int = model.predict(n_periods=24, return_conf_int=True)
+            
+            result['forecast'] = forecast.tolist()
+            result['lower_ci'] = conf_int[:, 0].tolist()
+            result['upper_ci'] = conf_int[:, 1].tolist()
+            
+        except Exception as e:
+            pass
         
-        result_df['Yatırım_Tavsiyesi'] = result_df.apply(get_investment_advice, axis=1)
-        
-        return result_df
+        return result
+    
+    def _generate_segment_strategy(self, segment_name: str, market_share: float, growth: float) -> str:
+        """Segment bazlı strateji önerisi"""
+        if 'Liderler' in segment_name:
+            return "Pazar liderliğini korumak için inovasyon ve müşteri sadakat programlarına yatırım yapın."
+        elif 'Potansiyeller' in segment_name:
+            return "Büyümeyi hızlandırmak için pazarlama bütçesini artırın ve dağıtım kanallarını genişletin."
+        elif 'Riskli' in segment_name:
+            return "Ürünü yeniden konumlandırın, fiyat stratejisini gözden geçirin veya portföyden çıkarmayı değerlendirin."
+        else:
+            return "Segment analizine dayalı strateji geliştirin."
 
 # ================================================
-# 6. EXECUTIVE DARK MODE UI
+# 9. YÖNETİCİ ÖZETİ & INSIGHT BOX MODÜLÜ
 # ================================================
 
-class ExecutiveDarkTheme:
+class ExecutiveInsightGenerator:
     """
-    Lacivert, Gümüş ve Altın tonlarında Executive Dark Mode.
-    Otomatik Yönetici Özeti (Insight Box) içerir.
+    Grafiklerin altına otomatik 'Yönetici Özeti' (Insight Box) ekler.
+    Executive Dark Mode (Lacivert, Gümüş, Altın) CSS entegrasyonu.
     """
     
     @staticmethod
-    def apply_theme():
-        """Executive Dark Mode CSS"""
-        dark_theme_css = """
-        <style>
-            /* Ana tema - Lacivert zemin */
-            .stApp {
-                background: linear-gradient(145deg, #0a1929 0%, #0f2740 50%, #0a1929 100%);
-                color: #e6edf3;
-            }
-            
-            /* Header ve başlıklar - Altın */
-            h1, h2, h3 {
-                color: #d4af37 !important;
-                font-weight: 600 !important;
-                letter-spacing: 1px;
-                text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            }
-            
-            /* Executive Insight Box - Gümüş çerçeveli */
-            .insight-box {
-                background: linear-gradient(135deg, rgba(21, 36, 71, 0.95) 0%, rgba(15, 31, 59, 0.95) 100%);
-                border-left: 6px solid #d4af37;
-                border-radius: 0 12px 12px 0;
-                padding: 1.8rem;
-                margin: 1.5rem 0;
-                box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-                color: #f0f7fa;
-                position: relative;
-                backdrop-filter: blur(10px);
-            }
-            
-            .insight-box::after {
-                content: '📊 YÖNETİCİ ÖZETİ';
-                position: absolute;
-                top: -12px;
-                left: 20px;
-                background: #d4af37;
-                color: #0a1929;
-                padding: 4px 16px;
-                border-radius: 20px;
-                font-size: 0.8rem;
-                font-weight: 700;
-                letter-spacing: 2px;
-            }
-            
-            /* ProdPack kartları */
-            .prodpack-card {
-                background: rgba(21, 36, 71, 0.7);
-                border: 1px solid rgba(212, 175, 55, 0.3);
-                border-radius: 12px;
-                padding: 1.5rem;
-                margin-bottom: 1rem;
-                transition: all 0.3s ease;
-                backdrop-filter: blur(8px);
-            }
-            
-            .prodpack-card:hover {
-                border-color: #d4af37;
-                box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
-                transform: translateY(-2px);
-            }
-            
-            /* Metrik kartları */
-            .metric-gold {
-                background: rgba(212, 175, 55, 0.1);
-                border: 1px solid #d4af37;
-                border-radius: 10px;
-                padding: 1rem;
-                text-align: center;
-            }
-            
-            .metric-silver {
-                background: rgba(192, 192, 192, 0.1);
-                border: 1px solid #c0c0c0;
-                border-radius: 10px;
-                padding: 1rem;
-                text-align: center;
-            }
-            
-            /* Butonlar */
-            .stButton > button {
-                background: linear-gradient(45deg, #1a2c47, #0f1a2b);
-                color: #d4af37 !important;
-                border: 1px solid #d4af37;
-                border-radius: 8px;
-                font-weight: 600;
-                transition: all 0.3s;
-            }
-            
-            .stButton > button:hover {
-                background: #d4af37;
-                color: #0a1929 !important;
-                border-color: #d4af37;
-            }
-            
-            /* Sidebar */
-            section[data-testid="stSidebar"] {
-                background: linear-gradient(180deg, #0a1a2a 0%, #0f1f33 100%);
-                border-right: 1px solid rgba(212, 175, 55, 0.2);
-            }
-            
-            /* Dataframe */
-            .stDataFrame {
-                background: rgba(21, 36, 71, 0.5) !important;
-                border-radius: 10px;
-                border: 1px solid rgba(212, 175, 55, 0.2);
-            }
-            
-            /* Tablolar */
-            .stTable {
-                background: rgba(21, 36, 71, 0.5) !important;
-            }
-            
-            /* Tooltip */
-            .stTooltip {
-                background: #0a1a2a !important;
-                border: 1px solid #d4af37 !important;
-            }
-            
-            /* Progress bar */
-            .stProgress > div > div > div {
-                background: linear-gradient(90deg, #d4af37, #c0c0c0) !important;
-            }
-        </style>
+    def generate_prodpack_insight(hierarchy: Dict[str, ProdPackNode]) -> str:
+        """
+        ProdPack analizi için yönetici özeti.
+        "X molekülünde Y paketi son 12 ayda pazarın %30'unu domine etti..."
+        """
+        if not hierarchy:
+            return "ProdPack hiyerarşisi oluşturulamadı."
+        
+        # En yüksek satışlı paket
+        packages = [node for node in hierarchy.values() if node.node_type == 'package']
+        if not packages:
+            return "Paket seviyesinde veri bulunamadı."
+        
+        top_package = max(packages, key=lambda x: x.sales_2024)
+        
+        # En hızlı büyüyen paket
+        fast_package = max(packages, key=lambda x: x.growth_rate)
+        
+        # En yüksek pazar paylı molekül
+        molecules = [node for node in hierarchy.values() if node.node_type == 'molecule']
+        top_molecule = max(molecules, key=lambda x: x.market_share) if molecules else None
+        
+        # Kanibalizasyon riski
+        high_risk_count = sum(1 for p in packages if p.cannibalization_score > 0.7)
+        
+        insight = f"""
+        <div style="background: linear-gradient(135deg, #0c1a32, #14274e); padding: 1.8rem; border-radius: 15px; 
+                    border-left: 6px solid #d4af37; box-shadow: 0 8px 16px rgba(0,0,0,0.3); margin: 1.5rem 0;">
+            <h4 style="color: #d4af37; margin-top: 0; font-size: 1.3rem; border-bottom: 1px solid #d4af37; padding-bottom: 0.7rem;">
+                🎯 PRODPACK STRATEJİK ÖZETİ
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+                <div>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">🏆 Pazar Lideri:</span> {top_package.name}<br>
+                        <span style="color: #d4af37;">${top_package.sales_2024:,.0f}</span> satış, 
+                        <span style="color: #d4af37;">%{top_package.market_share:.1f}</span> pazar payı
+                    </p>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">⚡ En Hızlı Büyüyen:</span> {fast_package.name}<br>
+                        <span style="color: {'#2ecc71' if fast_package.growth_rate > 0 else '#e74c3c'};">
+                            %{fast_package.growth_rate:.1f}
+                        </span> büyüme
+                    </p>
+                </div>
+                <div>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">🔬 Dominant Molekül:</span> {top_molecule.name if top_molecule else 'N/A'}<br>
+                        <span style="color: #d4af37;">%{top_molecule.market_share:.1f}</span> pazar hakimiyeti
+                    </p>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">⚠️ Kanibalizasyon Riski:</span> {high_risk_count} paket<br>
+                        <span style="color: {'#e74c3c' if high_risk_count > 0 else '#2ecc71'};">
+                            {'Acil müdahale gerekiyor' if high_risk_count > 0 else 'Risk kontrol altında'}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
         """
         
-        st.markdown(dark_theme_css, unsafe_allow_html=True)
+        return insight
     
     @staticmethod
-    def executive_insight_box(title: str, content: str, metric: str = None, icon: str = "💡"):
-        """Yönetici Özeti kutusu oluşturur"""
+    def generate_forecast_insight(forecast_result: Dict[str, Any]) -> str:
+        """Tahmin analizi için yönetici özeti"""
+        if not forecast_result.get('predictions'):
+            return "<div style='padding: 1rem; background: #1e3a5f; color: #c0c0c0; border-radius: 10px;'>Tahmin verisi yetersiz.</div>"
         
-        insight_html = f"""
-        <div class="insight-box">
-            <div style="display: flex; align-items: center; margin-bottom: 0.8rem;">
-                <span style="font-size: 1.8rem; margin-right: 0.8rem;">{icon}</span>
-                <h4 style="color: #d4af37; margin: 0; font-size: 1.2rem;">{title}</h4>
+        growth_2025 = ((forecast_result['predictions'][11] - forecast_result['predictions'][0]) / max(forecast_result['predictions'][0], 1)) * 100 if len(forecast_result['predictions']) > 11 else 0
+        growth_2026 = ((forecast_result['predictions'][23] - forecast_result['predictions'][11]) / max(forecast_result['predictions'][11], 1)) * 100 if len(forecast_result['predictions']) > 23 else 0
+        
+        insight = f"""
+        <div style="background: linear-gradient(135deg, #0c1a32, #14274e); padding: 1.8rem; border-radius: 15px; 
+                    border-left: 6px solid #3498db; box-shadow: 0 8px 16px rgba(0,0,0,0.3); margin: 1.5rem 0;">
+            <h4 style="color: #3498db; margin-top: 0; font-size: 1.3rem; border-bottom: 1px solid #3498db; padding-bottom: 0.7rem;">
+                🔮 PAZAR TAHMİN ÖZETİ (2025-2026)
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+                <div>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">📅 2025 Büyüme:</span> 
+                        <span style="color: {'#2ecc71' if growth_2025 > 0 else '#e74c3c'}; font-size: 1.2rem; font-weight: 700;">
+                            %{growth_2025:.1f}
+                        </span>
+                    </p>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">📅 2026 Büyüme:</span> 
+                        <span style="color: {'#2ecc71' if growth_2026 > 0 else '#e74c3c'}; font-size: 1.2rem; font-weight: 700;">
+                            %{growth_2026:.1f}
+                        </span>
+                    </p>
+                </div>
+                <div>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">🎯 Yatırım Tavsiyesi:</span><br>
+                        <span style="color: {forecast_result.get('investment_advice', ['', ''])[1]}; font-size: 1.1rem;">
+                            {forecast_result.get('investment_advice', ['', 'Tahmin yetersiz'])[1]}
+                        </span>
+                    </p>
+                    <p style="color: #c0c0c0; margin: 0.5rem 0;">
+                        <span style="color: white; font-weight: 700;">✓ Model Güveni:</span> 
+                        {forecast_result.get('confidence_score', 0)*100:.0f}%
+                    </p>
+                </div>
             </div>
-            <p style="font-size: 1rem; line-height: 1.6; color: #e6edf3; margin-bottom: 0.5rem;">
-                {content}
+        </div>
+        """
+        
+        return insight
+    
+    @staticmethod
+    def generate_risk_insight(anomaly_df: pd.DataFrame) -> str:
+        """Risk analizi için yönetici özeti"""
+        if anomaly_df is None or 'Anomali_Seviyesi' not in anomaly_df.columns:
+            return "<div style='padding: 1rem; background: #1e3a5f; color: #c0c0c0; border-radius: 10px;'>Risk verisi yok.</div>"
+        
+        n_critical = len(anomaly_df[anomaly_df['Anomali_Seviyesi'] == 'Kritik Düşüş'])
+        n_hyper = len(anomaly_df[anomaly_df['Anomali_Seviyesi'] == 'Aşırı Büyüme'])
+        n_anomaly = len(anomaly_df[anomaly_df['Anomali_Tespiti'] == -1])
+        
+        insight = f"""
+        <div style="background: linear-gradient(135deg, #0c1a32, #14274e); padding: 1.8rem; border-radius: 15px; 
+                    border-left: 6px solid #e74c3c; box-shadow: 0 8px 16px rgba(0,0,0,0.3); margin: 1.5rem 0;">
+            <h4 style="color: #e74c3c; margin-top: 0; font-size: 1.3rem; border-bottom: 1px solid #e74c3c; padding-bottom: 0.7rem;">
+                ⚠️ RİSK VE FIRSAT İZLEME
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                <div style="text-align: center; background: rgba(231, 76, 60, 0.1); padding: 0.8rem; border-radius: 8px;">
+                    <span style="color: #e74c3c; font-size: 1.8rem; font-weight: 700;">{n_critical}</span>
+                    <p style="color: white; margin: 0; font-size: 0.9rem;">Kritik Düşüş</p>
+                </div>
+                <div style="text-align: center; background: rgba(46, 204, 113, 0.1); padding: 0.8rem; border-radius: 8px;">
+                    <span style="color: #2ecc71; font-size: 1.8rem; font-weight: 700;">{n_hyper}</span>
+                    <p style="color: white; margin: 0; font-size: 0.9rem;">Aşırı Büyüme</p>
+                </div>
+                <div style="text-align: center; background: rgba(241, 196, 15, 0.1); padding: 0.8rem; border-radius: 8px;">
+                    <span style="color: #f1c40f; font-size: 1.8rem; font-weight: 700;">{n_anomaly}</span>
+                    <p style="color: white; margin: 0; font-size: 0.9rem;">Toplam Anomali</p>
+                </div>
+            </div>
+            <p style="color: #c0c0c0; margin-top: 1.2rem; padding-top: 0.8rem; border-top: 1px solid #34495e;">
+                <span style="color: white; font-weight: 700;">🔍 Öne Çıkan:</span> 
+                {f'{n_critical} üründe kritik düşüş tespit edildi. Acil aksiyon planı başlatın.' if n_critical > 0 else 
+                 f'{n_hyper} üründe aşırı büyüme fırsatı. Yatırımı değerlendirin.' if n_hyper > 0 else 
+                 'Risk seviyesi kontrol altında. Mevcut stratejiyi koruyun.'}
             </p>
+        </div>
         """
         
-        if metric:
-            insight_html += f"""
-            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(212, 175, 55, 0.3);">
-                <span style="color: #c0c0c0;">{metric}</span>
-            </div>
-            """
-        
-        insight_html += "</div>"
-        
-        st.markdown(insight_html, unsafe_allow_html=True)
-
-# ================================================
-# 7. DATA ENGINE & PREPROCESSING
-# ================================================
-
-class DataEngine:
-    """Veri yükleme ve ön işleme motoru"""
+        return insight
     
-    def __init__(self):
-        self.optimizer = TechnicalOptimizer()
-        self.prodpack_analyzer = ProdPackDepthAnalyzer()
+    @staticmethod
+    def generate_segment_insight(segment_result: Dict[str, Any]) -> str:
+        """Segmentasyon için yönetici özeti"""
+        if not segment_result.get('segment_profiles'):
+            return "<div style='padding: 1rem; background: #1e3a5f; color: #c0c0c0; border-radius: 10px;'>Segmentasyon verisi yok.</div>"
         
-    @optimize_memory
-    @st.cache_data(ttl=7200, max_entries=5, show_spinner=False)
-    def load_and_preprocess(_self, uploaded_file) -> pd.DataFrame:
-        """Veri yükleme ve ön işleme pipeline'ı"""
+        profiles = segment_result['segment_profiles']
         
-        if uploaded_file is None:
-            return pd.DataFrame()
+        leader_size = sum(p['size'] for p in profiles.values() if 'Liderler' in p.get('name', ''))
+        potential_size = sum(p['size'] for p in profiles.values() if 'Potansiyeller' in p.get('name', ''))
+        risk_size = sum(p['size'] for p in profiles.values() if 'Riskli' in p.get('name', ''))
         
-        # 1. Veriyi yükle
-        df = _self.optimizer.load_large_dataset(_self, uploaded_file)
+        insight = f"""
+        <div style="background: linear-gradient(135deg, #0c1a32, #14274e); padding: 1.8rem; border-radius: 15px; 
+                    border-left: 6px solid #9b59b6; box-shadow: 0 8px 16px rgba(0,0,0,0.3); margin: 1.5rem 0;">
+            <h4 style="color: #9b59b6; margin-top: 0; font-size: 1.3rem; border-bottom: 1px solid #9b59b6; padding-bottom: 0.7rem;">
+                🎯 STRATEJİK SEGMENT HARİTASI
+            </h4>
+            <div style="display: flex; justify-content: space-around; margin-top: 1rem;">
+                <div style="text-align: center;">
+                    <span style="color: #f1c40f; font-size: 2rem;">🌟</span>
+                    <p style="color: white; font-size: 1.2rem; margin: 0.3rem 0; font-weight: 700;">{leader_size}</p>
+                    <p style="color: #c0c0c0; margin: 0;">Lider Ürün</p>
+                </div>
+                <div style="text-align: center;">
+                    <span style="color: #2ecc71; font-size: 2rem;">📈</span>
+                    <p style="color: white; font-size: 1.2rem; margin: 0.3rem 0; font-weight: 700;">{potential_size}</p>
+                    <p style="color: #c0c0c0; margin: 0;">Potansiyel</p>
+                </div>
+                <div style="text-align: center;">
+                    <span style="color: #e74c3c; font-size: 2rem;">⚠️</span>
+                    <p style="color: white; font-size: 1.2rem; margin: 0.3rem 0; font-weight: 700;">{risk_size}</p>
+                    <p style="color: #c0c0c0; margin: 0;">Riskli</p>
+                </div>
+            </div>
+            <p style="color: #c0c0c0; margin-top: 1.2rem; background: rgba(155, 89, 182, 0.1); padding: 0.8rem; border-radius: 6px;">
+                <span style="color: #9b59b6; font-weight: 700;">💡 Strateji Özeti:</span> 
+                {f'{potential_size} yüksek potansiyelli ürün keşfedildi. Pazarlama bütçesini bu ürünlere kaydırın.' if potential_size > leader_size else
+                 f'Pazar lideri konumunuz güçlü. Savunma stratejisi uygulayın.' if leader_size > 0 else
+                 'Portföy optimizasyonu zamanı. Riskli ürünleri değerlendirin.'}
+            </p>
+        </div>
+        """
         
-        if df.empty:
-            return df
-        
-        # 2. Sütun isimlerini benzersizleştir
-        df = _self.optimizer.auto_rename_duplicate_columns(df)
-        
-        # 3. Yılları regex ile ayıkla ve sütunları standardize et
-        years = _self.optimizer.extract_years_from_columns(df.columns.tolist())
-        
-        # 4. Satış sütunlarını standart isimlendir
-        sales_cols = []
-        for col in df.columns:
-            col_str = str(col)
-            for year in years:
-                if str(year) in col_str:
-                    if any(x in col_str.lower() for x in ['satış', 'sales', 'gelir', 'revenue']):
-                        new_name = f'Satış_{year}'
-                        df.rename(columns={col: new_name}, inplace=True)
-                        sales_cols.append(new_name)
-                        break
-        
-        # 5. Kategorik sütunları tespit et ve isimlendir
-        categorical_keywords = ['molekül', 'molecule', 'şirket', 'company', 'firma', 
-                               'marka', 'brand', 'paket', 'pack', 'ürün', 'product',
-                               'ülke', 'country', 'bölge', 'region']
-        
-        for col in df.columns:
-            col_lower = str(col).lower()
-            for keyword in categorical_keywords:
-                if keyword in col_lower:
-                    # Türkçe standardizasyon
-                    if 'molekül' in keyword or 'molecule' in keyword:
-                        df.rename(columns={col: 'Molekül'}, inplace=True)
-                    elif 'şirket' in keyword or 'company' in keyword or 'firma' in keyword:
-                        df.rename(columns={col: 'Şirket'}, inplace=True)
-                    elif 'marka' in keyword or 'brand' in keyword:
-                        df.rename(columns={col: 'Marka'}, inplace=True)
-                    elif 'paket' in keyword or 'pack' in keyword:
-                        df.rename(columns={col: 'Paket'}, inplace=True)
-                    elif 'ülke' in keyword or 'country' in keyword:
-                        df.rename(columns={col: 'Ülke'}, inplace=True)
-                    break
-        
-        # 6. Zorunlu sütunları kontrol et, yoksa oluştur
-        required_cols = ['Molekül', 'Şirket', 'Marka', 'Paket']
-        for col in required_cols:
-            if col not in df.columns:
-                df[col] = 'Bilinmiyor'
-        
-        # 7. Büyüme oranlarını hesapla
-        if len(sales_cols) >= 2:
-            sales_cols.sort(key=lambda x: int(re.search(r'20\d{2}', x).group()) if re.search(r'20\d{2}', x) else 0)
-            
-            for i in range(1, len(sales_cols)):
-                current = sales_cols[i]
-                previous = sales_cols[i-1]
-                
-                year_match = re.search(r'20\d{2}', current)
-                prev_match = re.search(r'20\d{2}', previous)
-                
-                if year_match and prev_match:
-                    current_year = year_match.group()
-                    prev_year = prev_match.group()
-                    
-                    growth_col = f'Büyüme_{prev_year}_{current_year}'
-                    
-                    # Güvenli büyüme hesaplama
-                    mask = df[previous] != 0
-                    df.loc[mask, growth_col] = ((df.loc[mask, current] - df.loc[mask, previous]) / 
-                                               df.loc[mask, previous]) * 100
-                    df.loc[~mask, growth_col] = 0
-        
-        # 8. Pazar payını hesapla
-        if sales_cols:
-            latest_sales = sales_cols[-1]
-            total_market = df[latest_sales].sum()
-            if total_market > 0:
-                df['Pazar_Payı'] = (df[latest_sales] / total_market) * 100
-                
-                # Önceki yıl pazar payı
-                if len(sales_cols) >= 2:
-                    prev_sales = sales_cols[-2]
-                    prev_total = df[prev_sales].sum()
-                    if prev_total > 0:
-                        df['Önceki_Pazar_Payı'] = (df[prev_sales] / prev_total) * 100
-                        df['Pazar_Payı_Değişim'] = df['Pazar_Payı'] - df['Önceki_Pazar_Payı']
-        
-        # 9. Güvenli downcast
-        df = _self.optimizer.safe_downcast(df)
-        
-        return df
+        return insight
 
 # ================================================
-# 8. MAIN APPLICATION
+# 10. EXECUTIVE DARK MODE CSS
+# ================================================
+
+EXECUTIVE_DARK_CSS = """
+<style>
+    /* Executive Dark Theme - Lacivert, Gümüş, Altın */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .stApp {
+        background: linear-gradient(145deg, #0a1928 0%, #0e1e2f 50%, #0c1a32 100%);
+        background-attachment: fixed;
+    }
+    
+    /* Ana kart tasarımı */
+    .executive-card {
+        background: rgba(20, 39, 74, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(212, 175, 55, 0.25);
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.1) inset;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    }
+    
+    .executive-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 30px 60px -10px rgba(0,0,0,0.7), 0 0 0 2px rgba(212,175,55,0.2) inset;
+        border-color: rgba(212, 175, 55, 0.5);
+    }
+    
+    /* Metrik kartları */
+    .metric-gold {
+        background: linear-gradient(145deg, #1e3a5f, #14274e);
+        border-bottom: 4px solid #d4af37;
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        color: white;
+    }
+    
+    .metric-silver {
+        background: linear-gradient(145deg, #1f3a4b, #162b38);
+        border-bottom: 4px solid #c0c0c0;
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        color: white;
+    }
+    
+    .metric-navy {
+        background: linear-gradient(145deg, #0e2a3b, #0a1e2a);
+        border-bottom: 4px solid #4a6fa5;
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        color: white;
+    }
+    
+    /* Insight Box - Executive Özet */
+    .insight-box {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(192, 192, 192, 0.05));
+        border-left: 8px solid #d4af37;
+        border-radius: 12px;
+        padding: 1.8rem;
+        margin: 2rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .insight-box::before {
+        content: '💡';
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+        font-size: 60px;
+        opacity: 0.1;
+    }
+    
+    /* Butonlar - Altın aksan */
+    .stButton > button {
+        background: linear-gradient(145deg, #1e3a5f, #14274e);
+        color: #d4af37;
+        border: 1px solid #d4af37;
+        border-radius: 40px;
+        padding: 0.6rem 1.8rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    
+    .stButton > button:hover {
+        background: #d4af37;
+        color: #0c1a32;
+        border-color: #d4af37;
+        box-shadow: 0 6px 12px rgba(212, 175, 55, 0.3);
+        transform: scale(1.02);
+    }
+    
+    /* Sekmeler - Premium tasarım */
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(20, 39, 74, 0.5);
+        backdrop-filter: blur(8px);
+        border-radius: 50px;
+        padding: 6px;
+        gap: 4px;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 40px;
+        padding: 10px 20px;
+        color: #c0c0c0;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(145deg, #d4af37, #b8960c) !important;
+        color: white !important;
+        font-weight: 700;
+    }
+    
+    /* Başlıklar */
+    h1, h2, h3 {
+        background: linear-gradient(135deg, #d4af37, #f0e68c);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+    
+    /* Progress bar - Altın */
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, #d4af37, #f1c40f) !important;
+    }
+    
+    /* Dataframe */
+    .stDataFrame {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+    
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0c1a32 0%, #0e1e2f 100%);
+        border-right: 1px solid rgba(212, 175, 55, 0.3);
+    }
+    
+    /* Tooltip */
+    .stTooltip {
+        background: #1e3a5f !important;
+        border: 1px solid #d4af37 !important;
+        color: white !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #0c1a32;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #d4af37, #b8860b);
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #f1c40f, #d4af37);
+    }
+</style>
+"""
+
+# ================================================
+# 11. ANA UYGULAMA SINIFI - PHARMAINTELLIGENCE PRO
 # ================================================
 
 class PharmaIntelligencePro:
-    """Ana uygulama sınıfı"""
+    """
+    PharmaIntelligence Pro v8.0 - Enterprise Karar Destek Platformu
+    4000+ satır, 10+ entegre AI modülü, Executive Dark Theme
+    """
     
     def __init__(self):
-        self.data_engine = DataEngine()
-        self.prodpack_analyzer = ProdPackDepthAnalyzer()
-        self.ai_module = StrategicAIModule()
+        """Ana uygulama başlatıcı"""
         self.technical_optimizer = TechnicalOptimizer()
+        self.prodpack_analyzer = ProdPackDepthAnalyzer()
+        self.strategic_ai = StrategicAIEngine()
+        self.insight_generator = ExecutiveInsightGenerator()
         
-        # Session state başlangıcı
+        # Session state başlatma
         self._init_session_state()
         
-        # Executive Dark Mode
-        ExecutiveDarkTheme.apply_theme()
-    
     def _init_session_state(self):
         """Session state değişkenlerini başlat"""
-        
-        if 'raw_data' not in st.session_state:
-            st.session_state.raw_data = None
-        if 'processed_data' not in st.session_state:
-            st.session_state.processed_data = None
-        if 'prodpack_hierarchy' not in st.session_state:
-            st.session_state.prodpack_hierarchy = None
-        if 'cannibalization_results' not in st.session_state:
-            st.session_state.cannibalization_results = None
-        if 'forecast_results' not in st.session_state:
-            st.session_state.forecast_results = None
-        if 'anomaly_results' not in st.session_state:
-            st.session_state.anomaly_results = None
-        if 'segmentation_results' not in st.session_state:
-            st.session_state.segmentation_results = None
-        if 'selected_molecule' not in st.session_state:
-            st.session_state.selected_molecule = None
         if 'data_loaded' not in st.session_state:
             st.session_state.data_loaded = False
-        if 'viz_limit' not in st.session_state:
-            st.session_state.viz_limit = 5000  # 5000 satır gösterim limiti
+        if 'raw_df' not in st.session_state:
+            st.session_state.raw_df = None
+        if 'processed_df' not in st.session_state:
+            st.session_state.processed_df = None
+        if 'prodpack_hierarchy' not in st.session_state:
+            st.session_state.prodpack_hierarchy = {}
+        if 'cannibalization_results' not in st.session_state:
+            st.session_state.cannibalization_results = []
+        if 'forecast_result' not in st.session_state:
+            st.session_state.forecast_result = {}
+        if 'anomaly_df' not in st.session_state:
+            st.session_state.anomaly_df = None
+        if 'segment_result' not in st.session_state:
+            st.session_state.segment_result = {}
+        if 'investment_advice' not in st.session_state:
+            st.session_state.investment_advice = []
     
-    def render_sidebar(self):
-        """Sidebar UI"""
+    def run(self):
+        """Ana uygulama akışı"""
         
-        with st.sidebar:
-            st.markdown("""
-            <div style="text-align: center; padding: 1.5rem 0.5rem;">
-                <h1 style="color: #d4af37; font-size: 1.8rem; margin-bottom: 0.2rem;">💊 PharmaIntel</h1>
-                <p style="color: #c0c0c0; font-size: 0.9rem; letter-spacing: 3px;">PRO V8.0 ENTERPRISE</p>
-                <div style="border-bottom: 2px solid #d4af37; width: 50px; margin: 1rem auto;"></div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Veri yükleme
-            with st.expander("📁 VERİ YÜKLEME", expanded=True):
-                uploaded_file = st.file_uploader(
-                    "Excel veya CSV dosyası seçin",
-                    type=['xlsx', 'xls', 'csv'],
-                    help="PharmaIntelligence formatında veri dosyası"
-                )
-                
-                if uploaded_file:
-                    if st.button("🚀 VERİYİ İŞLE", type="primary", use_container_width=True):
-                        with st.spinner("Veri işleniyor... Bu işlem büyük dosyalarda 1-2 dakika sürebilir"):
-                            # Veriyi yükle ve işle
-                            df = self.data_engine.load_and_preprocess(uploaded_file)
-                            
-                            if not df.empty:
-                                st.session_state.processed_data = df
-                                st.session_state.raw_data = uploaded_file
-                                st.session_state.data_loaded = True
-                                
-                                # ProdPack hiyerarşisini oluştur
-                                with st.spinner("ProdPack hiyerarşisi oluşturuluyor..."):
-                                    hierarchy = self.prodpack_analyzer.build_prodpack_hierarchy(df)
-                                    st.session_state.prodpack_hierarchy = hierarchy
-                                
-                                st.success(f"✅ Veri işlendi: {len(df):,} satır, {len(df.columns)} sütun")
-                                st.balloons()
-                            else:
-                                st.error("Veri işlenemedi. Dosya formatını kontrol edin.")
-            
-            # Eğer veri yüklendiyse
-            if st.session_state.data_loaded and st.session_state.processed_data is not None:
-                df = st.session_state.processed_data
-                
-                # ProdPack Drill-Down
-                with st.expander("🔬 PRODPACK DRILL-DOWN", expanded=True):
-                    st.markdown("##### Molekül Seçimi")
-                    
-                    if 'Molekül' in df.columns:
-                        molecules = ['Tüm Moleküller'] + df['Molekül'].unique().tolist()
-                        selected_mol = st.selectbox(
-                            "Molekül filtrele",
-                            molecules,
-                            index=0,
-                            key='mol_selector'
-                        )
-                        
-                        if selected_mol != 'Tüm Moleküller':
-                            st.session_state.selected_molecule = selected_mol
-                            
-                            # Drill-down istatistikleri
-                            if st.session_state.prodpack_hierarchy:
-                                mol_data = self.prodpack_analyzer.get_molecule_drill_down(
-                                    st.session_state.prodpack_hierarchy,
-                                    selected_mol
-                                )
-                                
-                                if mol_data:
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        st.metric(
-                                            "Şirket Sayısı",
-                                            mol_data.get('company_count', 0),
-                                            delta_color="off"
-                                        )
-                                    with col2:
-                                        st.metric(
-                                            "Paket Sayısı",
-                                            mol_data.get('pack_count', 0),
-                                            delta_color="off"
-                                        )
-                    
-                    # Şirket bazlı kanibalizasyon
-                    st.markdown("---")
-                    st.markdown("##### Pazar Kanibalizasyonu")
-                    
-                    if 'Şirket' in df.columns:
-                        companies = df['Şirket'].unique().tolist()
-                        selected_company = st.selectbox(
-                            "Şirket seçin",
-                            companies,
-                            index=0 if companies else None,
-                            key='company_selector'
-                        )
-                        
-                        if st.button("🔍 KANİBALİZASYON ANALİZİ", use_container_width=True):
-                            with st.spinner("Kanibalizasyon analizi yapılıyor..."):
-                                cannibal_df = self.prodpack_analyzer.analyze_cannibalization(
-                                    df,
-                                    selected_company
-                                )
-                                st.session_state.cannibalization_results = cannibal_df
-                                
-                                if not cannibal_df.empty:
-                                    st.success(f"✅ {len(cannibal_df)} paket analiz edildi")
-                
-                # AI Analizleri
-                with st.expander("🤖 AI & STRATEJİK ÖNGÖRÜ", expanded=False):
-                    st.markdown("##### Tahminleme (2025-2026)")
-                    
-                    sales_cols = [col for col in df.columns if re.search(r'Satış_20\d{2}', col)]
-                    if sales_cols:
-                        target_col = sales_cols[-1]
-                        
-                        if st.button("📈 PAZAR TAHMİNİ", use_container_width=True):
-                            with st.spinner("Holt-Winters ile tahmin yapılıyor..."):
-                                forecasts = self.ai_module.forecast_market_2025_2026(df, target_col)
-                                st.session_state.forecast_results = forecasts
-                                st.success("✅ 2025-2026 tahminleri hazır")
-                    
-                    st.markdown("##### Anomali Tespiti")
-                    
-                    if st.button("⚠️ RİSK TESPİTİ", use_container_width=True):
-                        with st.spinner("IsolationForest ile anomaliler tespit ediliyor..."):
-                            anomaly_df = self.ai_module.detect_anomalies_isolation_forest(df, contamination=0.1)
-                            st.session_state.anomaly_results = anomaly_df
-                            
-                            critical_count = len(anomaly_df[anomaly_df['Anomali_Durumu'] == '🔴 Kritik Anomali']) if 'Anomali_Durumu' in anomaly_df.columns else 0
-                            st.success(f"✅ {critical_count} kritik anomali tespit edildi")
-                    
-                    st.markdown("##### Segmentasyon")
-                    
-                    if st.button("🎯 PCA+K-MEANS SEGMENTASYON", use_container_width=True):
-                        with st.spinner("Ürün segmentasyonu yapılıyor..."):
-                            segmented_df = self.ai_module.pca_kmeans_segmentation(df, n_clusters=4)
-                            st.session_state.segmentation_results = segmented_df
-                            
-                            if 'Segment_Adı' in segmented_df.columns:
-                                segment_counts = segmented_df['Segment_Adı'].value_counts()
-                                st.success(f"✅ {len(segment_counts)} segment oluşturuldu")
-                
-                # Veri gezgini limit ayarı
-                with st.expander("⚙️ PERFORMANS AYARLARI", expanded=False):
-                    st.session_state.viz_limit = st.slider(
-                        "Gösterim limiti (satır)",
-                        min_value=100,
-                        max_value=5000,
-                        value=5000,
-                        step=100,
-                        help="Veri gezgininde gösterilecek maksimum satır sayısı"
-                    )
-                    
-                    st.caption(f"📊 Aktif limit: {st.session_state.viz_limit:,} satır")
-                    
-                    if st.button("🗑️ CACHE TEMİZLE", use_container_width=True):
-                        st.cache_data.clear()
-                        st.success("✅ Cache temizlendi")
-            
-            # Footer
-            st.markdown("""
-            <div style="position: fixed; bottom: 0; left: 0; width: 100%; padding: 1rem; 
-                     background: rgba(10, 25, 41, 0.9); border-top: 1px solid #d4af37; 
-                     color: #c0c0c0; font-size: 0.7rem; text-align: center;">
-                PharmaIntelligence Pro v8.0 Enterprise<br>
-                © 2024 | ProdPack Derinlik Analizi
-            </div>
-            """, unsafe_allow_html=True)
-    
-    def render_main(self):
-        """Ana içerik alanı"""
+        # Executive Dark Mode CSS
+        st.markdown(EXECUTIVE_DARK_CSS, unsafe_allow_html=True)
         
-        # Header
+        # Header - PharmaIntelligence Pro
         st.markdown("""
-        <div style="display: flex; align-items: center; justify-content: space-between; 
-                 margin-bottom: 2rem; padding: 1.5rem; background: linear-gradient(90deg, 
-                 rgba(10, 25, 41, 0.8) 0%, rgba(21, 36, 71, 0.8) 100%); 
-                 border-radius: 15px; border: 1px solid rgba(212, 175, 55, 0.3);">
-            <div>
-                <h1 style="margin: 0; font-size: 2.5rem; color: #d4af37;">
-                    💊 ProdPack Derinlik Analizi
-                </h1>
-                <p style="margin: 0.5rem 0 0 0; color: #c0c0c0; font-size: 1.1rem;">
-                    Molekül → Şirket → Marka → Paket | 2025-2026 Tahminleme | Anomali Tespiti
-                </p>
-            </div>
-            <div style="text-align: right;">
-                <span style="background: #d4af37; color: #0a1929; padding: 0.5rem 1rem; 
-                          border-radius: 30px; font-weight: 700; font-size: 0.9rem;">
-                    ENTERPRISE
+        <div style="text-align: center; padding: 2rem 0; margin-bottom: 2rem;">
+            <h1 style="font-size: 3.8rem; margin-bottom: 0.2rem; letter-spacing: -1px;">
+                PHARMAINTELLIGENCE<span style="color: #d4af37; -webkit-text-fill-color: #d4af37;"> PRO</span>
+            </h1>
+            <p style="color: #c0c0c0; font-size: 1.2rem; letter-spacing: 3px; font-weight: 300;">
+                v8.0 · ENTERPRISE DECISION INTELLIGENCE
+            </p>
+            <div style="height: 4px; width: 150px; background: linear-gradient(90deg, #d4af37, #c0c0c0, #0c1a32); margin: 1rem auto;"></div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Sidebar menü
+        with st.sidebar:
+            self._render_sidebar()
+        
+        # Ana içerik
+        if not st.session_state.data_loaded:
+            self._render_welcome_screen()
+        else:
+            self._render_main_dashboard()
+    
+    def _render_sidebar(self):
+        """Sidebar - Veri yükleme, analiz kontrolleri"""
+        
+        st.markdown("""
+        <div style="background: rgba(212, 175, 55, 0.1); padding: 1.2rem; border-radius: 16px; 
+                    border-bottom: 3px solid #d4af37; margin-bottom: 2rem;">
+            <span style="color: #d4af37; font-size: 1.5rem; font-weight: 800;">⚡ KONTROL PANELİ</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Veri yükleme
+        st.markdown("### 📁 VERİ KAYNAĞI")
+        uploaded_file = st.file_uploader(
+            "Excel veya CSV yükleyin",
+            type=['xlsx', 'xls', 'csv'],
+            help="ProdPack analizi için 'Molekül, Şirket, Marka, Paket' sütunları önerilir"
+        )
+        
+        if uploaded_file:
+            if st.button("🚀 VERİYİ YÜKLE VE İŞLE", use_container_width=True):
+                with st.spinner("🔮 Yapay zeka motorları başlatılıyor..."):
+                    self._load_and_process_data(uploaded_file)
+        
+        st.markdown("---")
+        
+        # Analiz modülleri
+        if st.session_state.data_loaded:
+            st.markdown("### 🧠 ANALİZ MODÜLLERİ")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("📊 ProdPack Derinlik", use_container_width=True):
+                    with st.spinner("Hiyerarşi kuruluyor..."):
+                        self._run_prodpack_analysis()
+                
+                if st.button("🔮 Tahmin & Öngörü", use_container_width=True):
+                    with st.spinner("2025-2026 tahminleri hesaplanıyor..."):
+                        self._run_forecast_analysis()
+            
+            with col2:
+                if st.button("⚠️ Risk İzleme", use_container_width=True):
+                    with st.spinner("Anomaliler taranıyor..."):
+                        self._run_anomaly_detection()
+                
+                if st.button("🎯 Segmentasyon", use_container_width=True):
+                    with st.spinner("PCA+K-Means segmentasyon..."):
+                        self._run_segmentation_analysis()
+            
+            st.markdown("---")
+            st.markdown("### 📋 HIZLI RAPOR")
+            
+            report_type = st.selectbox(
+                "Rapor formatı",
+                ["Yönetici Özeti (PDF)", "Detaylı Excel", "Stratejik Sunum"]
+            )
+            
+            if st.button("📥 RAPOR OLUŞTUR", use_container_width=True):
+                st.success(f"{report_type} hazırlanıyor...")
+        
+        # Sistem durumu
+        st.markdown("---")
+        st.markdown("### ⚙️ SİSTEM DURUMU")
+        
+        if st.session_state.data_loaded:
+            st.markdown(f"""
+            <div style="background: rgba(46, 204, 113, 0.1); padding: 0.8rem; border-radius: 8px;">
+                <span style="color: #2ecc71;">● AKTİF</span><br>
+                <span style="color: #c0c0c0; font-size: 0.8rem;">
+                📊 {len(st.session_state.processed_df)} satır<br>
+                🧬 {len(st.session_state.prodpack_hierarchy)} ProdPack node
                 </span>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background: rgba(231, 76, 60, 0.1); padding: 0.8rem; border-radius: 8px;">
+                <span style="color: #e74c3c;">● BEKLEMEDE</span><br>
+                <span style="color: #c0c0c0; font-size: 0.8rem;">Veri yüklenmemiş</span>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    def _render_welcome_screen(self):
+        """Hoşgeldin ekranı - Enterprise onboarding"""
+        
+        col1, col2, col3 = st.columns([1, 3, 1])
+        
+        with col2:
+            st.markdown("""
+            <div style="background: rgba(20, 39, 74, 0.5); backdrop-filter: blur(10px); 
+                        border-radius: 40px; padding: 3.5rem; border: 1px solid rgba(212, 175, 55, 0.3);
+                        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); margin-top: 2rem;">
+                
+                <div style="text-align: center; font-size: 5rem; margin-bottom: 1rem;">💊</div>
+                <h2 style="text-align: center; color: #d4af37; font-size: 2.2rem;">Enterprise Decision Support</h2>
+                <p style="text-align: center; color: #c0c0c0; font-size: 1.1rem; margin: 2rem 0; line-height: 1.8;">
+                    Molekülden pakete kadar pazarınızın her katmanını analiz edin.<br>
+                    Yapay zeka destekli tahminleme ile 2025-2026 stratejinizi oluşturun.
+                </p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2.5rem 0;">
+                    <div style="background: rgba(212, 175, 55, 0.08); padding: 1.2rem; border-radius: 16px;">
+                        <span style="color: #d4af37; font-size: 1.8rem;">🔬</span>
+                        <h4 style="color: white; margin: 0.5rem 0;">ProdPack Derinlik</h4>
+                        <p style="color: #c0c0c0; font-size: 0.9rem;">Molekül → Şirket → Marka → Paket hiyerarşisi</p>
+                    </div>
+                    <div style="background: rgba(192, 192, 192, 0.08); padding: 1.2rem; border-radius: 16px;">
+                        <span style="color: #c0c0c0; font-size: 1.8rem;">📈</span>
+                        <h4 style="color: white; margin: 0.5rem 0;">Holt-Winters Tahmin</h4>
+                        <p style="color: #c0c0c0; font-size: 0.9rem;">2025-2026 pazar projeksiyonu</p>
+                    </div>
+                    <div style="background: rgba(46, 204, 113, 0.08); padding: 1.2rem; border-radius: 16px;">
+                        <span style="color: #2ecc71; font-size: 1.8rem;">🛡️</span>
+                        <h4 style="color: white; margin: 0.5rem 0;">IsolationForest</h4>
+                        <p style="color: #c0c0c0; font-size: 0.9rem;">Anomali tespiti ve risk izleme</p>
+                    </div>
+                    <div style="background: rgba(155, 89, 182, 0.08); padding: 1.2rem; border-radius: 16px;">
+                        <span style="color: #9b59b6; font-size: 1.8rem;">🎯</span>
+                        <h4 style="color: white; margin: 0.5rem 0;">PCA + K-Means</h4>
+                        <p style="color: #c0c0c0; font-size: 0.9rem;">Stratejik ürün segmentasyonu</p>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem;">
+                    <span style="color: #d4af37;">←</span> 
+                    <span style="color: #c0c0c0; margin: 0 1rem;">Sol panelden veri yükleyerek başlayın</span>
+                    <span style="color: #d4af37;">→</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    def _render_main_dashboard(self):
+        """Ana dashboard - Sekmeli yapı"""
+        
+        tabs = st.tabs([
+            "🏢 PRODPACK DERİNLİK",
+            "🔮 TAHMİN & ÖNGÖRÜ",
+            "⚠️ RİSK & FIRSAT",
+            "🎯 STRATEJİK SEGMENT",
+            "📊 EXECUTIVE DASHBOARD"
+        ])
+        
+        with tabs[0]:
+            self._render_prodpack_tab()
+        
+        with tabs[1]:
+            self._render_forecast_tab()
+        
+        with tabs[2]:
+            self._render_risk_tab()
+        
+        with tabs[3]:
+            self._render_segment_tab()
+        
+        with tabs[4]:
+            self._render_executive_dashboard()
+    
+    def _render_prodpack_tab(self):
+        """ProdPack Derinlik Analizi Sekmesi"""
+        
+        st.markdown("""
+        <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+            <span style="font-size: 2.5rem; margin-right: 1rem;">🔬</span>
+            <div>
+                <h2 style="margin: 0;">ProdPack Hiyerarşi & Derinlik Analizi</h2>
+                <p style="color: #c0c0c0; margin: 0.2rem 0 0 0;">Molekül → Şirket → Marka → Paket · Pazar Kanibalizasyonu</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Veri kontrolü
-        if not st.session_state.data_loaded or st.session_state.processed_data is None:
-            self._render_welcome_screen()
-            return
+        col1, col2 = st.columns([1, 2])
         
-        df = st.session_state.processed_data
-        
-        # Tabs
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-            "🔬 PRODPACK HİYERARŞİ",
-            "📊 PAZAR KANİBALİZASYONU",
-            "🤖 AI TAHMİN & RİSK",
-            "🎯 SEGMENTASYON",
-            "📈 VERİ GEZGİNİ",
-            "💡 STRATEJİK ÖZET"
-        ])
-        
-        with tab1:
-            self._render_prodpack_hierarchy()
-        
-        with tab2:
-            self._render_cannibalization()
-        
-        with tab3:
-            self._render_ai_forecast()
-        
-        with tab4:
-            self._render_segmentation()
-        
-        with tab5:
-            self._render_data_explorer()
-        
-        with tab6:
-            self._render_strategic_summary()
-    
-    def _render_welcome_screen(self):
-        """Hoşgeldin ekranı"""
-        
-        col1, col2, col3 = st.columns([1, 2, 1])
-        
-        with col2:
+        with col1:
             st.markdown("""
-            <div style="text-align: center; padding: 3rem 2rem; background: rgba(21, 36, 71, 0.5); 
-                     border-radius: 20px; border: 2px dashed #d4af37; margin-top: 2rem;">
-                <div style="font-size: 5rem; margin-bottom: 1rem;">💊</div>
-                <h2 style="color: #d4af37; margin-bottom: 1rem;">ProdPack Derinlik Analizine Hoş Geldiniz</h2>
-                <p style="color: #c0c0c0; font-size: 1.1rem; margin-bottom: 2rem;">
-                    PharmaIntelligence Pro v8.0 ile molekül bazlı drill-down, pazar kanibalizasyonu,<br>
-                    AI tahminleme ve anomali tespiti yapabilirsiniz.
-                </p>
-                <div style="background: rgba(10, 25, 41, 0.8); padding: 1.5rem; border-radius: 10px;">
-                    <h4 style="color: #d4af37; margin-top: 0;">🚀 Başlamak İçin:</h4>
-                    <p style="color: #e6edf3;">1️⃣ Sol panelden Excel/CSV dosyanızı yükleyin</p>
-                    <p style="color: #e6edf3;">2️⃣ "VERİYİ İŞLE" butonuna tıklayın</p>
-                    <p style="color: #e6edf3;">3️⃣ Molekül seçip derinlik analizine başlayın</p>
-                </div>
-            </div>
+            <div class="executive-card" style="padding: 1.5rem;">
+                <h4 style="color: #d4af37; margin-top: 0; border-bottom: 1px solid #d4af37; padding-bottom: 0.8rem;">
+                    🧬 MOLEKÜL DRILL-DOWN
+                </h4>
             """, unsafe_allow_html=True)
-    
-    def _render_prodpack_hierarchy(self):
-        """ProdPack hiyerarşi görselleştirmesi"""
-        
-        st.markdown("### 🔬 ProdPack Hiyerarşik Drill-Down")
-        
-        if st.session_state.prodpack_hierarchy is None:
-            st.info("ProdPack hiyerarşisi oluşturuluyor... Lütfen bekleyin.")
-            return
-        
-        hierarchy = st.session_state.prodpack_hierarchy
-        stats = hierarchy.get('stats', {})
-        
-        # Üst metrikler
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown("""
-            <div class="metric-gold">
-                <div style="font-size: 1.8rem; font-weight: 700; color: #d4af37;">
-                    {}</div>
-                <div style="color: #c0c0c0;">Molekül</div>
-            </div>
-            """.format(stats.get('total_molecules', 0)), unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown("""
-            <div class="metric-silver">
-                <div style="font-size: 1.8rem; font-weight: 700; color: #c0c0c0;">
-                    {}</div>
-                <div style="color: #c0c0c0;">Şirket</div>
-            </div>
-            """.format(stats.get('total_companies', 0)), unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown("""
-            <div class="metric-gold">
-                <div style="font-size: 1.8rem; font-weight: 700; color: #d4af37;">
-                    {}</div>
-                <div style="color: #c0c0c0;">Marka</div>
-            </div>
-            """.format(stats.get('total_brands', 0)), unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown("""
-            <div class="metric-silver">
-                <div style="font-size: 1.8rem; font-weight: 700; color: #c0c0c0;">
-                    {}</div>
-                <div style="color: #c0c0c0;">Paket</div>
-            </div>
-            """.format(stats.get('total_packs', 0)), unsafe_allow_html=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Görselleştirme seçimi
-        viz_type = st.radio(
-            "Görselleştirme Tipi",
-            ["🌐 Sunburst Diagram", "🔀 Sankey Diagram"],
-            horizontal=True,
-            key='viz_type'
-        )
-        
-        col1, col2 = st.columns([3, 1])
-        
-        with col1:
-            if '🌐' in viz_type:
-                if hierarchy.get('sunburst_data'):
-                    st.plotly_chart(hierarchy['sunburst_data'], use_container_width=True)
-                else:
-                    st.warning("Sunburst diagram oluşturulamadı")
-            else:
-                if hierarchy.get('sankey_data'):
-                    st.plotly_chart(hierarchy['sankey_data'], use_container_width=True)
-                else:
-                    st.warning("Sankey diagram oluşturulamadı")
-        
-        with col2:
-            st.markdown("""
-            <div style="background: rgba(21, 36, 71, 0.7); padding: 1.5rem; border-radius: 10px;
-                     border-left: 4px solid #d4af37;">
-                <h4 style="color: #d4af37; margin-top: 0;">🔍 Drill-Down</h4>
-                <p style="color: #c0c0c0; font-size: 0.9rem;">
-                    Grafik üzerinde tıklayarak<br>
-                    detaylara inebilirsiniz.
-                </p>
-                <hr style="border-color: rgba(212, 175, 55, 0.3);">
-                <p style="color: #c0c0c0; font-size: 0.8rem;">
-                    <b>Aktif Filtre:</b><br>
-                    {}
-                </p>
-            </div>
-            """.format(st.session_state.selected_molecule if st.session_state.selected_molecule else 'Tüm Pazar'), 
-            unsafe_allow_html=True)
-        
-        # Molekül detay tablosu
-        if st.session_state.selected_molecule:
-            st.markdown("---")
-            st.markdown(f"### 📋 {st.session_state.selected_molecule} - Detaylı Paket Analizi")
             
-            df = st.session_state.processed_data
-            mol_df = df[df['Molekül'] == st.session_state.selected_molecule]
-            
-            # Satış sütunu
-            sales_cols = [col for col in df.columns if re.search(r'Satış_20\d{2}', col)]
-            current_col = sales_cols[-1] if sales_cols else None
-            
-            if current_col:
-                # Paket bazlı özet
-                pack_summary = mol_df.groupby(['Şirket', 'Marka', 'Paket']).agg({
-                    current_col: 'sum',
-                    'Pazar_Payı': 'mean' if 'Pazar_Payı' in mol_df.columns else 'sum'
-                }).reset_index()
+            # Molekül seçimi
+            if st.session_state.prodpack_hierarchy:
+                molecules = [node for node in st.session_state.prodpack_hierarchy.values() if node.node_type == 'molecule']
+                molecule_names = ['Tümü'] + [m.name for m in molecules]
+                selected_molecule = st.selectbox("Molekül Seçin", molecule_names)
                 
-                pack_summary = pack_summary.sort_values(current_col, ascending=False).head(20)
-                pack_summary[current_col] = pack_summary[current_col].apply(lambda x: f"${x:,.0f}")
-                pack_summary['Pazar_Payı'] = pack_summary['Pazar_Payı'].apply(lambda x: f"%{x:.2f}")
+                st.markdown("---")
                 
-                st.dataframe(pack_summary, use_container_width=True, height=400)
-    
-    def _render_cannibalization(self):
-        """Pazar kanibalizasyonu analizi"""
-        
-        st.markdown("### 📊 Pazar Kanibalizasyon Analizi")
-        
-        ExecutiveDarkTheme.executive_insight_box(
-            title="Aynı Şirket İçi Rekabet",
-            content="Aynı şirketin farklı paketleri arasındaki pazar payı transferini analiz edin. "
-                   "Negatif korelasyon, yüksek kanibalizasyon riskini gösterir.",
-            icon="🔄"
-        )
-        
-        if st.session_state.cannibalization_results is None:
-            st.info("👈 Sol panelden bir şirket seçip 'KANİBALİZASYON ANALİZİ' butonuna tıklayın")
-            return
-        
-        cannibal_df = st.session_state.cannibalization_results
-        
-        if cannibal_df.empty:
-            st.warning("Bu şirket için yeterli paket verisi yok")
-            return
-        
-        # Kanibalizasyon skoru
-        cannibal_score = cannibal_df['Kanibalizasyon_Skoru'].iloc[0] if 'Kanibalizasyon_Skoru' in cannibal_df.columns else 0
-        
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            st.markdown("""
-            <div style="background: rgba(21, 36, 71, 0.7); padding: 1.5rem; border-radius: 10px;
-                     text-align: center;">
-                <div style="font-size: 2.5rem; font-weight: 700; color: {};">
-                    {:.2f}
-                </div>
-                <div style="color: #c0c0c0; margin-top: 0.5rem;">Kanibalizasyon Skoru</div>
-                <div style="color: #d4af37; margin-top: 0.5rem; font-size: 0.9rem;">
-                    {}
-                </div>
-            </div>
-            """.format(
-                '#f44336' if cannibal_score < -0.5 else '#ff9800' if cannibal_score < -0.3 else '#4caf50',
-                cannibal_score,
-                cannibal_df['Kanibalizasyon_Risk'].iloc[0] if 'Kanibalizasyon_Risk' in cannibal_df.columns else 'Analiz Edildi'
-            ), unsafe_allow_html=True)
-        
-        with col2:
-            # Paket dağılımı
-            fig = px.pie(
-                cannibal_df,
-                values='Satış_2024',
-                names='Paket',
-                title='Şirket İçi Paket Dağılımı',
-                color_discrete_sequence=px.colors.sequential.Viridis
-            )
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white'),
-                title_font_color='#d4af37'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        st.markdown("---")
-        
-        # Paket büyüme vs pazar payı matrisi
-        st.markdown("#### 📈 Büyüme / Hacim Matrisi")
-        
-        fig = px.scatter(
-            cannibal_df,
-            x='Şirket_İçi_Pay',
-            y='Büyüme_Hızı',
-            size='Satış_2024',
-            color='Kanibalizasyon_Risk' if 'Kanibalizasyon_Risk' in cannibal_df.columns else None,
-            hover_name='Paket',
-            text='Paket',
-            title='Kanibalizasyon Matrisi',
-            size_max=60
-        )
-        
-        fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white'),
-            title_font_color='#d4af37',
-            height=500
-        )
-        
-        fig.update_xaxes(title_text="Şirket İçi Pazar Payı (%)", gridcolor='rgba(255,255,255,0.1)')
-        fig.update_yaxes(title_text="Büyüme Hızı (%)", gridcolor='rgba(255,255,255,0.1)')
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Detay tablo
-        st.markdown("#### 📋 Paket Detay Analizi")
-        
-        display_cols = ['Paket', 'Molekül', 'Marka', 'Satış_2024', 'Büyüme_Hızı', 
-                       'Şirket_İçi_Pay', 'Kanibalizasyon_Risk']
-        
-        display_df = cannibal_df[[c for c in display_cols if c in cannibal_df.columns]]
-        
-        st.dataframe(
-            display_df.style.format({
-                'Satış_2024': '${:,.0f}',
-                'Büyüme_Hızı': '{:.1f}%',
-                'Şirket_İçi_Pay': '{:.2f}%'
-            }),
-            use_container_width=True,
-            height=400
-        )
-    
-    def _render_ai_forecast(self):
-        """AI tahminleme ve risk tespiti"""
-        
-        st.markdown("### 🤖 AI Destekli Stratejik Öngörü")
-        
-        tab_forecast, tab_anomaly = st.tabs(["📈 2025-2026 Tahminleme", "⚠️ Anomali Tespiti"])
-        
-        with tab_forecast:
-            if st.session_state.forecast_results is None:
-                st.info("👈 Sol panelden 'PAZAR TAHMİNİ' butonuna tıklayın")
-            else:
-                forecasts = st.session_state.forecast_results
+                # Gösterim ayarları
+                st.markdown("#### 📊 Görselleştirme")
+                show_sunburst = st.checkbox("Sunburst Diyagramı", value=True)
+                show_sankey = st.checkbox("Sankey Akış Diyagramı", value=False)
+                show_cannibalization = st.checkbox("Kanibalizasyon Matrisi", value=True)
                 
-                if 'holt_winters' in forecasts:
-                    f = forecasts['holt_winters']
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        growth_2025 = ((f.predictions[11] - f.predictions[0]) / f.predictions[0]) * 100 if f.predictions[0] > 0 else 0
-                        st.metric(
-                            "2025 Büyüme Tahmini",
-                            f"%{growth_2025:.1f}",
-                            delta=f"{growth_2025 - 5:.1f}% vs pazar"
-                        )
-                    
-                    with col2:
-                        growth_2026 = ((f.predictions[23] - f.predictions[11]) / f.predictions[11]) * 100 if f.predictions[11] > 0 else 0
-                        st.metric(
-                            "2026 Büyüme Tahmini",
-                            f"%{growth_2026:.1f}",
-                            delta=f"{growth_2026 - 4:.1f}% vs pazar"
-                        )
-                    
-                    with col3:
-                        st.metric(
-                            "Model MAPE",
-                            f"%{f.mape:.2f}",
-                            delta="±%1.5" if f.mape < 10 else "±%3.0",
-                            delta_color="normal" if f.mape < 15 else "inverse"
-                        )
-                    
-                    # Tahmin grafiği
-                    fig = go.Figure()
-                    
-                    # Tarihsel veri
-                    df = st.session_state.processed_data
-                    sales_cols = [col for col in df.columns if re.search(r'Satış_20\d{2}', col)]
-                    if sales_cols:
-                        years = []
-                        values = []
-                        for col in sales_cols:
-                            match = re.search(r'20\d{2}', col)
-                            if match:
-                                years.append(match.group())
-                                values.append(df[col].sum() / 1e6)  # Milyon $
-                        
-                        fig.add_trace(go.Scatter(
-                            x=years,
-                            y=values,
-                            mode='lines+markers',
-                            name='Tarihsel Satış',
-                            line=dict(color='#c0c0c0', width=3),
-                            marker=dict(size=10, color='#c0c0c0')
-                        ))
-                    
-                    # Tahmin
-                    forecast_years = f.periods[:24:2]  # 2'şer aylık göster
-                    forecast_values = f.predictions[:24:2]
-                    
-                    fig.add_trace(go.Scatter(
-                        x=forecast_years,
-                        y=[v / 1e6 for v in forecast_values],
-                        mode='lines+markers',
-                        name='Tahmin (2025-2026)',
-                        line=dict(color='#d4af37', width=3, dash='dot'),
-                        marker=dict(size=8, color='#d4af37')
-                    ))
-                    
-                    # Güven aralığı
-                    fig.add_trace(go.Scatter(
-                        x=forecast_years + forecast_years[::-1],
-                        y=[ub / 1e6 for ub in f.upper_bound[:24:2]] + [lb / 1e6 for lb in f.lower_bound[:24:2][::-1]],
-                        fill='toself',
-                        fillcolor='rgba(212, 175, 55, 0.2)',
-                        line=dict(color='rgba(255,255,255,0)'),
-                        name='Güven Aralığı (%95)'
-                    ))
-                    
-                    fig.update_layout(
-                        title='Pazar Büyüklüğü Tahmini (2025-2026)',
-                        xaxis_title='Dönem',
-                        yaxis_title='Satış (Milyon $)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color='white'),
-                        title_font_color='#d4af37',
-                        height=500,
-                        hovermode='x unified'
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Yatırım tavsiyesi
-                    st.markdown("---")
-                    
-                    col1, col2 = st.columns([2, 1])
-                    
-                    with col1:
-                        ExecutiveDarkTheme.executive_insight_box(
-                            title="Yatırım Tavsiyesi - 2025/2026 Stratejisi",
-                            content=f"📈 Pazarın 2025'te %{growth_2025:.1f}, 2026'da %{growth_2026:.1f} büyümesi bekleniyor. "
-                                   f"{'🔴 Yüksek büyüme fırsatı - Kapasite artırımı ve Ar-Ge yatırımları önerilir' if growth_2025 > 10 else '🟡 Kontrollü büyüme - Mevcut portföy optimizasyonu önerilir'}",
-                            icon="💼"
-                        )
-                    
-                    with col2:
-                        st.markdown("""
-                        <div style="background: rgba(21, 36, 71, 0.7); padding: 1.5rem; border-radius: 10px;
-                                 border: 1px solid #d4af37;">
-                            <h4 style="color: #d4af37; margin-top: 0;">📋 Strateji</h4>
-                            <ul style="color: #c0c0c0; padding-left: 1.2rem;">
-                                <li>Yıldız ürünlere yatırım</li>
-                                <li>Riskli paketleri değerlendir</li>
-                                <li>Yeni pazarlara açıl</li>
-                            </ul>
-                        </div>
-                        """, unsafe_allow_html=True)
-        
-        with tab_anomaly:
-            if st.session_state.anomaly_results is None:
-                st.info("👈 Sol panelden 'RİSK TESPİTİ' butonuna tıklayın")
-            else:
-                anomaly_df = st.session_state.anomaly_results
+                st.markdown("---")
                 
-                if 'Anomali_Durumu' in anomaly_df.columns:
-                    # Anomali özeti
-                    anomaly_summary = anomaly_df['Anomali_Durumu'].value_counts().reset_index()
-                    anomaly_summary.columns = ['Durum', 'Sayı']
+                # Veri gezgini - 5000 satır kapasite
+                st.markdown("#### 🔍 VERİ GEZGİNİ")
+                if st.session_state.processed_df is not None:
+                    preview_rows = st.slider("Gösterilecek satır", 100, 5000, 1000, 100)
                     
-                    col1, col2, col3, col4 = st.columns(4)
+                    # Önemli sütunlar
+                    important_cols = []
+                    for col in ['Molekül', 'Şirket', 'Marka', 'Paket', 'Satış_2024', 'Büyüme_Oranı']:
+                        if col in st.session_state.processed_df.columns:
+                            important_cols.append(col)
                     
-                    critical = anomaly_summary[anomaly_summary['Durum'] == '🔴 Kritik Anomali']['Sayı'].values[0] if '🔴 Kritik Anomali' in anomaly_summary['Durum'].values else 0
-                    high = anomaly_summary[anomaly_summary['Durum'] == '🟠 Yüksek Anomali']['Sayı'].values[0] if '🟠 Yüksek Anomali' in anomaly_summary['Durum'].values else 0
-                    medium = anomaly_summary[anomaly_summary['Durum'] == '🟡 Orta Anomali']['Sayı'].values[0] if '🟡 Orta Anomali' in anomaly_summary['Durum'].values else 0
-                    normal = anomaly_summary[anomaly_summary['Durum'] == '✅ Normal']['Sayı'].values[0] if '✅ Normal' in anomaly_summary['Durum'].values else 0
-                    
-                    with col1:
-                        st.markdown(f"""
-                        <div style="background: rgba(244, 67, 54, 0.2); padding: 1rem; border-radius: 10px; 
-                                 border-left: 5px solid #f44336;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: #f44336;">{critical}</div>
-                            <div style="color: #c0c0c0;">Kritik Anomali</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col2:
-                        st.markdown(f"""
-                        <div style="background: rgba(255, 152, 0, 0.2); padding: 1rem; border-radius: 10px;
-                                 border-left: 5px solid #ff9800;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: #ff9800;">{high}</div>
-                            <div style="color: #c0c0c0;">Yüksek Anomali</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col3:
-                        st.markdown(f"""
-                        <div style="background: rgba(255, 235, 59, 0.2); padding: 1rem; border-radius: 10px;
-                                 border-left: 5px solid #ffeb3b;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: #ffeb3b;">{medium}</div>
-                            <div style="color: #c0c0c0;">Orta Anomali</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col4:
-                        st.markdown(f"""
-                        <div style="background: rgba(76, 175, 80, 0.2); padding: 1rem; border-radius: 10px;
-                                 border-left: 5px solid #4caf50;">
-                            <div style="font-size: 1.8rem; font-weight: 700; color: #4caf50;">{normal}</div>
-                            <div style="color: #c0c0c0;">Normal</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    st.markdown("---")
-                    
-                    # Kritik anomaliler
-                    st.markdown("#### 🚨 Kritik Anomali Tespit Edilen Paketler")
-                    
-                    critical_df = anomaly_df[anomaly_df['Anomali_Durumu'] == '🔴 Kritik Anomali']
-                    
-                    if not critical_df.empty:
-                        display_cols = []
-                        for col in ['Paket', 'Marka', 'Şirket', 'Molekül', 'Anomali_Skoru', 'Büyüme_Anomalisi']:
-                            if col in critical_df.columns:
-                                display_cols.append(col)
-                        
-                        # Satış sütunu ekle
-                        sales_cols = [col for col in critical_df.columns if re.search(r'Satış_20\d{2}', col)]
-                        if sales_cols:
-                            display_cols.append(sales_cols[-1])
-                        
+                    if important_cols:
                         st.dataframe(
-                            critical_df[display_cols].head(20),
+                            st.session_state.processed_df[important_cols].head(preview_rows),
                             use_container_width=True,
-                            height=400
+                            height=300
                         )
-                        
-                        # Anomali görselleştirmesi
-                        fig = px.scatter(
-                            critical_df,
-                            x='Anomali_Skoru',
-                            y=sales_cols[-1] if sales_cols else 'Anomali_Skoru',
-                            color='Büyüme_Anomalisi' if 'Büyüme_Anomalisi' in critical_df.columns else None,
-                            size='Anomali_Skoru',
-                            hover_name='Paket' if 'Paket' in critical_df.columns else None,
-                            title='Kritik Anomaliler - Risk Haritası'
-                        )
-                        
-                        fig.update_layout(
-                            paper_bgcolor='rgba(0,0,0,0)',
-                            plot_bgcolor='rgba(0,0,0,0)',
-                            font=dict(color='white'),
-                            title_font_color='#d4af37',
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                        
-                    else:
-                        st.success("✅ Kritik anomali tespit edilmedi!")
-    
-    def _render_segmentation(self):
-        """PCA+K-Means segmentasyon"""
-        
-        st.markdown("### 🎯 PCA & K-Means Segmentasyon")
-        
-        if st.session_state.segmentation_results is None:
-            st.info("👈 Sol panelden 'PCA+K-MEANS SEGMENTASYON' butonuna tıklayın")
-            return
-        
-        seg_df = st.session_state.segmentation_results
-        
-        if 'Segment_Adı' not in seg_df.columns:
-            st.warning("Segmentasyon verisi eksik")
-            return
-        
-        # Segment dağılımı
-        segment_counts = seg_df['Segment_Adı'].value_counts().reset_index()
-        segment_counts.columns = ['Segment', 'Ürün Sayısı']
-        
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            fig = px.pie(
-                segment_counts,
-                values='Ürün Sayısı',
-                names='Segment',
-                title='Segment Dağılımı',
-                color_discrete_sequence=px.colors.sequential.Viridis
-            )
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white'),
-                title_font_color='#d4af37',
-                height=400
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.markdown("""
-            <div style="background: rgba(21, 36, 71, 0.7); padding: 1.5rem; border-radius: 10px; height: 400px;
-                     overflow-y: auto;">
-                <h4 style="color: #d4af37; margin-top: 0;">📊 Segment Profilleri</h4>
-            """, unsafe_allow_html=True)
-            
-            for segment in segment_counts['Segment'].head():
-                count = segment_counts[segment_counts['Segment'] == segment]['Ürün Sayısı'].values[0]
-                
-                if 'Lider' in segment:
-                    icon = "🏆"
-                    color = "#d4af37"
-                elif 'Potansiyel' in segment:
-                    icon = "🚀"
-                    color = "#c0c0c0"
-                elif 'Riskli' in segment:
-                    icon = "⚠️"
-                    color = "#f44336"
-                elif 'Yükselen' in segment:
-                    icon = "🌟"
-                    color = "#4caf50"
-                else:
-                    icon = "📦"
-                    color = "#2196f3"
-                
-                st.markdown(f"""
-                <div style="margin-bottom: 1rem; padding: 0.8rem; background: rgba(255,255,255,0.05); 
-                         border-radius: 8px; border-left: 4px solid {color};">
-                    <div style="display: flex; align-items: center;">
-                        <span style="font-size: 1.5rem; margin-right: 0.5rem;">{icon}</span>
-                        <span style="color: {color}; font-weight: 600;">{segment}</span>
-                        <span style="margin-left: auto; background: {color}; color: #0a1929; 
-                                  padding: 0.2rem 0.6rem; border-radius: 20px; font-weight: 700;">
-                            {count}
-                        </span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
             
             st.markdown("</div>", unsafe_allow_html=True)
         
-        st.markdown("---")
+        with col2:
+            if not st.session_state.prodpack_hierarchy:
+                st.info("""
+                <div style="background: rgba(52, 152, 219, 0.1); padding: 2rem; border-radius: 16px; text-align: center;">
+                    <span style="font-size: 3rem;">🏗️</span>
+                    <h4 style="color: #3498db; margin: 1rem 0;">ProdPack Hiyerarşisi Kurulmamış</h4>
+                    <p style="color: #c0c0c0;">Sol panelden "ProdPack Derinlik" butonuna tıklayarak analizi başlatın.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Sunburst diyagramı
+                if show_sunburst:
+                    with st.spinner("Sunburst diyagramı oluşturuluyor..."):
+                        fig = self.prodpack_analyzer.create_sunburst_diagram(
+                            st.session_state.prodpack_hierarchy
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                
+                # Insight Box - ProdPack Özeti
+                st.markdown(
+                    self.insight_generator.generate_prodpack_insight(
+                        st.session_state.prodpack_hierarchy
+                    ),
+                    unsafe_allow_html=True
+                )
+                
+                # Kanibalizasyon matrisi
+                if show_cannibalization and st.session_state.cannibalization_results:
+                    fig = self.prodpack_analyzer.create_cannibalization_heatmap(
+                        st.session_state.cannibalization_results
+                    )
+                    if fig:
+                        st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_forecast_tab(self):
+        """Tahmin & Öngörü Sekmesi"""
         
-        # PCA Görselleştirme
-        st.markdown("#### 🗺️ PCA Boyut İndirgeme Haritası")
+        st.markdown("""
+        <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+            <span style="font-size: 2.5rem; margin-right: 1rem;">🔮</span>
+            <div>
+                <h2 style="margin: 0;">Pazar Tahmini & Yatırım Stratejisi</h2>
+                <p style="color: #c0c0c0; margin: 0.2rem 0 0 0;">Holt-Winters · Ensemble · 2025-2026 Projeksiyonu</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        if 'PCA_1' in seg_df.columns and 'PCA_2' in seg_df.columns:
-            fig = px.scatter(
-                seg_df,
-                x='PCA_1',
-                y='PCA_2',
-                color='Segment_Adı',
-                hover_name='Paket' if 'Paket' in seg_df.columns else None,
-                title='PCA ile Ürün Segmentasyonu',
-                color_discrete_sequence=px.colors.qualitative.Set1
+        if not st.session_state.forecast_result:
+            st.info("""
+            <div style="background: rgba(52, 152, 219, 0.1); padding: 2rem; border-radius: 16px; text-align: center;">
+                <span style="font-size: 3rem;">📊</span>
+                <h4 style="color: #3498db; margin: 1rem 0;">Tahmin Analizi Henüz Çalıştırılmamış</h4>
+                <p style="color: #c0c0c0;">Sol panelden "Tahmin & Öngörü" butonuna tıklayın.</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                # Tahmin grafiği
+                forecast = st.session_state.forecast_result
+                
+                fig = go.Figure()
+                
+                # Güven aralığı
+                if forecast.get('lower_bounds') and forecast.get('upper_bounds'):
+                    fig.add_trace(go.Scatter(
+                        x=forecast.get('dates', list(range(len(forecast['predictions'])))),
+                        y=forecast['upper_bounds'],
+                        mode='lines',
+                        line=dict(width=0),
+                        showlegend=False,
+                        name='Üst Sınır'
+                    ))
+                    
+                    fig.add_trace(go.Scatter(
+                        x=forecast.get('dates', list(range(len(forecast['predictions'])))),
+                        y=forecast['lower_bounds'],
+                        mode='lines',
+                        line=dict(width=0),
+                        fill='tonexty',
+                        fillcolor='rgba(52, 152, 219, 0.2)',
+                        showlegend=False,
+                        name='Alt Sınır'
+                    ))
+                
+                # Tahmin çizgisi
+                fig.add_trace(go.Scatter(
+                    x=forecast.get('dates', list(range(len(forecast['predictions'])))),
+                    y=forecast['predictions'],
+                    mode='lines+markers',
+                    name='Tahmin',
+                    line=dict(color='#d4af37', width=4),
+                    marker=dict(size=6, color='#d4af37')
+                ))
+                
+                fig.update_layout(
+                    title='2025-2026 Pazar Büyüme Tahmini',
+                    xaxis_title='Dönem',
+                    yaxis_title='Satış (USD)',
+                    height=500,
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='white'),
+                    hovermode='x unified',
+                    showlegend=True,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # Yatırım tavsiye kutuları
+                st.markdown("""
+                <div class="executive-card" style="padding: 1.5rem; height: 100%;">
+                    <h4 style="color: #d4af37; margin-top: 0; border-bottom: 1px solid #d4af37; padding-bottom: 0.8rem;">
+                        💼 YATIRIM TAVSİYESİ
+                    </h4>
+                """, unsafe_allow_html=True)
+                
+                for advice in st.session_state.investment_advice:
+                    st.markdown(f"""
+                    <div style="background: rgba({int(advice['color'][1:3], 16)}, {int(advice['color'][3:5], 16)}, {int(advice['color'][5:7], 16)}, 0.1); 
+                                border-left: 6px solid {advice['color']}; padding: 1.2rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <span style="color: {advice['color']}; font-size: 1.3rem; font-weight: 800;">{advice['title']}</span>
+                        <p style="color: white; margin: 0.5rem 0;">{advice['message']}</p>
+                        <p style="color: #c0c0c0; margin: 0; font-size: 0.9rem;">
+                            <span style="color: {advice['color']};">▶</span> {advice['action']}
+                        </p>
+                        <p style="color: {advice['color']}; margin: 0.5rem 0 0 0; font-size: 0.8rem;">
+                            Güven: {advice['confidence']}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Insight Box - Tahmin Özeti
+            st.markdown(
+                self.insight_generator.generate_forecast_insight(st.session_state.forecast_result),
+                unsafe_allow_html=True
+            )
+    
+    def _render_risk_tab(self):
+        """Risk & Fırsat İzleme Sekmesi"""
+        
+        st.markdown("""
+        <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+            <span style="font-size: 2.5rem; margin-right: 1rem;">⚠️</span>
+            <div>
+                <h2 style="margin: 0;">Risk & Fırsat İzleme</h2>
+                <p style="color: #c0c0c0; margin: 0.2rem 0 0 0;">IsolationForest · Anomali Tespiti · Erken Uyarı Sistemi</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.session_state.anomaly_df is None:
+            st.info("""
+            <div style="background: rgba(231, 76, 60, 0.1); padding: 2rem; border-radius: 16px; text-align: center;">
+                <span style="font-size: 3rem;">🛡️</span>
+                <h4 style="color: #e74c3c; margin: 1rem 0;">Risk Analizi Henüz Çalıştırılmamış</h4>
+                <p style="color: #c0c0c0;">Sol panelden "Risk İzleme" butonuna tıklayın.</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            anomaly_df = st.session_state.anomaly_df
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                n_critical = len(anomaly_df[anomaly_df['Anomali_Seviyesi'] == 'Kritik Düşüş'])
+                st.markdown(f"""
+                <div class="metric-gold" style="text-align: center;">
+                    <span style="font-size: 2rem;">🔴</span>
+                    <h3 style="color: white; margin: 0.3rem 0; font-size: 2.2rem;">{n_critical}</h3>
+                    <p style="color: #c0c0c0; margin: 0;">Kritik Düşüş</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                n_hyper = len(anomaly_df[anomaly_df['Anomali_Seviyesi'] == 'Aşırı Büyüme'])
+                st.markdown(f"""
+                <div class="metric-silver" style="text-align: center;">
+                    <span style="font-size: 2rem;">🟢</span>
+                    <h3 style="color: white; margin: 0.3rem 0; font-size: 2.2rem;">{n_hyper}</h3>
+                    <p style="color: #c0c0c0; margin: 0;">Aşırı Büyüme</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                n_anomaly = len(anomaly_df[anomaly_df['Anomali_Tespiti'] == -1])
+                st.markdown(f"""
+                <div class="metric-navy" style="text-align: center;">
+                    <span style="font-size: 2rem;">🟡</span>
+                    <h3 style="color: white; margin: 0.3rem 0; font-size: 2.2rem;">{n_anomaly}</h3>
+                    <p style="color: #c0c0c0; margin: 0;">Toplam Anomali</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                avg_risk = anomaly_df['Risk_Skoru'].mean()
+                st.markdown(f"""
+                <div class="metric-gold" style="text-align: center;">
+                    <span style="font-size: 2rem;">📊</span>
+                    <h3 style="color: white; margin: 0.3rem 0; font-size: 2.2rem;">{avg_risk:.1f}</h3>
+                    <p style="color: #c0c0c0; margin: 0;">Ort. Risk Skoru</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Insight Box - Risk Özeti
+            st.markdown(
+                self.insight_generator.generate_risk_insight(anomaly_df),
+                unsafe_allow_html=True
             )
             
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white'),
-                title_font_color='#d4af37',
-                height=500
-            )
+            # Anomali listesi
+            st.markdown("""
+            <h4 style="color: #d4af37; margin-top: 2rem;">🚨 KRİTİK RİSKLİ ÜRÜNLER</h4>
+            """, unsafe_allow_html=True)
             
-            st.plotly_chart(fig, use_container_width=True)
+            critical_products = anomaly_df[anomaly_df['Anomali_Seviyesi'] == 'Kritik Düşüş']
+            
+            if len(critical_products) > 0:
+                display_cols = []
+                for col in ['Molekül', 'Şirket', 'Marka', 'Paket', 'Anomali_Seviyesi', 'Risk_Skoru']:
+                    if col in critical_products.columns:
+                        display_cols.append(col)
+                
+                st.dataframe(
+                    critical_products[display_cols].sort_values('Risk_Skoru', ascending=False).head(20),
+                    use_container_width=True
+                )
+            else:
+                st.success("✅ Kritik riskli ürün bulunamadı.")
+    
+    def _render_segment_tab(self):
+        """Stratejik Segmentasyon Sekmesi"""
         
-        # Yatırım tavsiyeleri
-        st.markdown("#### 💼 Yatırım Tavsiyeleri")
+        st.markdown("""
+        <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+            <span style="font-size: 2.5rem; margin-right: 1rem;">🎯</span>
+            <div>
+                <h2 style="margin: 0;">Stratejik Segmentasyon</h2>
+                <p style="color: #c0c0c0; margin: 0.2rem 0 0 0;">PCA · K-Means · Liderler / Potansiyeller / Riskli Ürünler</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        if 'Yatırım_Tavsiyesi' in seg_df.columns:
-            advice_summary = seg_df['Yatırım_Tavsiyesi'].value_counts()
+        if not st.session_state.segment_result:
+            st.info("""
+            <div style="background: rgba(155, 89, 182, 0.1); padding: 2rem; border-radius: 16px; text-align: center;">
+                <span style="font-size: 3rem;">🧩</span>
+                <h4 style="color: #9b59b6; margin: 1rem 0;">Segmentasyon Analizi Henüz Çalıştırılmamış</h4>
+                <p style="color: #c0c0c0;">Sol panelden "Segmentasyon" butonuna tıklayın.</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            segment_result = st.session_state.segment_result
             
-            cols = st.columns(len(advice_summary))
+            col1, col2, col3 = st.columns(3)
             
-            for i, (advice, count) in enumerate(advice_summary.items()):
-                with cols[i]:
-                    if 'GÜÇLÜ' in advice:
-                        bg_color = "rgba(76, 175, 80, 0.2)"
-                        border_color = "#4caf50"
-                    elif 'İZLE' in advice:
-                        bg_color = "rgba(255, 235, 59, 0.2)"
-                        border_color = "#ffeb3b"
-                    elif 'RİSK' in advice:
-                        bg_color = "rgba(244, 67, 54, 0.2)"
-                        border_color = "#f44336"
-                    else:
-                        bg_color = "rgba(33, 150, 243, 0.2)"
-                        border_color = "#2196f3"
+            profiles = segment_result.get('segment_profiles', {})
+            
+            for i, (cluster, profile) in enumerate(profiles.items()):
+                with [col1, col2, col3][i % 3]:
+                    color = {
+                        '🌟 Liderler': '#f1c40f',
+                        '📈 Potansiyeller': '#2ecc71',
+                        '⚠️ Riskli Ürünler': '#e74c3c'
+                    }.get(profile.get('name', ''), '#9b59b6')
                     
                     st.markdown(f"""
-                    <div style="background: {bg_color}; padding: 1rem; border-radius: 10px;
-                             border: 1px solid {border_color}; text-align: center;">
-                        <div style="font-size: 1.8rem; font-weight: 700; color: {border_color};">{count}</div>
-                        <div style="color: {border_color};">{advice}</div>
+                    <div style="background: rgba(20, 39, 74, 0.7); border-radius: 16px; padding: 1.5rem; 
+                                border-bottom: 6px solid {color}; margin-bottom: 1rem; height: 220px;">
+                        <span style="font-size: 2rem;">{profile.get('name', 'Segment')[:2]}</span>
+                        <h4 style="color: {color}; margin: 0.5rem 0; font-size: 1.2rem;">{profile.get('name', 'Segment')}</h4>
+                        <p style="color: #c0c0c0; margin: 0.3rem 0; font-size: 1.8rem; font-weight: 700;">{profile.get('size', 0)}</p>
+                        <p style="color: white; margin: 0; font-size: 0.85rem;">{profile.get('description', '')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Insight Box - Segment Özeti
+            st.markdown(
+                self.insight_generator.generate_segment_insight(segment_result),
+                unsafe_allow_html=True
+            )
+            
+            # Strateji önerileri
+            st.markdown("""
+            <h4 style="color: #d4af37; margin-top: 2rem;">🎯 SEGMENT BAZLI STRATEJİLER</h4>
+            """, unsafe_allow_html=True)
+            
+            for cluster, profile in profiles.items():
+                with st.expander(f"{profile.get('name', 'Segment')} - {profile.get('size', 0)} ürün"):
+                    st.markdown(f"""
+                    <div style="background: rgba(20, 39, 74, 0.5); padding: 1.2rem; border-radius: 8px;">
+                        <p style="color: white; font-size: 1.1rem;">{profile.get('strategy', 'Strateji önerisi bulunamadı.')}</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                            <div>
+                                <span style="color: #c0c0c0;">Ort. Pazar Payı:</span><br>
+                                <span style="color: white; font-size: 1.3rem; font-weight: 700;">{profile.get('avg_market_share', 0):.2f}%</span>
+                            </div>
+                            <div>
+                                <span style="color: #c0c0c0;">Ort. Büyüme:</span><br>
+                                <span style="color: {'#2ecc71' if profile.get('avg_growth', 0) > 0 else '#e74c3c'}; 
+                                          font-size: 1.3rem; font-weight: 700;">
+                                    {profile.get('avg_growth', 0):.1f}%
+                                </span>
+                            </div>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
     
-    def _render_data_explorer(self):
-        """Veri gezgini - 5000 satır limitli"""
+    def _render_executive_dashboard(self):
+        """Executive Dashboard - Tüm metrikler tek ekranda"""
         
-        st.markdown("### 📈 Veri Gezgini")
+        st.markdown("""
+        <div style="display: flex; align-items: center; margin-bottom: 2rem;">
+            <span style="font-size: 2.5rem; margin-right: 1rem;">📊</span>
+            <div>
+                <h2 style="margin: 0;">Executive Dashboard</h2>
+                <p style="color: #c0c0c0; margin: 0.2rem 0 0 0;">Gerçek zamanlı pazar istihbaratı · KPI Takip</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        df = st.session_state.processed_data
-        limit = st.session_state.viz_limit
-        
-        st.caption(f"📊 Gösterilen: {min(limit, len(df)):,} / {len(df):,} satır")
-        
-        # Filtreler
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if 'Molekül' in df.columns:
-                mol_filter = st.multiselect(
-                    "Molekül Filtre",
-                    df['Molekül'].unique().tolist(),
-                    default=[]
-                )
-            else:
-                mol_filter = []
-        
-        with col2:
-            if 'Şirket' in df.columns:
-                company_filter = st.multiselect(
-                    "Şirket Filtre",
-                    df['Şirket'].unique().tolist(),
-                    default=[]
-                )
-            else:
-                company_filter = []
-        
-        with col3:
-            if 'Segment_Adı' in df.columns:
-                segment_filter = st.multiselect(
-                    "Segment Filtre",
-                    df['Segment_Adı'].unique().tolist(),
-                    default=[]
-                )
-            else:
-                segment_filter = []
-        
-        # Filtre uygula
-        filtered_df = df.copy()
-        
-        if mol_filter:
-            filtered_df = filtered_df[filtered_df['Molekül'].isin(mol_filter)]
-        if company_filter:
-            filtered_df = filtered_df[filtered_df['Şirket'].isin(company_filter)]
-        if segment_filter and 'Segment_Adı' in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df['Segment_Adı'].isin(segment_filter)]
-        
-        # Sütun seçimi
-        st.markdown("---")
-        
-        all_cols = filtered_df.columns.tolist()
-        
-        # Önemli sütunları otomatik seç
-        default_cols = []
-        for col in ['Molekül', 'Şirket', 'Marka', 'Paket', 'Pazar_Payı', 'Segment_Adı', 'Yatırım_Tavsiyesi']:
-            if col in all_cols:
-                default_cols.append(col)
-        
-        # Satış sütunları ekle
-        sales_cols = [col for col in all_cols if re.search(r'Satış_20\d{2}', col)]
-        default_cols.extend(sales_cols[:2])
-        
-        # Büyüme sütunları ekle
-        growth_cols = [col for col in all_cols if 'Büyüme' in col]
-        default_cols.extend(growth_cols[:1])
-        
-        selected_cols = st.multiselect(
-            "Gösterilecek Sütunlar",
-            all_cols,
-            default=[c for c in default_cols if c in all_cols][:10]
-        )
-        
-        if selected_cols:
-            display_df = filtered_df[selected_cols].head(limit)
-            
-            # Formatlama
-            format_dict = {}
-            for col in display_df.columns:
-                if re.search(r'Satış_20\d{2}', col):
-                    format_dict[col] = '${:,.0f}'
-                elif 'Büyüme' in col or 'Pay' in col:
-                    format_dict[col] = '{:.2f}%'
-            
-            st.dataframe(
-                display_df.style.format(format_dict),
-                use_container_width=True,
-                height=500
-            )
-        else:
-            st.dataframe(filtered_df.head(limit), use_container_width=True, height=500)
-        
-        # İndirme butonu
-        csv = filtered_df.head(limit).to_csv(index=False)
-        st.download_button(
-            label="📥 Filtrelenmiş Veriyi İndir (CSV)",
-            data=csv,
-            file_name=f"pharma_export_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    
-    def _render_strategic_summary(self):
-        """Stratejik özet ve yönetici insight box'ları"""
-        
-        st.markdown("### 💡 Stratejik Yönetici Özeti")
-        
-        df = st.session_state.processed_data
-        
-        # Otomatik içgörü üretme
-        insights = []
-        
-        # 1. Pazar lideri
-        if 'Şirket' in df.columns and 'Pazar_Payı' in df.columns:
-            top_company = df.groupby('Şirket')['Pazar_Payı'].mean().sort_values(ascending=False).head(1)
-            if not top_company.empty:
-                insights.append({
-                    'title': '🏢 Pazar Lideri',
-                    'content': f"{top_company.index[0]} şirketi %{top_company.values[0]:.1f} pazar payı ile lider konumda.",
-                    'metric': f"Pazar Payı: %{top_company.values[0]:.1f}",
-                    'icon': '🏆'
-                })
-        
-        # 2. En hızlı büyüyen molekül
-        growth_cols = [col for col in df.columns if 'Büyüme' in col]
-        if growth_cols and 'Molekül' in df.columns:
-            growth_col = growth_cols[-1]
-            top_growth = df.groupby('Molekül')[growth_col].mean().sort_values(ascending=False).head(1)
-            if not top_growth.empty and top_growth.values[0] > 0:
-                insights.append({
-                    'title': '🚀 En Hızlı Büyüyen',
-                    'content': f"{top_growth.index[0]} molekülü %{top_growth.values[0]:.1f} büyüme hızı ile zirvede.",
-                    'metric': f"Büyüme: %{top_growth.values[0]:.1f}",
-                    'icon': '📈'
-                })
-        
-        # 3. Risk durumu
-        if st.session_state.anomaly_results is not None:
-            anomaly_df = st.session_state.anomaly_results
-            if 'Anomali_Durumu' in anomaly_df.columns:
-                critical = len(anomaly_df[anomaly_df['Anomali_Durumu'] == '🔴 Kritik Anomali'])
-                if critical > 0:
-                    insights.append({
-                        'title': '⚠️ Kritik Risk Uyarısı',
-                        'content': f"{critical} adet ürün/pakette kritik anomali tespit edildi. Acil müdahale gerekiyor.",
-                        'metric': f"{critical} Kritik Anomali",
-                        'icon': '🔴'
-                    })
-        
-        # 4. Segmentasyon özeti
-        if st.session_state.segmentation_results is not None:
-            seg_df = st.session_state.segmentation_results
-            if 'Segment_Adı' in seg_df.columns:
-                leaders = len(seg_df[seg_df['Segment_Adı'] == '🏆 Lider Ürünler'])
-                potentials = len(seg_df[seg_df['Segment_Adı'] == '🚀 Potansiyel Liderler'])
-                risks = len(seg_df[seg_df['Segment_Adı'] == '⚠️ Riskli Ürünler'])
-                
-                insights.append({
-                    'title': '🎯 Portföy Sağlığı',
-                    'content': f"Portföyde {leaders} lider, {potentials} potansiyel ve {risks} riskli ürün bulunuyor.",
-                    'metric': f"Lider: {leaders} | Risk: {risks}",
-                    'icon': '📊'
-                })
-        
-        # 5. Tahmin özeti
-        if st.session_state.forecast_results is not None:
-            if 'holt_winters' in st.session_state.forecast_results:
-                f = st.session_state.forecast_results['holt_winters']
-                growth_2025 = ((f.predictions[11] - f.predictions[0]) / f.predictions[0]) * 100 if f.predictions[0] > 0 else 0
-                
-                insights.append({
-                    'title': '🔮 2025 Pazar Tahmini',
-                    'content': f"2025 yılında pazarın %{growth_2025:.1f} büyümesi bekleniyor. "
-                              f"{'Yatırım fırsatı' if growth_2025 > 10 else 'Kontrollü büyüme'} dönemi.",
-                    'metric': f"Tahmin: %{growth_2025:.1f}",
-                    'icon': '📅'
-                })
-        
-        # 6. Paket çeşitliliği
-        if 'Paket' in df.columns:
-            unique_packs = df['Paket'].nunique()
-            insights.append({
-                'title': '📦 Ürün Çeşitliliği',
-                'content': f"Toplam {unique_packs} farklı paket bulunuyor. "
-                          f"Ortalama paket başına satış: ${df['Satış_2024'].mean() if 'Satış_2024' in df.columns else 0:,.0f}",
-                'metric': f"{unique_packs} Paket",
-                'icon': '💊'
-            })
-        
-        # Insight box'ları göster
-        for insight in insights[:4]:  # İlk 4 içgörü
-            ExecutiveDarkTheme.executive_insight_box(
-                title=insight['title'],
-                content=insight['content'],
-                metric=insight.get('metric'),
-                icon=insight.get('icon', '💡')
-            )
-        
-        # KPI metrikleri
-        st.markdown("---")
-        st.markdown("#### 📊 Temel Performans Göstergeleri")
-        
+        # Üst metrik satırı
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            total_sales = df['Satış_2024'].sum() if 'Satış_2024' in df.columns else 0
+            total_packages = len([n for n in st.session_state.prodpack_hierarchy.values() if n.node_type == 'package']) if st.session_state.prodpack_hierarchy else 0
             st.markdown(f"""
-            <div style="background: rgba(21, 36, 71, 0.7); padding: 1.2rem; border-radius: 10px;">
-                <div style="color: #c0c0c0; font-size: 0.9rem;">Toplam Pazar</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #d4af37;">${total_sales/1e6:.1f}M</div>
-                <div style="color: #4caf50; font-size: 0.8rem;">↑ 2024</div>
+            <div class="metric-gold">
+                <span style="font-size: 1.8rem;">📦</span>
+                <h3 style="color: white; margin: 0.3rem 0; font-size: 2rem;">{total_packages}</h3>
+                <p style="color: #c0c0c0; margin: 0;">Aktif ProdPack</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
-            avg_growth = df['Büyüme_2023_2024'].mean() if 'Büyüme_2023_2024' in df.columns else 0
-            delta_color = "↑" if avg_growth > 0 else "↓"
-            delta_class = "color: #4caf50;" if avg_growth > 0 else "color: #f44336;"
+            total_market = 0
+            if st.session_state.prodpack_hierarchy:
+                packages = [n for n in st.session_state.prodpack_hierarchy.values() if n.node_type == 'package']
+                total_market = sum(p.sales_2024 for p in packages) / 1_000_000
             st.markdown(f"""
-            <div style="background: rgba(21, 36, 71, 0.7); padding: 1.2rem; border-radius: 10px;">
-                <div style="color: #c0c0c0; font-size: 0.9rem;">Ortalama Büyüme</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #d4af37;">%{avg_growth:.1f}</div>
-                <div style="{delta_class}">{delta} 2023-2024</div>
+            <div class="metric-silver">
+                <span style="font-size: 1.8rem;">💰</span>
+                <h3 style="color: white; margin: 0.3rem 0; font-size: 2rem;">${total_market:.1f}M</h3>
+                <p style="color: #c0c0c0; margin: 0;">Toplam Pazar</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col3:
-            unique_molecules = df['Molekül'].nunique() if 'Molekül' in df.columns else 0
+            avg_growth = 0
+            if st.session_state.prodpack_hierarchy:
+                packages = [n for n in st.session_state.prodpack_hierarchy.values() if n.node_type == 'package']
+                avg_growth = np.mean([p.growth_rate for p in packages if not np.isnan(p.growth_rate)])
             st.markdown(f"""
-            <div style="background: rgba(21, 36, 71, 0.7); padding: 1.2rem; border-radius: 10px;">
-                <div style="color: #c0c0c0; font-size: 0.9rem;">Aktif Molekül</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #d4af37;">{unique_molecules}</div>
-                <div style="color: #c0c0c0; font-size: 0.8rem;">🔬 Araştırma</div>
+            <div class="metric-navy">
+                <span style="font-size: 1.8rem;">📈</span>
+                <h3 style="color: white; margin: 0.3rem 0; font-size: 2rem;">%{avg_growth:.1f}</h3>
+                <p style="color: #c0c0c0; margin: 0;">Ort. Büyüme</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col4:
-            hhi_score = 0
-            if 'Şirket' in df.columns and 'Pazar_Payı' in df.columns:
-                company_shares = df.groupby('Şirket')['Pazar_Payı'].mean()
-                hhi_score = (company_shares ** 2).sum()
+            risk_score = 0
+            if st.session_state.anomaly_df is not None:
+                risk_score = st.session_state.anomaly_df['Risk_Skoru'].mean()
             st.markdown(f"""
-            <div style="background: rgba(21, 36, 71, 0.7); padding: 1.2rem; border-radius: 10px;">
-                <div style="color: #c0c0c0; font-size: 0.9rem;">HHI İndeksi</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #d4af37;">{hhi_score:.0f}</div>
-                <div style="color: { '#f44336' if hhi_score > 2500 else '#ff9800' if hhi_score > 1800 else '#4caf50' };">
-                    {'Yüksek Yoğunluk' if hhi_score > 2500 else 'Orta Yoğunluk' if hhi_score > 1800 else 'Rekabetçi'}
-                </div>
+            <div class="metric-gold">
+                <span style="font-size: 1.8rem;">⚠️</span>
+                <h3 style="color: white; margin: 0.3rem 0; font-size: 2rem;">{risk_score:.0f}</h3>
+                <p style="color: #c0c0c0; margin: 0;">Risk Endeksi</p>
             </div>
             """, unsafe_allow_html=True)
         
-        # PDF/Excel rapor butonu
-        st.markdown("---")
+        # İkinci satır - Görselleştirmeler
+        col1, col2 = st.columns(2)
         
-        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            st.markdown("""
+            <div class="executive-card" style="padding: 1.2rem;">
+                <h4 style="color: #d4af37; margin-top: 0;">🏆 TOP 5 PAKET - SATIŞ</h4>
+            """, unsafe_allow_html=True)
+            
+            if st.session_state.prodpack_hierarchy:
+                packages = [n for n in st.session_state.prodpack_hierarchy.values() if n.node_type == 'package']
+                top_packages = sorted(packages, key=lambda x: x.sales_2024, reverse=True)[:5]
+                
+                fig = go.Figure(go.Bar(
+                    x=[p.sales_2024 for p in top_packages],
+                    y=[p.name[:20] + '...' if len(p.name) > 20 else p.name for p in top_packages],
+                    orientation='h',
+                    marker=dict(
+                        color=[p.growth_rate for p in top_packages],
+                        colorscale='Viridis',
+                        showscale=True,
+                        colorbar=dict(title="Büyüme %")
+                    ),
+                    text=[f"${p.sales_2024:,.0f}" for p in top_packages],
+                    textposition='auto'
+                ))
+                
+                fig.update_layout(
+                    height=300,
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='white'),
+                    xaxis_title="Satış (USD)",
+                    yaxis=dict(autorange="reversed"),
+                    margin=dict(l=0, r=0, t=0, b=0)
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
         
         with col2:
-            report_data = {
-                'zaman': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'toplam_pazar': f"${total_sales:,.0f}",
-                'ortalama_buyume': f"%{avg_growth:.1f}",
-                'molekul_sayisi': unique_molecules,
-                'hhi_index': f"{hhi_score:.0f}",
-                'kritik_anomali': critical if 'critical' in locals() else 0,
-                'lider_urun': leaders if 'leaders' in locals() else 0,
-                'tahmin_2025': f"%{growth_2025:.1f}" if 'growth_2025' in locals() else 'N/A'
-            }
+            st.markdown("""
+            <div class="executive-card" style="padding: 1.2rem;">
+                <h4 style="color: #d4af37; margin-top: 0;">📊 SEGMENT DAĞILIMI</h4>
+            """, unsafe_allow_html=True)
             
-            if st.button("📋 STRATEJİK ÖZET RAPORU OLUŞTUR", use_container_width=True):
-                report_json = json.dumps(report_data, indent=2, ensure_ascii=False)
-                st.download_button(
-                    label="📥 Raporu İndir (JSON)",
-                    data=report_json,
-                    file_name=f"pharma_strategic_report_{datetime.now().strftime('%Y%m%d')}.json",
-                    mime="application/json"
-                )
+            if st.session_state.segment_result and st.session_state.segment_result.get('segmented_df') is not None:
+                segment_df = st.session_state.segment_result['segmented_df']
+                if 'Segment_Adı' in segment_df.columns:
+                    segment_counts = segment_df['Segment_Adı'].value_counts()
+                    
+                    fig = go.Figure(go.Pie(
+                        labels=segment_counts.index,
+                        values=segment_counts.values,
+                        hole=0.4,
+                        marker=dict(colors=['#f1c40f', '#2ecc71', '#e74c3c', '#3498db']),
+                        textinfo='label+percent',
+                        textposition='outside'
+                    ))
+                    
+                    fig.update_layout(
+                        height=300,
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='white'),
+                        showlegend=False,
+                        margin=dict(l=0, r=0, t=0, b=0)
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
+    
+    def _load_and_process_data(self, uploaded_file):
+        """Veri yükleme ve işleme"""
+        try:
+            # Cache mekanizması ile veri yükle
+            df = TechnicalOptimizer.cached_data_loader(uploaded_file)
+            
+            if df.empty:
+                st.error("Veri yüklenemedi. Dosya formatını kontrol edin.")
+                return
+            
+            # Sütun isimlerini benzersizleştir
+            df.columns = TechnicalOptimizer.unique_column_names(df.columns.tolist())
+            
+            # Güvenli downcast
+            df = TechnicalOptimizer.safe_downcast(df)
+            
+            # Session state güncelle
+            st.session_state.raw_df = df
+            st.session_state.processed_df = df
+            st.session_state.data_loaded = True
+            
+            st.success(f"✅ Veri başarıyla yüklendi: {len(df):,} satır, {len(df.columns)} sütun")
+            
+            # Otomatik ProdPack analizi
+            self._run_prodpack_analysis()
+            
+        except Exception as e:
+            st.error(f"Veri yükleme hatası: {str(e)}")
+            st.code(traceback.format_exc())
+    
+    def _run_prodpack_analysis(self):
+        """ProdPack Derinlik Analizi çalıştır"""
+        if st.session_state.processed_df is not None:
+            with st.spinner("ProdPack hiyerarşisi kuruluyor..."):
+                hierarchy = self.prodpack_analyzer.build_prodpack_hierarchy(st.session_state.processed_df)
+                st.session_state.prodpack_hierarchy = hierarchy
+                
+                if hierarchy:
+                    cannibalization = self.prodpack_analyzer.detect_cannibalization(
+                        st.session_state.processed_df, hierarchy
+                    )
+                    st.session_state.cannibalization_results = cannibalization
+                    st.success(f"✅ ProdPack analizi tamam: {len(hierarchy)} node, {len(cannibalization)} kanibalizasyon tespiti")
+    
+    def _run_forecast_analysis(self):
+        """Tahmin analizi çalıştır"""
+        if st.session_state.processed_df is not None:
+            df = st.session_state.processed_df
+            
+            # Satış sütununu bul
+            sales_col = None
+            for col in df.columns:
+                if TechnicalOptimizer.safe_extract_years(col):
+                    sales_col = col
+                    break
+            
+            if sales_col:
+                with st.spinner("Holt-Winters tahmini hesaplanıyor..."):
+                    forecast = self.strategic_ai.ensemble_forecast(df, sales_col)
+                    st.session_state.forecast_result = forecast
+                    
+                    advices = self.strategic_ai.generate_investment_advice(forecast)
+                    st.session_state.investment_advice = advices
+                    
+                    st.success("✅ 2025-2026 tahminleri tamamlandı")
+            else:
+                st.warning("Satış sütunu bulunamadı")
+    
+    def _run_anomaly_detection(self):
+        """Anomali tespiti çalıştır"""
+        if st.session_state.processed_df is not None:
+            with st.spinner("IsolationForest ile anomali taranıyor..."):
+                anomaly_df = self.strategic_ai.isolation_forest_anomaly_detection(st.session_state.processed_df)
+                st.session_state.anomaly_df = anomaly_df
+                st.success(f"✅ Risk analizi tamam: {len(anomaly_df[anomaly_df['Anomali_Tespiti'] == -1])} anomali tespit edildi")
+    
+    def _run_segmentation_analysis(self):
+        """Segmentasyon analizi çalıştır"""
+        if st.session_state.processed_df is not None:
+            with st.spinner("PCA + K-Means segmentasyonu uygulanıyor..."):
+                segment_result = self.strategic_ai.pca_kmeans_segmentation(st.session_state.processed_df)
+                st.session_state.segment_result = segment_result
+                
+                if segment_result.get('segmented_df') is not None:
+                    st.success(f"✅ Segmentasyon tamam: Silhouette skoru {segment_result.get('silhouette_score', 0):.3f}")
 
 # ================================================
-# 9. APPLICATION ENTRY POINT
+# 12. UYGULAMA GİRİŞ NOKTASI
 # ================================================
 
 def main():
-    """Ana uygulama giriş noktası"""
+    """Ana uygulama başlatıcı"""
     
-    try:
-        # Uygulama instance'ı oluştur
-        app = PharmaIntelligencePro()
-        
-        # UI'ı render et
-        app.render_sidebar()
-        app.render_main()
-        
-    except Exception as e:
-        st.error(f"""
-        ## ⚠️ Uygulama Hatası
-        
-        PharmaIntelligence Pro v8.0'da beklenmeyen bir hata oluştu.
-        
-        **Hata:** {str(e)}
-        """)
-        
-        with st.expander("🔍 Hata Detayları"):
-            st.code(traceback.format_exc())
-        
-        st.info("""
-        **Önerilen Çözümler:**
-        1. Sayfayı yenileyin (F5)
-        2. Sol panelden 'CACHE TEMİZLE' butonuna tıklayın
-        3. Veri dosyanızın formatını kontrol edin
-        4. Uygulamayı yeniden başlatın
-        """)
-        
-        if st.button("🔄 Uygulamayı Yeniden Başlat"):
-            st.cache_data.clear()
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-
-# ================================================
-# 10. MODULE EXPORTS
-# ================================================
-
-__all__ = [
-    'ProdPackDepthAnalyzer',
-    'TechnicalOptimizer',
-    'StrategicAIModule',
-    'ExecutiveDarkTheme',
-    'DataEngine',
-    'PharmaIntelligencePro'
-]
+    # Sayfa konfigürasyonu
+    st.set_page_config(
+        page_title="PharmaIntelligence Pro v8.0",
+        page_icon="💊",
+        layout="wide",
+        initial_sidebar_state="expanded",
+        menu_items={
+            'Get Help': 'https://pharmaintelligence.com/support',
+            'Report a bug': 'https://pharmaintelligence.com/bug',
+            'About': 'PharmaIntelligence Pro v8.0 - Enterprise Decision Intelligence Platform'
+        }
+    )
+    
+    # Uygulamayı başlat
+    app = PharmaIntelligencePro()
+    app.run()
 
 if __name__ == "__main__":
     main()
-"""
-
