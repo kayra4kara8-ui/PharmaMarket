@@ -1,11 +1,8 @@
-# ================================================
-# PHARMAINTELLIGENCE PRO V8.0 - ENTERPRISE KARAR DESTEK PLATFORMU
-# PRODPACK DERİNLİK ANALİZİ + AI ÖNGÖRÜ + EXECUTIVE DASHBOARD
-# ================================================
-# Toplam Satır: 4.587
-# Versiyon: 8.0.0
-# Lisans: E.Ş. - PharmaIntelligence Inc.
-# ================================================
+"""
+PharmaIntelligence Pro v8.0 - ProdPack Derinlik Analizi
+Enterprise Karar Destek Platformu
+Versiyon: 8.0.0
+"""
 
 import streamlit as st
 import pandas as pd
@@ -130,8 +127,9 @@ except ImportError:
 try:
     from pmdarima import auto_arima
     ARIMA_AVAILABLE = True
-except ImportError:
+except:
     ARIMA_AVAILABLE = False
+    st.warning("pmdarima kurulu değil...")
 
 # ================================================
 # 5. RAPORLAMA VE GÖRSELLEŞTİRME
@@ -3924,3 +3922,4 @@ if __name__ == "__main__":
                     mime="application/json",
                     use_container_width=True
                 )
+
