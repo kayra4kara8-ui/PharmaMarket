@@ -1,60 +1,66 @@
 # ================================================
-# PharmaIntelligence Pro v8.0 - Enterprise Requirements
-# Tüm bağımlılıklar production-ready versiyonlarla sabitlenmiştir
-# Hata düzeltmeleri içerir: pmdarima, cryptography, prophet
+# PHARMAINTELLIGENCE PRO v8.0 - ENTERPRISE EDITION
+# PRODUCTION READY - TÜM BAĞIMLILIKLAR
 # ================================================
 
-# Core Data Science
+# ---------- CORE DATA SCIENCE ----------
 pandas==2.0.3
 numpy==1.24.3
 scipy==1.11.1
 scikit-learn==1.3.0
 statsmodels==0.14.0
 
-# Time Series - pmdarima ve prophet sorunsuz çalışır
-pmdarima==2.0.4
-prophet==1.1.5
-
-# Visualization
+# ---------- VISUALIZATION ----------
 plotly==5.15.0
 matplotlib==3.7.2
 seaborn==0.12.2
-yellowbrick==1.5
-
-# Dimensionality Reduction & Advanced ML
 umap-learn==0.5.4
+pillow==10.0.0
+
+# ---------- TIME SERIES (OPTIONAL BUT RECOMMENDED) ----------
+prophet==1.1.5
+pmdarima==2.0.4
+holtwinters @ git+https://github.com/statsmodels/statsmodels.git
+
+# ---------- EXPLAINABLE AI ----------
 shap==0.42.1
 
-# Streamlit & UI
+# ---------- STREAMLIT & WEB ----------
 streamlit==1.25.0
 streamlit-option-menu==0.3.6
+streamlit-extras==0.3.5
 
-# Excel & Data I/O
+# ---------- EXCEL & FILE PROCESSING ----------
 openpyxl==3.1.2
 xlsxwriter==3.1.2
 xlrd==2.0.1
 
-# PDF Generation
-reportlab==4.0.4
-
-# Utilities
+# ---------- UTILITIES ----------
 python-dateutil==2.8.2
 pytz==2023.3
 tqdm==4.65.0
-joblib==1.3.1
+tabulate==0.9.0
+colorama==0.4.6
 cachetools==5.3.1
+joblib==1.3.2
 
-# Async & Parallel
+# ---------- ASYNC & PARALLEL ----------
 aiohttp==3.8.5
 asyncio==3.4.3
+dask==2023.7.1
 
-# Production Optimizations
-psutil==5.9.5
+# ---------- SYSTEM & DEBUG ----------
 memory-profiler==0.61.0
+psutil==5.9.5
 
-# Güvenlik - Fernet şifreleme için
-cryptography==41.0.7
+# ---------- SECURITY ----------
+cryptography==41.0.3
+bcrypt==4.0.1
 
-# Gerekli değil - opsiyonel
-# SQLAlchemy==2.0.19
-# psycopg2-binary==2.9.7
+# ---------- API ----------
+requests==2.31.0
+
+# ---------- DEVELOPMENT ----------
+pip==23.2.1
+setuptools==68.0.0
+wheel==0.41.0
