@@ -1,35 +1,79 @@
-# Core Data Science
+# ================================================
+# PHARMAINTELLIGENCE PRO V8.0 - ENTERPRISE REQUIREMENTS
+# ProdPack Derinlik Analizi + AI Öngörü + Executive Dashboard
+# ================================================
+
+# ========== TEMEL VERİ BİLİMİ ==========
 pandas==2.0.3
 numpy==1.24.3
 scipy==1.10.1
 
-# Visualization
+# ========== GÖRSELLEŞTİRME ==========
 streamlit==1.28.2
 plotly==5.17.0
 matplotlib==3.7.1
 seaborn==0.12.2
-
-# Machine Learning & Preprocessing
-scikit-learn==1.3.0
 umap-learn==0.5.4
 
-# Time Series & Forecasting
+# ========== MAKİNE ÖĞRENMESİ ==========
+scikit-learn==1.3.0
+
+# ========== ZAMAN SERİSİ VE TAHMİNLEME ==========
 statsmodels==0.14.0
 prophet==1.1.5
 pmdarima==2.0.4
 
-# Explainable AI
+# ========== AÇIKLANABİLİR YAPAY ZEKA ==========
 shap==0.42.1
 
-# Excel & File Handling
+# ========== VERİ OKUMA/YAZMA ==========
 openpyxl==3.1.2
 xlsxwriter==3.1.2
 xlrd==2.0.1
+xlwt==1.3.0
+xlutils==2.0.0
 
-# PDF Reporting
+# ========== PDF RAPORLAMA ==========
 reportlab==4.0.4
 
-# Utilities
+# ========== ASENKRON VE PARALEL İŞLEME ==========
 aiohttp==3.8.5
 asyncio==3.4.3
+aiofiles==23.2.1
 joblib==1.3.2
+multiprocess==0.70.15
+
+# ========== WEB SCRAPING VE API ==========
+requests==2.31.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
+httpx==0.25.0
+
+# ========== VERİTABANI ==========
+sqlalchemy==2.0.20
+psycopg2-binary==2.9.7
+pymongo==4.4.1
+redis==5.0.0
+
+# ========== GÜVENLİK VE ŞİFRELEME ==========
+cryptography==41.0.3
+pycryptodome==3.18.0
+
+# ========== SİSTEM VE PERFORMANS ==========
+psutil==5.9.5
+platformdirs==3.10.0
+
+# ========== UTİLİTY ==========
+python-dateutil==2.8.2
+pytz==2023.3
+tzdata==2023.3
+pyyaml==6.0.1
+tqdm==4.66.1
+colorama==0.4.6
+
+# ========== GELİŞTİRME ARAÇLARI ==========
+black==23.7.0
+flake8==6.1.0
+isort==5.12.0
+pytest==7.4.0
+pytest-cov==4.1.0
