@@ -188,7 +188,12 @@ import secrets
 import hashlib
 import hmac
 import binascii
-from cryptography.fernet import Fernet
+try:
+    from pmdarima import auto_arima
+    ARIMA_AVAILABLE = True
+except:
+    ARIMA_AVAILABLE = False
+    st.warning("pmdarima kurulu değil...")
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
 
@@ -3922,4 +3927,5 @@ if __name__ == "__main__":
                     mime="application/json",
                     use_container_width=True
                 )
+
 
