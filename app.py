@@ -43,7 +43,6 @@ import hashlib
 from collections import defaultdict
 
 # Excel/PDF Dışa Aktarım
-import xlsxwriter
 # Reportlab'i şartlı olarak içe aktar
 try:
     from reportlab.lib.pagesizes import letter, A4
@@ -3115,4 +3114,5 @@ if __name__ == "__main__":
             for anahtar in list(st.session_state.keys()):
                 del st.session_state[anahtar]
             st.rerun()
+
 
