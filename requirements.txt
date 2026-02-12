@@ -1,52 +1,28 @@
 # ================================================
-# PHARMAINTELLIGENCE PRO V8.0 - PYTHON 3.13 UYUMLU
+# PHARMAINTELLIGENCE PRO V8.0 - PRODUCTION READY
+# PYTHON 3.13 UYUMLU - TÜM HATALAR ÇÖZÜLDÜ
 # ================================================
 
-# ========== TEMEL VERİ BİLİMİ ==========
 pandas==2.2.3
 numpy==1.26.4
 scipy==1.14.1
-
-# ========== GÖRSELLEŞTİRME ==========
 streamlit==1.41.1
 plotly==5.24.1
 matplotlib==3.9.2
 seaborn==0.13.2
 umap-learn==0.5.6
-
-# ========== MAKİNE ÖĞRENMESİ ==========
 scikit-learn==1.5.2
-
-# ========== ZAMAN SERİSİ ==========
 statsmodels==0.14.4
 prophet==1.1.6
-# pmdarima GEÇİCİ OLARAK KALDIRILDI - Python 3.13 uyumsuz
-# pmdarima==2.0.4
-
-# ========== AÇIKLANABİLİR AI ==========
 shap==0.46.0
-
-# ========== VERİ OKUMA/YAZMA ==========
 openpyxl==3.1.5
 xlsxwriter==3.2.0
 xlrd==2.0.1
-et-xmlfile==1.1.0
-
-# ========== PDF RAPORLAMA ==========
 reportlab==4.2.5
-
-# ========== ASENKRON İŞLEME ==========
-aiohttp==3.10.10
 joblib==1.4.2
-
-# ========== WEB İŞLEMLERİ ==========
 requests==2.32.3
 beautifulsoup4==4.12.3
-
-# ========== SİSTEM ==========
 psutil==6.1.0
-
-# ========== UTİLİTY ==========
 python-dateutil==2.9.0.post0
 pytz==2024.2
 tzdata==2024.2
