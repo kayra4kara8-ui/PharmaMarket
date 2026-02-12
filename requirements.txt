@@ -1,29 +1,20 @@
-# Temel bağımlılıklar
+# Python 3.11 ile uyumlu sürümler
 streamlit>=1.28.0
-numpy==1.24.3  # Pandas 2.0.3 ile uyumlu
+numpy==1.24.3
 pandas==2.0.3
 scikit-learn>=1.3.0
 scipy>=1.10.0
-
-# pmdarima'yı kaldır, yerine aşağıdakileri ekle
-statsmodels>=0.14.0  # pmdarima'nın işlevlerinin çoğunu karşılar
-prophet>=1.1.5  # Zaman serisi tahmini için alternatif
-
-# Görselleştirme
+statsmodels>=0.14.0
+pmdarima==2.0.4
 plotly>=5.17.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
-
-# Veri tabanı
 SQLAlchemy>=2.0.0
 psycopg2-binary>=2.9.0
-
-# Diğer
 openpyxl>=3.1.0
 python-dotenv>=1.0.0
 requests>=2.31.0
 joblib>=1.3.0
-
-# Eksik olan kritik paketler
-setuptools>=68.0.0  # pandas build hatası için
-wheel>=0.40.0
+setuptools>=68.2.0
+wheel>=0.41.0
+cython>=0.29.36
