@@ -3,14 +3,6 @@ PharmaIntelligence Pro v8.0 - Kurumsal Karar Destek ve Stratejik İstihbarat Pla
 Versiyon: 8.0.0
 Yazar: PharmaIntelligence Inc.
 Lisans: Kurumsal Enterprise
-
-✓ AI-Powered Predictive Analytics
-✓ Multi-Algorithm Anomaly Detection  
-✓ PCA + UMAP + t-SNE Advanced Segmentation
-✓ Prophet & ARIMA Time Series Forecasting
-✓ SHAP Explainable AI
-✓ Executive Dark Theme with 3D Visualizations
-✓ Automated Strategic Recommendations
 """
 
 import streamlit as st
@@ -4332,4 +4324,5 @@ if __name__ == "__main__":
                     mime="application/json",
                     use_container_width=True
                 )]
+
 
