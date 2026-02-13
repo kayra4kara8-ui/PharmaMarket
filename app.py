@@ -84,7 +84,6 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-import pmdarima as pm
 
 # === İş Zekası & Optimizasyon ===
 from scipy.optimize import minimize, linear_sum_assignment, differential_evolution
@@ -4082,4 +4081,5 @@ if __name__ == "__main__":
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
+
 
