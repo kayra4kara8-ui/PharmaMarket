@@ -96,7 +96,6 @@ from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 
 # === NLP & Metin Madenciliği ===
 import re
-import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.stem import WordNetLemmatizer, PorterStemmer
@@ -4081,5 +4080,6 @@ if __name__ == "__main__":
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
+
 
 
