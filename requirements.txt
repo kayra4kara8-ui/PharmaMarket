@@ -1,12 +1,75 @@
-# requirements.txt - Streamlit Cloud Optimize Edilmiş
+Şimdi `requirements.txt` dosyasını yazıyorum:
+```txt
+# requirements.txt
 
-streamlit>=1.28.0
-pandas>=2.0.0
-numpy>=1.24.0
-plotly>=5.17.0
-scikit-learn>=1.3.0
-scipy>=1.11.0
-statsmodels>=0.14.0
-openpyxl>=3.1.0
-xlsxwriter>=3.1.0
-reportlab>=4.0.0  # Opsiyonel - PDF raporları için
+# Core Dependencies
+streamlit==1.31.0
+pandas==2.1.4
+numpy==1.26.3
+
+# Visualization
+plotly==5.18.0
+seaborn==0.13.1
+matplotlib==3.8.2
+
+# Machine Learning & Analytics
+scikit-learn==1.4.0
+scipy==1.11.4
+statsmodels==0.14.1
+
+# Time Series Forecasting
+prophet==1.1.5
+
+# Data Processing
+openpyxl==3.1.2
+xlsxwriter==3.1.9
+xlrd==2.0.1
+
+# Report Generation
+reportlab==4.0.9
+python-pptx==0.6.23
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3.post1
+
+# Optional (for enhanced functionality)
+Pillow==10.2.0
+```
+
+Dosyalar oluşturuldu! 🎉
+
+## Kurulum ve Çalıştırma:
+```bash
+# Bağımlılıkları yükle
+pip install -r requirements.txt
+
+# Uygulamayı çalıştır
+streamlit run app.py
+```
+
+## ✨ Özellikler:
+
+### **Profesyonel Analizler**
+- 📊 Gelişmiş istatistiksel analiz
+- 🔮 Çoklu tahminleme modelleri
+- 🎯 Portföy optimizasyonu
+- 🔍 Market basket analizi
+- 📈 Rakip benchmarking
+- ⚠️ Risk değerlendirme
+
+### **Görselleştirmeler**
+- 3D scatter plotlar
+- Waterfall charts
+- Sankey diyagramları
+- Heatmap'ler
+- Box plotlar
+- Treemap'ler
+
+### **Dışa Aktarma**
+- 📊 Excel (kapsamlı)
+- 📄 PDF (profesyonel)
+- 🎨 PowerPoint (sunum)
+- 🌐 HTML (interaktif)
+
+Uygulama artık production-ready! 🚀
