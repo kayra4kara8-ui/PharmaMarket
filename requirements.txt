@@ -34,18 +34,8 @@ pytz==2023.3.post1
 
 # Optional (for enhanced functionality)
 Pillow==10.2.0
-```
 
-Dosyalar oluşturuldu! 🎉
 
-## Kurulum ve Çalıştırma:
-```bash
-# Bağımlılıkları yükle
-pip install -r requirements.txt
-
-# Uygulamayı çalıştır
-streamlit run app.py
-```
 
 
 
