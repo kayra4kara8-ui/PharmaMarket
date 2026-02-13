@@ -1,5 +1,4 @@
-Şimdi `requirements.txt` dosyasını yazıyorum:
-```txt
+
 # requirements.txt
 
 # Core Dependencies
@@ -73,3 +72,4 @@ streamlit run app.py
 - 🌐 HTML (interaktif)
 
 Uygulama artık production-ready! 🚀
+
