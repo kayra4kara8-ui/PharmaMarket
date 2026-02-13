@@ -811,13 +811,13 @@ import imageio_ffmpeg
 import cv2
 import av
 import pyav
-import scikit-video
+import skvideo
 from skvideo.io import vread, vwrite
 import vidgear
 from vidgear.gears import CamGear, WriteGear
 import streamlink
 from streamlink import Streamlink
-import youtube-dl
+import youtube_dl
 import pytube
 from pytube import YouTube
 import instagram-scraper
@@ -863,7 +863,7 @@ import mandrill
 from mandrill import Mandrill
 import boto3
 from boto3 import client, resource
-import google-cloud
+import google.cloud  # Nokta kullanarak alt modüllere erişilir
 from google.cloud import storage, bigquery, pubsub, firestore
 import azure
 from azure.storage.blob import BlobServiceClient
@@ -5738,6 +5738,7 @@ if __name__ == "__main__":
         if st.button("🔄 RESTART ENTERPRISE APPLICATION"):
             st.caching.clear_cache()
             st.rerun()
+
 
 
 
