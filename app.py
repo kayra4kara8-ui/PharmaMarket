@@ -94,14 +94,6 @@ from scipy.stats import (
 from scipy.signal import savgol_filter, find_peaks
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 
-# === NLP & Metin Madenciliği ===
-import re
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize, sent_tokenize
-from nltk.stem import WordNetLemmatizer, PorterStemmer
-from nltk.sentiment import SentimentIntensityAnalyzer
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from wordcloud import WordCloud
 
 # === Görselleştirme & Raporlama ===
 import matplotlib.pyplot as plt
@@ -4080,6 +4072,7 @@ if __name__ == "__main__":
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
+
 
 
 
