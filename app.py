@@ -4064,7 +4064,7 @@ class EnterpriseAIInsightEngine:
                     stars = high_growth_high_share.nlargest(3, sales_cols[-1])
                     investments = []
                     for idx, row in stars.iterrows():
-                        name = row.get('Molecule', row.get('Product', f'Asset {idx}')))
+                        name = row.get('Molecule', row.get('Product', f'Asset {idx}'))
                         investments.append(f"{name}")
                     return ', '.join(investments[:3])
             return "Oncology pipeline assets, rare disease gene therapies, digital therapeutics platform"
@@ -5739,4 +5739,5 @@ if __name__ == "__main__":
         if st.button("🔄 RESTART ENTERPRISE APPLICATION"):
             st.caching.clear_cache()
             st.rerun()
+
 
