@@ -808,7 +808,7 @@ import moviepy
 from moviepy.editor import *
 import imageio
 import imageio_ffmpeg
-import opencv-python
+import cv2
 import av
 import pyav
 import scikit-video
@@ -5738,6 +5738,7 @@ if __name__ == "__main__":
         if st.button("🔄 RESTART ENTERPRISE APPLICATION"):
             st.caching.clear_cache()
             st.rerun()
+
 
 
 
