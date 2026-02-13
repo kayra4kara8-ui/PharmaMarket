@@ -28,12 +28,17 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # === Derin Öğrenme & Gelişmiş Makine Öğrenimi ===
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers, models, callbacks, optimizers, regularizers
-from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout, Bidirectional, Attention
-from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, BatchNormalization
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+# ================================================
+# TENSORFLOW / DERİN ÖĞRENME İMKANSIZLAŞTIRILDI
+# ================================================
+# TensorFlow, PyTorch ve diğer ağır kütüphaneler
+# Streamlit Cloud'da çalışmaz. Gerekli import'lar
+# yorum satırına alınmıştır.
+# ================================================
+
+# import tensorflow as tf  # DEVRE DIŞI
+# from tensorflow import keras  # DEVRE DIŞI
+# from tensorflow.keras import layers, models, callbacks  # DEVRE DIŞI
 
 # === Gelişmiş Sklearn Modülleri ===
 from sklearn.preprocessing import (
@@ -4077,3 +4082,4 @@ if __name__ == "__main__":
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
+
