@@ -213,7 +213,7 @@ import optuna
 from optuna import trial, study
 import hyperopt
 from hyperopt import hp, tpe, fmin, Trials, STATUS_OK
-import bayesian-optimization
+from bayes_opt import BayesianOptimization
 from bayes_opt import BayesianOptimization
 import pyomo
 from pyomo.environ import *
@@ -5739,5 +5739,6 @@ if __name__ == "__main__":
         if st.button("🔄 RESTART ENTERPRISE APPLICATION"):
             st.caching.clear_cache()
             st.rerun()
+
 
 
