@@ -47,29 +47,5 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## ✨ Özellikler:
 
-### **Profesyonel Analizler**
-- 📊 Gelişmiş istatistiksel analiz
-- 🔮 Çoklu tahminleme modelleri
-- 🎯 Portföy optimizasyonu
-- 🔍 Market basket analizi
-- 📈 Rakip benchmarking
-- ⚠️ Risk değerlendirme
-
-### **Görselleştirmeler**
-- 3D scatter plotlar
-- Waterfall charts
-- Sankey diyagramları
-- Heatmap'ler
-- Box plotlar
-- Treemap'ler
-
-### **Dışa Aktarma**
-- 📊 Excel (kapsamlı)
-- 📄 PDF (profesyonel)
-- 🎨 PowerPoint (sunum)
-- 🌐 HTML (interaktif)
-
-Uygulama artık production-ready! 🚀
 
