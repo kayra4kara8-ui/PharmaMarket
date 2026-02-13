@@ -4037,6 +4037,7 @@ class EnterpriseAIInsightEngine:
     
     @staticmethod
     def _get_divestment_candidates(df: pd.DataFrame, risk_df: Optional[pd.DataFrame]) -> str:
+        """Get divestment candidates based on risk and market share"""
         try:
             if risk_df is not None:
                 high_risk = risk_df[risk_df['Risk_Rating'].isin(['Critical', 'High'])]
@@ -4044,7 +4045,7 @@ class EnterpriseAIInsightEngine:
                     divest = high_risk.nsmallest(3, 'Market_Share' if 'Market_Share' in high_risk.columns else 'Risk_Index')
                     candidates = []
                     for idx, row in divest.iterrows():
-                        name = row.get('Molecule', row.get('Product', f'Asset {idx}')))
+                        name = row.get('Molecule', row.get('Product', f'Asset {idx}'))
                         candidates.append(f"{name}")
                     return ', '.join(candidates[:3])
             return "3-5 low-growth, low-share products in mature categories"
@@ -5738,3 +5739,4 @@ if __name__ == "__main__":
         if st.button("🔄 RESTART ENTERPRISE APPLICATION"):
             st.caching.clear_cache()
             st.rerun()
+
