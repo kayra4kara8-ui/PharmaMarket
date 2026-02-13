@@ -1,4 +1,5 @@
-# Minimal requirements.txt
+# requirements.txt - Streamlit Cloud Optimize Edilmiş
+
 streamlit>=1.28.0
 pandas>=2.0.0
 numpy>=1.24.0
@@ -8,3 +9,4 @@ scipy>=1.11.0
 statsmodels>=0.14.0
 openpyxl>=3.1.0
 xlsxwriter>=3.1.0
+reportlab>=4.0.0  # Opsiyonel - PDF raporları için
